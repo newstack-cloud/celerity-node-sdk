@@ -1,0 +1,50 @@
+{
+  "name": "@celerity-sdk/queue",
+  "version": "0.1.0",
+  "description": "Queue abstraction for the Celerity Node SDK (SQS / Pub/Sub / Service Bus)",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@celerity-sdk/types": "workspace:*",
+    "@celerity-sdk/config": "workspace:*"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-sqs": "^3.0.0",
+    "@google-cloud/pubsub": "^4.0.0",
+    "@azure/service-bus": "^7.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-sqs": { "optional": true },
+    "@google-cloud/pubsub": { "optional": true },
+    "@azure/service-bus": { "optional": true }
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

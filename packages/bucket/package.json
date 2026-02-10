@@ -1,0 +1,50 @@
+{
+  "name": "@celerity-sdk/bucket",
+  "version": "0.1.0",
+  "description": "Object storage abstraction for the Celerity Node SDK (S3 / GCS / Azure Blob)",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@celerity-sdk/types": "workspace:*",
+    "@celerity-sdk/config": "workspace:*"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@google-cloud/storage": "^7.0.0",
+    "@azure/storage-blob": "^12.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-s3": { "optional": true },
+    "@google-cloud/storage": { "optional": true },
+    "@azure/storage-blob": { "optional": true }
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
