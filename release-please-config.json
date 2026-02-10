@@ -1,0 +1,81 @@
+{
+  "include-component-in-tag": true,
+  "tag-separator": "/",
+  "separate-pull-requests": true,
+  "bump-minor-pre-major": true,
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "perf", "section": "Performance Improvements" },
+    { "type": "deps", "section": "Dependencies" },
+    { "type": "chore", "section": "Miscellaneous", "hidden": true }
+  ],
+  "pull-request-title-pattern": "chore: release ${component} ${version}",
+  "packages": {
+    "packages/types": {
+      "release-type": "node",
+      "component": "types",
+      "package-name": "@celerity-sdk/types"
+    },
+    "packages/common": {
+      "release-type": "node",
+      "component": "common",
+      "package-name": "@celerity-sdk/common"
+    },
+    "packages/config": {
+      "release-type": "node",
+      "component": "config",
+      "package-name": "@celerity-sdk/config"
+    },
+    "packages/core": {
+      "release-type": "node",
+      "component": "core",
+      "package-name": "@celerity-sdk/core"
+    },
+    "packages/bucket": {
+      "release-type": "node",
+      "component": "bucket",
+      "package-name": "@celerity-sdk/bucket"
+    },
+    "packages/queue": {
+      "release-type": "node",
+      "component": "queue",
+      "package-name": "@celerity-sdk/queue"
+    },
+    "packages/topic": {
+      "release-type": "node",
+      "component": "topic",
+      "package-name": "@celerity-sdk/topic"
+    },
+    "packages/datastore": {
+      "release-type": "node",
+      "component": "datastore",
+      "package-name": "@celerity-sdk/datastore"
+    },
+    "packages/sql-database": {
+      "release-type": "node",
+      "component": "sql-database",
+      "package-name": "@celerity-sdk/sql-database"
+    },
+    "packages/cache": {
+      "release-type": "node",
+      "component": "cache",
+      "package-name": "@celerity-sdk/cache"
+    },
+    "packages/serverless-aws": {
+      "release-type": "node",
+      "component": "serverless-aws",
+      "package-name": "@celerity-sdk/serverless-aws"
+    },
+    "packages/telemetry": {
+      "release-type": "node",
+      "component": "telemetry",
+      "package-name": "@celerity-sdk/telemetry"
+    },
+    "packages/cli": {
+      "release-type": "node",
+      "component": "cli",
+      "package-name": "@celerity-sdk/cli"
+    }
+  }
+}

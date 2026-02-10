@@ -1,0 +1,25 @@
+name: celerity-sdk-integration
+
+services:
+  valkey:
+    image: valkey/valkey:8-alpine
+    ports:
+      - "6399:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+
+  localstack:
+    image: localstack/localstack:4
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=ssm,secretsmanager,s3,sqs,sns,dynamodb
+      - DEBUG=0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
