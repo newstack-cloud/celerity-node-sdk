@@ -1,7 +1,8 @@
-// Constructor type for DI
-export type Type<T = unknown> = {
-  new (...args: unknown[]): T;
-};
+// Constructor type for DI — uses `any[]` for constructor params because
+// TypeScript's contravariance rejects typed constructors against `unknown[]`.
+// This matches Angular/NestJS convention; DI resolves actual types at runtime.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type Type<T = unknown> = new (...args: any[]) => T;
 
 // Token for dependency injection — class reference, string, or symbol
 export type InjectionToken = string | symbol | Type;
@@ -18,7 +19,8 @@ export type ClassProvider<T = unknown> = {
 };
 
 export type FactoryProvider<T = unknown> = {
-  useFactory: (...args: unknown[]) => T | Promise<T>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  useFactory: (...args: any[]) => T | Promise<T>;
   inject?: InjectionToken[];
   onClose?: (value: T) => Promise<void> | void;
 };
