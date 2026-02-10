@@ -29,5 +29,3 @@ export type ValueProvider<T = unknown> = {
 };
 
 export type Provider<T = unknown> = ClassProvider<T> | FactoryProvider<T> | ValueProvider<T>;
-
-export type NextFunction = () => Promise<void>;

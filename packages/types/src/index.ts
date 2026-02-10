@@ -6,7 +6,6 @@ export type {
   FactoryProvider,
   ValueProvider,
   Provider,
-  NextFunction,
 } from "./common";
 
 export type {
@@ -19,11 +18,9 @@ export type {
 
 export type { ServiceContainer } from "./container";
 
-export type { AuthClaims } from "./auth";
+export type { HandlerResponse, NextFunction, CelerityLayer } from "./layer";
 
-export type { HandlerResponse, CelerityLayer } from "./layer";
-
-export type { Schema, ValidationError, ValidationResult } from "./validation";
+export type { Schema } from "./validation";
 
 export type { FunctionHandlerDefinition, ModuleMetadata } from "./module";
 
