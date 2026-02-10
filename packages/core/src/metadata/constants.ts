@@ -1,0 +1,12 @@
+export const CONTROLLER_METADATA = Symbol("celerity:controller");
+export const HTTP_METHOD_METADATA = Symbol("celerity:http-method");
+export const ROUTE_PATH_METADATA = Symbol("celerity:route-path");
+export const PARAM_METADATA = Symbol("celerity:param");
+export const GUARD_PROTECTEDBY_METADATA = Symbol("celerity:guard:protectedBy");
+export const GUARD_CUSTOM_METADATA = Symbol("celerity:guard:custom");
+export const LAYER_METADATA = Symbol("celerity:layer");
+export const MODULE_METADATA = Symbol("celerity:module");
+export const INJECTABLE_METADATA = Symbol("celerity:injectable");
+export const INJECT_METADATA = Symbol("celerity:inject");
+export const PUBLIC_METADATA = Symbol("celerity:public");
+export const CUSTOM_METADATA = Symbol("celerity:custom-metadata");
