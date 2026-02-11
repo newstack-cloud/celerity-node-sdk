@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/serverless-aws/v0.2.0...serverless-aws/v0.2.1) (2026-02-11)
+
+
+### Bug Fixes
+
+* **serverless-aws:** add missing support for looking up handler in app ([eafa9a4](https://github.com/newstack-cloud/celerity-node-sdk/commit/eafa9a483624ccd28ce4a60788f525c1e6c35d8d))
+
 ## [0.2.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/serverless-aws/v0.1.0...serverless-aws/v0.2.0) (2026-02-11)
 
 
