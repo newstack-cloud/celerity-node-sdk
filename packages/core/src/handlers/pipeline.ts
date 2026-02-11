@@ -1,3 +1,4 @@
+import createDebug from "debug";
 import type {
   HttpRequest,
   HttpResponse,
@@ -12,6 +13,8 @@ import { HttpException } from "../errors/http-exception";
 import { extractParam, type ParamMetadata, type ParamType } from "../decorators/params";
 import { buildHttpRequest, buildHttpContext } from "../functions/context";
 import { HandlerMetadataStore } from "../metadata/handler-metadata";
+
+const debug = createDebug("celerity:core:pipeline");
 
 export type ResolvedHandler = {
   path?: string;
@@ -50,17 +53,23 @@ export async function executeHandlerPipeline(
     ...handler.layers,
   ];
 
+  debug("%s %s — %d layers", request.method, request.path, allLayers.length);
+
   try {
     const response = await runLayerPipeline(allLayers, context, async () => {
+      const handlerType = handler.isFunctionHandler ? "function" : "class";
+      debug("invoking %s handler", handlerType);
       const result = handler.isFunctionHandler
         ? await invokeFunctionHandler(handler, context)
         : await invokeClassHandler(handler, context);
       return normalizeResponse(result);
     });
 
+    debug("response %d", response.status);
     return response;
   } catch (error) {
     if (error instanceof HttpException) {
+      debug("HttpException %d: %s", error.statusCode, error.message);
       return {
         status: error.statusCode,
         headers: { "content-type": "application/json" },

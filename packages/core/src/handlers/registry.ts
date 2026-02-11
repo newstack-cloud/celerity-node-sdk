@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import createDebug from "debug";
 import type {
   HttpMethod,
   CelerityLayer,
@@ -26,17 +27,21 @@ import type { Container } from "../di/container";
 import { buildModuleGraph, registerModuleGraph } from "../bootstrap/module-graph";
 import type { ModuleGraph } from "../bootstrap/module-graph";
 
+const debug = createDebug("celerity:core:registry");
+
 export class HandlerRegistry {
   private handlers: ResolvedHandler[] = [];
 
   getHandler(path: string, method: string): ResolvedHandler | undefined {
-    return this.handlers.find(
+    const found = this.handlers.find(
       (h) =>
         h.path !== undefined &&
         h.method !== undefined &&
         matchRoute(h.path, path) &&
         h.method === method,
     );
+    debug("getHandler %s %s → %s", method, path, found ? "matched" : "not found");
+    return found;
   }
 
   getAllHandlers(): ResolvedHandler[] {
@@ -110,6 +115,13 @@ export class HandlerRegistry {
         layers.unshift(validate(validationSchemas));
       }
 
+      debug(
+        "registerClassHandler: %s %s (%s.%s)",
+        method,
+        fullPath,
+        controllerClass.name,
+        methodName,
+      );
       this.handlers.push({
         path: fullPath,
         method,
@@ -148,6 +160,10 @@ export class HandlerRegistry {
       }
     }
 
+    debug(
+      "registerFunctionHandler: %s",
+      meta.method && meta.path ? `${meta.method} ${meta.path}` : "(no route)",
+    );
     this.handlers.push({
       path: meta.path,
       method: meta.method,

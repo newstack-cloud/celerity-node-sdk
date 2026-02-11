@@ -1,7 +1,10 @@
+import createDebug from "debug";
 import type { CelerityLayer, Type } from "@celerity-sdk/types";
 import type { Container } from "../di/container";
 import type { HandlerRegistry } from "../handlers/registry";
 import { disposeLayers } from "../layers/dispose";
+
+const debug = createDebug("celerity:core:factory");
 
 export class CelerityApplication {
   constructor(
@@ -20,6 +23,7 @@ export class CelerityApplication {
   }
 
   async close(): Promise<void> {
+    debug("close: shutting down application");
     if (this.runtimeApp && typeof this.runtimeApp === "object") {
       const app = this.runtimeApp as { shutdown(): Promise<void> };
       await app.shutdown();

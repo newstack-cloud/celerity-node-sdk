@@ -1,0 +1,208 @@
+version: 2
+updates:
+  # GitHub Actions — pin action versions, weekly updates
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Etc/UTC"
+    commit-message:
+      prefix: "ci(deps)"
+    labels:
+      - "dependencies"
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # npm — root devDependencies (eslint, vitest, tsup, typescript, etc.)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:30"
+      timezone: "Etc/UTC"
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+    groups:
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "@celerity-sdk/*"
+
+  # npm — @celerity-sdk/config
+  - package-ecosystem: "npm"
+    directory: "/packages/config"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:30"
+      timezone: "Etc/UTC"
+    commit-message:
+      prefix: "deps(config)"
+    labels:
+      - "dependencies"
+    groups:
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "@celerity-sdk/*"
+
+  # npm — @celerity-sdk/core
+  - package-ecosystem: "npm"
+    directory: "/packages/core"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:30"
+      timezone: "Etc/UTC"
+    commit-message:
+      prefix: "deps(core)"
+    labels:
+      - "dependencies"
+    groups:
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "@celerity-sdk/*"
+
+  # npm — @celerity-sdk/telemetry
+  - package-ecosystem: "npm"
+    directory: "/packages/telemetry"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:30"
+      timezone: "Etc/UTC"
+    commit-message:
+      prefix: "deps(telemetry)"
+    labels:
+      - "dependencies"
+    groups:
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "@celerity-sdk/*"
+
+  # npm — @celerity-sdk/cli
+  - package-ecosystem: "npm"
+    directory: "/packages/cli"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:30"
+      timezone: "Etc/UTC"
+    commit-message:
+      prefix: "deps(cli)"
+    labels:
+      - "dependencies"
+    groups:
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "@celerity-sdk/*"
+
+  # npm — @celerity-sdk/bucket
+  - package-ecosystem: "npm"
+    directory: "/packages/bucket"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:30"
+      timezone: "Etc/UTC"
+    commit-message:
+      prefix: "deps(bucket)"
+    labels:
+      - "dependencies"
+    groups:
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "@celerity-sdk/*"
+
+  # npm — @celerity-sdk/queue
+  - package-ecosystem: "npm"
+    directory: "/packages/queue"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:30"
+      timezone: "Etc/UTC"
+    commit-message:
+      prefix: "deps(queue)"
+    labels:
+      - "dependencies"
+    groups:
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "@celerity-sdk/*"
+
+  # npm — @celerity-sdk/topic
+  - package-ecosystem: "npm"
+    directory: "/packages/topic"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:30"
+      timezone: "Etc/UTC"
+    commit-message:
+      prefix: "deps(topic)"
+    labels:
+      - "dependencies"
+    groups:
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "@celerity-sdk/*"
+
+  # npm — @celerity-sdk/datastore
+  - package-ecosystem: "npm"
+    directory: "/packages/datastore"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:30"
+      timezone: "Etc/UTC"
+    commit-message:
+      prefix: "deps(datastore)"
+    labels:
+      - "dependencies"
+    groups:
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "@celerity-sdk/*"
+
+  # npm — @celerity-sdk/cache
+  - package-ecosystem: "npm"
+    directory: "/packages/cache"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:30"
+      timezone: "Etc/UTC"
+    commit-message:
+      prefix: "deps(cache)"
+    labels:
+      - "dependencies"
+    groups:
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "@celerity-sdk/*"

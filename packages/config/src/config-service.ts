@@ -1,5 +1,8 @@
+import createDebug from "debug";
 import type { Schema } from "@celerity-sdk/types";
 import type { ConfigBackend } from "./backends/types";
+
+const debug = createDebug("celerity:config");
 
 /**
  * A single config namespace backed by one celerity/config resource.
@@ -47,17 +50,25 @@ export class ConfigNamespace {
       now - this.lastFetchedAt >= this.refreshIntervalMs;
 
     if (this.values === null) {
+      debug("namespace %s: first fetch", this.storeId);
       this.values = await this.backend.fetch(this.storeId);
       this.lastFetchedAt = now;
+      debug("namespace %s: %d keys loaded", this.storeId, this.values.size);
     } else if (isStale) {
+      debug(
+        "namespace %s: stale (age=%dms), triggering background refresh",
+        this.storeId,
+        now - this.lastFetchedAt,
+      );
       void this.backend
         .fetch(this.storeId)
         .then((fresh) => {
           this.values = fresh;
           this.lastFetchedAt = Date.now();
+          debug("namespace %s: refreshed, %d keys", this.storeId, fresh.size);
         })
         .catch(() => {
-          // Refresh failure is non-fatal — keep serving stale values
+          debug("namespace %s: refresh failed, serving stale values", this.storeId);
         });
     }
 
@@ -73,6 +84,7 @@ export class ConfigService {
   private readonly namespaces = new Map<string, ConfigNamespace>();
 
   registerNamespace(name: string, namespace: ConfigNamespace): void {
+    debug("registerNamespace: %s", name);
     this.namespaces.set(name, namespace);
   }
 

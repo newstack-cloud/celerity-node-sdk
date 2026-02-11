@@ -3,6 +3,11 @@
   "version": "0.2.0",
   "description": "AWS Lambda adapter for the Celerity Node SDK — converts API Gateway events to SDK types",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/newstack-cloud/celerity-node-sdk.git",
+    "directory": "packages/serverless-aws"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -43,8 +48,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@celerity-sdk/core": "workspace:*",
-    "@celerity-sdk/types": "workspace:*"
+    "@celerity-sdk/core": "workspace:^",
+    "@celerity-sdk/types": "workspace:^",
+    "debug": "^4.4.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.160"
