@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.2.0...core/v0.2.1) (2026-02-11)
+
+
+### Bug Fixes
+
+* **core:** add support for serverless-style handler defs without routing info ([743ce02](https://github.com/newstack-cloud/celerity-node-sdk/commit/743ce02cc591bc7fd2f7961dbf9801fb6205b870))
+
 ## [0.2.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.1.0...core/v0.2.0) (2026-02-11)
 
 
