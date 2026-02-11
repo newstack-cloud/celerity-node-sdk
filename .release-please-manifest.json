@@ -11,5 +11,5 @@
   "packages/cache": "0.1.0",
   "packages/serverless-aws": "0.2.0",
   "packages/telemetry": "0.2.0",
-  "packages/cli": "0.1.0"
+  "packages/cli": "0.2.0"
 }
