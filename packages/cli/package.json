@@ -1,6 +1,6 @@
 {
   "name": "@celerity-sdk/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Build-time extraction tool for Celerity decorator metadata",
   "license": "Apache-2.0",
   "type": "module",
@@ -23,7 +23,10 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "schemas"],
+  "files": [
+    "dist",
+    "schemas"
+  ],
   "engines": {
     "node": ">=22.0.0"
   },
