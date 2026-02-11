@@ -31,8 +31,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@celerity-sdk/types": "workspace:*",
-    "@celerity-sdk/config": "workspace:*"
+    "@celerity-sdk/types": "workspace:^",
+    "@celerity-sdk/config": "workspace:^"
   },
   "peerDependencies": {
     "ioredis": "^5.0.0"
