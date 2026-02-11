@@ -998,4 +998,107 @@ describe("HandlerRegistry", () => {
       expect(handler!.layers).toHaveLength(2);
     });
   });
+
+  describe("getHandlerById — ID-based lookup", () => {
+    it("returns handler when id matches exactly", async () => {
+      // Arrange
+      const fnHandler: FunctionHandlerDefinition = {
+        __celerity_handler: true,
+        id: "app.module.getOrder",
+        type: "http",
+        metadata: {},
+        handler: vi.fn(),
+      };
+
+      @Module({ functionHandlers: [fnHandler] })
+      class FnModule {}
+      await registry.scanModule(FnModule, container);
+
+      // Act
+      const handler = registry.getHandlerById("app.module.getOrder");
+
+      // Assert
+      expect(handler).toBeDefined();
+      expect(handler!.id).toBe("app.module.getOrder");
+      expect(handler!.isFunctionHandler).toBe(true);
+    });
+
+    it("returns undefined when no handler matches the id", async () => {
+      // Arrange
+      const fnHandler: FunctionHandlerDefinition = {
+        __celerity_handler: true,
+        id: "app.module.getOrder",
+        type: "http",
+        metadata: {},
+        handler: vi.fn(),
+      };
+
+      @Module({ functionHandlers: [fnHandler] })
+      class FnModule {}
+      await registry.scanModule(FnModule, container);
+
+      // Act
+      const handler = registry.getHandlerById("app.module.listOrders");
+
+      // Assert
+      expect(handler).toBeUndefined();
+    });
+
+    it("does not match handlers without an id", async () => {
+      // Arrange
+      const fnHandler: FunctionHandlerDefinition = {
+        __celerity_handler: true,
+        type: "http",
+        metadata: { path: "/orders", method: "GET" },
+        handler: vi.fn(),
+      };
+
+      @Module({ functionHandlers: [fnHandler] })
+      class FnModule {}
+      await registry.scanModule(FnModule, container);
+
+      // Act
+      const handler = registry.getHandlerById("app.module.getOrders");
+
+      // Assert
+      expect(handler).toBeUndefined();
+    });
+
+    it("handler with both id and path/method is matchable by either method", async () => {
+      // Arrange
+      const fnHandler: FunctionHandlerDefinition = {
+        __celerity_handler: true,
+        id: "app.module.getOrder",
+        type: "http",
+        metadata: { path: "/orders/{orderId}", method: "GET" },
+        handler: vi.fn(),
+      };
+
+      @Module({ functionHandlers: [fnHandler] })
+      class FnModule {}
+      await registry.scanModule(FnModule, container);
+
+      // Act
+      const byId = registry.getHandlerById("app.module.getOrder");
+      const byRoute = registry.getHandler("/orders/123", "GET");
+
+      // Assert
+      expect(byId).toBeDefined();
+      expect(byRoute).toBeDefined();
+      expect(byId).toBe(byRoute);
+    });
+
+    it("does not match class handlers by id", async () => {
+      // Arrange — class handlers never have an id field
+      @Module({ controllers: [UserHandler] })
+      class M {}
+      await registry.scanModule(M, container);
+
+      // Act
+      const handler = registry.getHandlerById("UserHandler.findAll");
+
+      // Assert
+      expect(handler).toBeUndefined();
+    });
+  });
 });

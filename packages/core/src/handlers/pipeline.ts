@@ -17,6 +17,7 @@ import { HandlerMetadataStore } from "../metadata/handler-metadata";
 const debug = createDebug("celerity:core:pipeline");
 
 export type ResolvedHandler = {
+  id?: string;
   path?: string;
   method?: string;
   protectedBy: string[];

@@ -8,14 +8,15 @@ import { bootstrap } from "./bootstrap";
 import { mapRuntimeRequest, mapToRuntimeResponse } from "./runtime-mapper";
 import { createDefaultSystemLayers } from "../layers/system";
 
+type RuntimeCallback = (err: Error | null, request: RuntimeRequest) => Promise<RuntimeResponse>;
+
 export type RuntimeBootstrapResult = {
   registry: HandlerRegistry;
   container: Container;
   /** Create a runtime-compatible handler callback for a specific route. */
-  createRouteCallback(
-    path: string,
-    method: string,
-  ): ((err: Error | null, request: RuntimeRequest) => Promise<RuntimeResponse>) | null;
+  createRouteCallback(path: string, method: string): RuntimeCallback | null;
+  /** Create a runtime-compatible handler callback by handler ID (blueprint handler field). */
+  createRouteCallbackById(handlerId: string): RuntimeCallback | null;
 };
 
 /**
@@ -31,21 +32,29 @@ export async function bootstrapForRuntime(
   const rootModule = await discoverModule(modulePath);
   const { container, registry } = await bootstrap(rootModule);
 
+  function buildCallback(
+    handler: ReturnType<HandlerRegistry["getHandler"]>,
+  ): RuntimeCallback | null {
+    if (!handler) return null;
+
+    return async (_err: Error | null, request: RuntimeRequest): Promise<RuntimeResponse> => {
+      const httpRequest = mapRuntimeRequest(request);
+      const httpResponse = await executeHandlerPipeline(handler, httpRequest, {
+        container,
+        systemLayers: layers,
+      });
+      return mapToRuntimeResponse(httpResponse);
+    };
+  }
+
   return {
     registry,
     container,
     createRouteCallback(path: string, method: string) {
-      const handler = registry.getHandler(path, method);
-      if (!handler) return null;
-
-      return async (_err: Error | null, request: RuntimeRequest): Promise<RuntimeResponse> => {
-        const httpRequest = mapRuntimeRequest(request);
-        const httpResponse = await executeHandlerPipeline(handler, httpRequest, {
-          container,
-          systemLayers: layers,
-        });
-        return mapToRuntimeResponse(httpResponse);
-      };
+      return buildCallback(registry.getHandler(path, method));
+    },
+    createRouteCallbackById(handlerId: string) {
+      return buildCallback(registry.getHandlerById(handlerId));
     },
   };
 }

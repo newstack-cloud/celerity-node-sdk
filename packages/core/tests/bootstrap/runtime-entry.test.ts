@@ -79,4 +79,56 @@ describe("bootstrapForRuntime", () => {
 
     expect(result.registry.getHandler("/health", "GET")).toBeDefined();
   });
+
+  it("creates a route callback by handler ID", async () => {
+    const modulePath = resolve(fixturesDir, "test-module.ts");
+    const result = await bootstrapForRuntime(modulePath);
+
+    const callback = result.createRouteCallbackById("app.module.getOrder");
+    expect(callback).toBeTypeOf("function");
+  });
+
+  it("returns null for an unmatched handler ID", async () => {
+    const modulePath = resolve(fixturesDir, "test-module.ts");
+    const result = await bootstrapForRuntime(modulePath);
+
+    const callback = result.createRouteCallbackById("app.module.nonexistent");
+    expect(callback).toBeNull();
+  });
+
+  it("ID-based route callback maps request and returns response", async () => {
+    const modulePath = resolve(fixturesDir, "test-module.ts");
+    const result = await bootstrapForRuntime(modulePath);
+
+    const callback = result.createRouteCallbackById("app.module.getOrder");
+    expect(callback).not.toBeNull();
+
+    const mockRequest = {
+      method: "GET",
+      path: "/orders/abc-123",
+      pathParams: { orderId: "abc-123" },
+      query: {} as Record<string, string[]>,
+      headers: {} as Record<string, string[]>,
+      cookies: {},
+      textBody: null,
+      binaryBody: null,
+      contentType: "",
+      requestId: "test-req-2",
+      requestTime: "2026-01-01T00:00:00Z",
+      auth: null,
+      clientIp: "127.0.0.1",
+      traceContext: null,
+      userAgent: "test",
+      matchedRoute: "/orders/{orderId}",
+      httpVersion: "HTTP/1.1",
+      uri: "/orders/abc-123",
+    };
+
+    const response = await callback!(null, mockRequest as never);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toBeDefined();
+    const body = JSON.parse(response.body!);
+    expect(body).toEqual({ orderId: "abc-123" });
+  });
 });

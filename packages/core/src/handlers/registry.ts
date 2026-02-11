@@ -44,6 +44,12 @@ export class HandlerRegistry {
     return found;
   }
 
+  getHandlerById(id: string): ResolvedHandler | undefined {
+    const found = this.handlers.find((h) => h.id !== undefined && h.id === id);
+    debug("getHandlerById %s → %s", id, found ? "matched" : "not found");
+    return found;
+  }
+
   getAllHandlers(): ResolvedHandler[] {
     return [...this.handlers];
   }
@@ -162,9 +168,10 @@ export class HandlerRegistry {
 
     debug(
       "registerFunctionHandler: %s",
-      meta.method && meta.path ? `${meta.method} ${meta.path}` : "(no route)",
+      definition.id ?? (meta.method && meta.path ? `${meta.method} ${meta.path}` : "(no route)"),
     );
     this.handlers.push({
+      id: definition.id,
       path: meta.path,
       method: meta.method,
       protectedBy: [],
