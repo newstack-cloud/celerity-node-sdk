@@ -7,6 +7,7 @@ The official Node.js SDK for building [Celerity](https://celerityframework.com) 
 | Package | Description |
 |---|---|
 | [`@celerity-sdk/types`](./packages/types) | Shared TypeScript interfaces and types |
+| [`@celerity-sdk/common`](./packages/common) | Shared runtime utilities (auth helpers, path joining, etc.) |
 | [`@celerity-sdk/config`](./packages/config) | Configuration resolution, secret access, and platform detection |
 | [`@celerity-sdk/core`](./packages/core) | Application factory, decorators, DI, middleware, guards, and handler adapters |
 | [`@celerity-sdk/bucket`](./packages/bucket) | Object storage abstraction (S3 / GCS / Azure Blob) |
@@ -15,7 +16,9 @@ The official Node.js SDK for building [Celerity](https://celerityframework.com) 
 | [`@celerity-sdk/datastore`](./packages/datastore) | NoSQL data store abstraction (DynamoDB / Cloud Datastore / Cosmos DB) |
 | [`@celerity-sdk/sql-database`](./packages/sql-database) | SQL database abstraction |
 | [`@celerity-sdk/cache`](./packages/cache) | Cache abstraction (ElastiCache / Memorystore / Azure Cache for Redis) |
-| [`@celerity-sdk/cli`](./packages/cli) | Metadata extraction CLI tools |
+| [`@celerity-sdk/serverless-aws`](./packages/serverless-aws) | AWS Lambda adapter, API Gateway v2 event mapping, serverless entry point |
+| [`@celerity-sdk/telemetry`](./packages/telemetry) | Observability: pino-based logger, OTel tracing, auto-instrumentation |
+| [`@celerity-sdk/cli`](./packages/cli) | Build-time extraction tool for decorator metadata |
 
 ## Contributing
 
