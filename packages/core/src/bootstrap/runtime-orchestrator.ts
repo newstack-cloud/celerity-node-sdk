@@ -32,7 +32,7 @@ export async function startRuntime(options?: StartRuntimeOptions): Promise<void>
   for (const def of appConfig.api?.http?.handlers ?? []) {
     const callback =
       result.createRouteCallback(def.path, def.method) ??
-      result.createRouteCallbackById(def.handler);
+      (await result.createRouteCallbackById(def.handler, def.location));
     if (callback) {
       app.registerHttpHandler(def.path, def.method, def.timeout, callback);
     }

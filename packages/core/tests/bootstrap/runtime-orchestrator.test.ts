@@ -152,4 +152,37 @@ describe("startRuntime", () => {
     expect(mockRegisterHttpHandler).not.toHaveBeenCalled();
     expect(mockRun).toHaveBeenCalled();
   });
+
+  it("resolves handler via module reference when not matched by path or ID", async () => {
+    // Use no-id-module: the greet handler is registered in @Module without an ID
+    // and without path/method, so neither createRouteCallback nor direct
+    // getHandlerById will match. The module resolution fallback should resolve it.
+    process.env.CELERITY_MODULE_PATH = resolve(fixturesDir, "no-id-module.ts");
+
+    mockSetup.mockReturnValue({
+      api: {
+        http: {
+          handlers: [
+            {
+              path: "/greet",
+              method: "GET",
+              timeout: 30,
+              location: fixturesDir,
+              handler: "no-id-handlers.greet",
+            },
+          ],
+        },
+      },
+    });
+
+    await startRuntime();
+
+    expect(mockRegisterHttpHandler).toHaveBeenCalledTimes(1);
+    expect(mockRegisterHttpHandler).toHaveBeenCalledWith(
+      "/greet",
+      "GET",
+      30,
+      expect.any(Function),
+    );
+  });
 });
