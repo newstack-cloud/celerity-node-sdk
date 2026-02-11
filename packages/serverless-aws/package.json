@@ -43,8 +43,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@celerity-sdk/core": "workspace:*",
-    "@celerity-sdk/types": "workspace:*"
+    "@celerity-sdk/core": "workspace:^",
+    "@celerity-sdk/types": "workspace:^",
+    "debug": "^4.4.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.160"
