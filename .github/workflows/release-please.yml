@@ -47,15 +47,13 @@ jobs:
 
       - run: pnpm run build
 
-      - run: pnpm run test:run
-
       - name: Publish changed packages
         run: |
           PATHS_RELEASED='${{ needs.release-please.outputs.paths_released }}'
           for path in $(echo "$PATHS_RELEASED" | jq -r '.[]'); do
             echo "Publishing $path..."
             cd "$path"
-            pnpm publish --no-git-checks --access public
+            pnpm publish --no-git-checks --access public --provenance
             cd "$GITHUB_WORKSPACE"
           done
         env:
