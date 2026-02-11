@@ -18,6 +18,7 @@ module.exports = {
         "perf",
         "test",
         "instr",
+        "deps",
       ],
     ],
     "scope-enum": [
@@ -37,6 +38,9 @@ module.exports = {
         "serverless-aws",
         "telemetry",
         "cli",
+        "ci",
+        "repo",
+        "deps",
       ],
     ],
   },

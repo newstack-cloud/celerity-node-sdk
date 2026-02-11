@@ -1,3 +1,4 @@
+import createDebug from "debug";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import type { PipelineOptions } from "@celerity-sdk/core";
 import {
@@ -10,12 +11,15 @@ import {
 import type { HandlerRegistry } from "@celerity-sdk/core";
 import { mapApiGatewayV2Event, mapHttpResponseToResult } from "./event-mapper";
 
+const debug = createDebug("celerity:serverless-aws");
+
 let cached: { registry: HandlerRegistry; options: PipelineOptions } | null = null;
 let shutdownRegistered = false;
 
 function registerShutdownHandler(options: PipelineOptions): void {
   if (shutdownRegistered) return;
   shutdownRegistered = true;
+  debug("entry: SIGTERM shutdown handler registered");
 
   process.on("SIGTERM", async () => {
     await options.container.closeAll();
@@ -29,7 +33,9 @@ async function ensureBootstrapped(): Promise<{
   options: PipelineOptions;
 }> {
   if (!cached) {
+    debug("entry: cold start, bootstrapping");
     const systemLayers = await createDefaultSystemLayers();
+    debug("entry: %d system layers created", systemLayers.length);
     const rootModule = await discoverModule();
     const result = await bootstrap(rootModule);
     cached = {
@@ -39,6 +45,7 @@ async function ensureBootstrapped(): Promise<{
         systemLayers,
       },
     };
+    debug("entry: bootstrap complete");
   }
   return cached;
 }
@@ -48,6 +55,7 @@ export async function handler(event: unknown, _context: unknown): Promise<APIGat
   registerShutdownHandler(options);
   const apiEvent = event as APIGatewayProxyEventV2;
   const httpRequest = mapApiGatewayV2Event(apiEvent);
+  debug("entry: %s %s", httpRequest.method, httpRequest.path);
 
   const resolved = registry.getHandler(httpRequest.path, httpRequest.method);
   if (!resolved) {

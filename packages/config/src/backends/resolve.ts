@@ -1,9 +1,12 @@
+import createDebug from "debug";
 import type { ConfigBackend, AwsStoreKind } from "./types";
 import { AwsSecretsManagerBackend } from "./aws-secrets-manager";
 import { AwsParameterStoreBackend } from "./aws-parameter-store";
 import { AwsLambdaExtensionBackend } from "./aws-lambda-extension";
 import { LocalConfigBackend } from "./local";
 import { EmptyConfigBackend } from "./empty";
+
+const debug = createDebug("celerity:config:backend");
 
 /**
  * Selects the appropriate config backend based on platform and environment.
@@ -14,14 +17,25 @@ import { EmptyConfigBackend } from "./empty";
  * - Secrets Manager otherwise → direct SDK
  */
 export function resolveBackend(platform: string, storeKind: AwsStoreKind): ConfigBackend {
+  let backend: ConfigBackend;
   switch (platform) {
     case "aws":
-      return resolveAwsBackend(storeKind);
+      backend = resolveAwsBackend(storeKind);
+      break;
     case "local":
-      return new LocalConfigBackend();
+      backend = new LocalConfigBackend();
+      break;
     default:
-      return new EmptyConfigBackend();
+      backend = new EmptyConfigBackend();
+      break;
   }
+  debug(
+    "resolveBackend: platform=%s storeKind=%s → %s",
+    platform,
+    storeKind,
+    backend.constructor.name,
+  );
+  return backend;
 }
 
 function resolveAwsBackend(storeKind: AwsStoreKind): ConfigBackend {

@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "description": "SQL database abstraction for the Celerity Node SDK",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/newstack-cloud/celerity-node-sdk.git",
+    "directory": "packages/sql-database"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -19,7 +24,9 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "engines": {
     "node": ">=22.0.0"
   },
@@ -31,8 +38,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@celerity-sdk/types": "workspace:*",
-    "@celerity-sdk/config": "workspace:*"
+    "@celerity-sdk/types": "workspace:^",
+    "@celerity-sdk/config": "workspace:^"
   },
   "publishConfig": {
     "access": "public"

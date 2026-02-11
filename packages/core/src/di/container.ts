@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import createDebug from "debug";
 import type {
   Type,
   InjectionToken,
@@ -10,6 +11,8 @@ import type {
 } from "@celerity-sdk/types";
 import { INJECTABLE_METADATA } from "../metadata/constants";
 import { getClassDependencyTokens, getProviderDependencyTokens } from "./dependency-tokens";
+
+const debug = createDebug("celerity:core:di");
 
 type CloseEntry = {
   token: InjectionToken;
@@ -62,6 +65,12 @@ export class Container implements ServiceContainer {
   private trackedTokens = new Set<InjectionToken>();
 
   register<T>(token: InjectionToken, provider: Provider<T>): void {
+    const type = isClassProvider(provider)
+      ? "class"
+      : isFactoryProvider(provider)
+        ? "factory"
+        : "value";
+    debug("register %s (%s)", tokenToString(token), type);
     this.providers.set(token, provider);
 
     if (isValueProvider(provider)) {
@@ -70,16 +79,20 @@ export class Container implements ServiceContainer {
   }
 
   registerClass<T>(target: Type<T>): void {
+    debug("register %s (class)", target.name);
     this.providers.set(target, { useClass: target });
   }
 
   registerValue<T>(token: InjectionToken, value: T): void {
+    debug("registerValue %s", tokenToString(token));
     this.instances.set(token, value);
     this.trackCloseable(token, value);
   }
 
   async resolve<T>(token: InjectionToken): Promise<T> {
+    const name = tokenToString(token);
     if (this.instances.has(token)) {
+      debug("resolve %s → cached", name);
       return this.instances.get(token) as T;
     }
 
@@ -88,6 +101,7 @@ export class Container implements ServiceContainer {
       throw new Error(`Circular dependency detected: ${path}`);
     }
 
+    debug("resolve %s → constructing", name);
     this.resolving.add(token);
     try {
       const provider = this.providers.get(token);
@@ -146,9 +160,11 @@ export class Container implements ServiceContainer {
   }
 
   async closeAll(): Promise<void> {
+    debug("closeAll: %d resources", this.closeStack.length);
     const entries = [...this.closeStack].reverse();
     for (const entry of entries) {
       try {
+        debug("closing %s", tokenToString(entry.token));
         await entry.close();
       } catch {
         // Close failure is non-fatal — continue closing remaining services.
@@ -241,6 +257,7 @@ export class Container implements ServiceContainer {
     }
 
     const depTokens = this.getClassDependencyTokens(target);
+    debug("construct %s deps=[%s]", target.name, depTokens.map(tokenToString).join(", "));
     this.recordEdges(target, depTokens);
 
     const deps: unknown[] = [];

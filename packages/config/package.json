@@ -3,6 +3,11 @@
   "version": "0.2.0",
   "description": "Configuration resolution, secret access, and platform detection for the Celerity Node SDK",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/newstack-cloud/celerity-node-sdk.git",
+    "directory": "packages/config"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -33,7 +38,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@celerity-sdk/types": "workspace:*"
+    "@celerity-sdk/types": "workspace:^",
+    "debug": "^4.4.0"
   },
   "devDependencies": {
     "@aws-sdk/client-secrets-manager": "^3.750.0",

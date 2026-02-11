@@ -1,4 +1,7 @@
+import createDebug from "debug";
 import type { CelerityLayer, HandlerContext, HandlerResponse, Type } from "@celerity-sdk/types";
+
+const debug = createDebug("celerity:core:layers");
 
 export function runLayerPipeline(
   layers: (CelerityLayer | Type<CelerityLayer>)[],
@@ -6,6 +9,7 @@ export function runLayerPipeline(
   handler: () => Promise<HandlerResponse>,
 ): Promise<HandlerResponse> {
   const resolved = layers.map((layer) => (typeof layer === "function" ? new layer() : layer));
+  debug("runLayerPipeline: %d layers", resolved.length);
 
   let index = -1;
 
@@ -20,6 +24,7 @@ export function runLayerPipeline(
     }
 
     const current = resolved[i];
+    debug("layer[%d] %s", i, current.constructor.name);
     return current.handle(context, () => dispatch(i + 1));
   }
 
