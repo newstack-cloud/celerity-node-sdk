@@ -2,7 +2,6 @@ import "reflect-metadata";
 import type {
   HttpMethod,
   CelerityLayer,
-  ModuleMetadata,
   FunctionHandlerDefinition,
   Type,
   Schema,
@@ -16,7 +15,6 @@ import {
   PARAM_METADATA,
   GUARD_PROTECTEDBY_METADATA,
   LAYER_METADATA,
-  MODULE_METADATA,
   PUBLIC_METADATA,
   CUSTOM_METADATA,
 } from "../metadata/constants";
@@ -25,6 +23,7 @@ import type { ParamMetadata } from "../decorators/params";
 import type { ResolvedHandler } from "./pipeline";
 import { validate, type ValidationSchemas } from "../layers/validate";
 import type { Container } from "../di/container";
+import { buildModuleGraph, registerModuleGraph } from "../bootstrap/module-graph";
 import type { ModuleGraph } from "../bootstrap/module-graph";
 
 export class HandlerRegistry {
@@ -56,29 +55,9 @@ export class HandlerRegistry {
   }
 
   async scanModule(moduleClass: Type, container: Container): Promise<void> {
-    const metadata: ModuleMetadata | undefined = Reflect.getOwnMetadata(
-      MODULE_METADATA,
-      moduleClass,
-    );
-    if (!metadata) return;
-
-    if (metadata.imports) {
-      for (const imported of metadata.imports) {
-        await this.scanModule(imported, container);
-      }
-    }
-
-    if (metadata.controllers) {
-      for (const controllerClass of metadata.controllers) {
-        await this.registerClassHandler(controllerClass, container);
-      }
-    }
-
-    if (metadata.functionHandlers) {
-      for (const fnHandler of metadata.functionHandlers) {
-        this.registerFunctionHandler(fnHandler);
-      }
-    }
+    const graph = buildModuleGraph(moduleClass);
+    registerModuleGraph(graph, container);
+    await this.populateFromGraph(graph, container);
   }
 
   private async registerClassHandler(controllerClass: Type, container: Container): Promise<void> {

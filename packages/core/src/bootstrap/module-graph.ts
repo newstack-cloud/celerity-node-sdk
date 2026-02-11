@@ -9,6 +9,7 @@ import type {
 import { MODULE_METADATA } from "../metadata/constants";
 import type { Container } from "../di/container";
 import { tokenToString } from "../di/container";
+import { getClassDependencyTokens, getProviderDependencyTokens } from "../di/dependency-tokens";
 
 export type ModuleNode = {
   moduleClass: Type;
@@ -23,12 +24,12 @@ export type ModuleNode = {
 export type ModuleGraph = Map<Type, ModuleNode>;
 
 /**
- * Walks the module tree once, depth-first, registering providers in the container
- * and collecting all module metadata into a graph structure.
+ * Builds a module graph by walking the module tree depth-first, collecting
+ * all metadata into a graph structure without any side effects.
  *
  * Detects circular module imports and deduplicates visited modules.
  */
-export function walkModuleGraph(rootModule: Type, container: Container): ModuleGraph {
+export function buildModuleGraph(rootModule: Type): ModuleGraph {
   const graph: ModuleGraph = new Map();
   const resolving = new Set<Type>();
 
@@ -73,20 +74,15 @@ export function walkModuleGraph(rootModule: Type, container: Container): ModuleG
     for (const provider of providers) {
       if (typeof provider === "function") {
         ownTokens.add(provider);
-        container.registerClass(provider);
       } else {
         const typed = provider as Provider & { provide: InjectionToken };
         ownTokens.add(typed.provide);
-        container.register(typed.provide, typed);
       }
     }
 
-    // Controllers are also own tokens (they're auto-registered as class providers)
+    // Controllers are also own tokens
     const controllers = metadata.controllers ?? [];
     for (const controller of controllers) {
-      if (!container.has(controller)) {
-        container.registerClass(controller);
-      }
       ownTokens.add(controller);
     }
 
@@ -106,6 +102,41 @@ export function walkModuleGraph(rootModule: Type, container: Container): ModuleG
   }
 
   walk(rootModule, []);
+  return graph;
+}
+
+/**
+ * Registers all providers and controllers from the module graph into the
+ * DI container.
+ */
+export function registerModuleGraph(graph: ModuleGraph, container: Container): void {
+  for (const [, node] of graph) {
+    for (const provider of node.providers) {
+      if (typeof provider === "function") {
+        container.registerClass(provider);
+      } else {
+        const typed = provider as Provider & { provide: InjectionToken };
+        container.register(typed.provide, typed);
+      }
+    }
+
+    for (const controller of node.controllers) {
+      if (!container.has(controller)) {
+        container.registerClass(controller);
+      }
+    }
+  }
+}
+
+/**
+ * Walks the module tree once, depth-first, registering providers in the container
+ * and collecting all module metadata into a graph structure.
+ *
+ * Detects circular module imports and deduplicates visited modules.
+ */
+export function walkModuleGraph(rootModule: Type, container: Container): ModuleGraph {
+  const graph = buildModuleGraph(rootModule);
+  registerModuleGraph(graph, container);
   return graph;
 }
 
@@ -154,11 +185,11 @@ export function validateModuleGraph(graph: ModuleGraph, container: Container): v
 
       if (typeof provider === "function") {
         consumerToken = provider;
-        depTokens = container.getClassDependencyTokens(provider);
+        depTokens = getClassDependencyTokens(provider);
       } else {
         const typed = provider as Provider & { provide: InjectionToken };
         consumerToken = typed.provide;
-        depTokens = container.getProviderDependencyTokens(typed);
+        depTokens = getProviderDependencyTokens(typed);
       }
 
       checkDependencies(
@@ -174,7 +205,7 @@ export function validateModuleGraph(graph: ModuleGraph, container: Container): v
 
     // Validate each controller's dependencies
     for (const controller of node.controllers) {
-      const depTokens = container.getClassDependencyTokens(controller);
+      const depTokens = getClassDependencyTokens(controller);
       checkDependencies(
         controller,
         depTokens,
@@ -240,7 +271,7 @@ function checkDependencies(
       }
       visibleTokens.add(dep);
 
-      const adoptedDeps = container.getClassDependencyTokens(dep);
+      const adoptedDeps = getClassDependencyTokens(dep);
       checkDependencies(
         dep,
         adoptedDeps,

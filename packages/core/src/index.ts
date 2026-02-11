@@ -21,6 +21,7 @@ export { HandlerMetadataStore } from "./metadata/handler-metadata";
 
 // DI
 export { Container, tokenToString } from "./di/container";
+export { getClassDependencyTokens, getProviderDependencyTokens } from "./di/dependency-tokens";
 export { APP_CONFIG, RUNTIME_APP } from "./di/tokens";
 
 // Application
@@ -81,6 +82,7 @@ export {
 
 // Bootstrap
 export { bootstrap, discoverModule } from "./bootstrap/index";
+export { buildModuleGraph, registerModuleGraph } from "./bootstrap/index";
 export { bootstrapForRuntime } from "./bootstrap/index";
 export { startRuntime } from "./bootstrap/index";
 export {
@@ -121,4 +123,5 @@ export type { CreateOptions } from "./application/factory";
 export type { MockRequestOptions } from "./testing/test-app";
 export type { BootstrapResult } from "./bootstrap/index";
 export type { RuntimeBootstrapResult } from "./bootstrap/index";
+export type { ModuleNode, ModuleGraph } from "./bootstrap/index";
 export type { StartRuntimeOptions } from "./bootstrap/runtime-orchestrator";

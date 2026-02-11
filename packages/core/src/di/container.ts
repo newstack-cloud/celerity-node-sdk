@@ -8,7 +8,8 @@ import type {
   ValueProvider,
   ServiceContainer,
 } from "@celerity-sdk/types";
-import { INJECT_METADATA, INJECTABLE_METADATA } from "../metadata/constants";
+import { INJECTABLE_METADATA } from "../metadata/constants";
+import { getClassDependencyTokens, getProviderDependencyTokens } from "./dependency-tokens";
 
 type CloseEntry = {
   token: InjectionToken;
@@ -215,20 +216,11 @@ export class Container implements ServiceContainer {
   }
 
   getClassDependencyTokens(target: Type): InjectionToken[] {
-    const paramTypes: Type[] = Reflect.getMetadata("design:paramtypes", target) ?? [];
-    const injectOverrides: Map<number, InjectionToken> =
-      Reflect.getMetadata(INJECT_METADATA, target) ?? new Map();
-    return paramTypes.map((paramType, index) => injectOverrides.get(index) ?? paramType);
+    return getClassDependencyTokens(target);
   }
 
   getProviderDependencyTokens(provider: AnyProvider): InjectionToken[] {
-    if (isClassProvider(provider)) {
-      return this.getClassDependencyTokens(provider.useClass);
-    }
-    if (isFactoryProvider(provider) && provider.inject) {
-      return [...provider.inject];
-    }
-    return [];
+    return getProviderDependencyTokens(provider);
   }
 
   /**

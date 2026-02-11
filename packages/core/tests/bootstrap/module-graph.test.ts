@@ -1,6 +1,10 @@
 import "reflect-metadata";
 import { describe, it, expect, beforeEach } from "vitest";
-import { walkModuleGraph, validateModuleGraph } from "../../src/bootstrap/module-graph";
+import {
+  buildModuleGraph,
+  walkModuleGraph,
+  validateModuleGraph,
+} from "../../src/bootstrap/module-graph";
 import { Container } from "../../src/di/container";
 import { Module } from "../../src/decorators/module";
 import { Injectable, Inject } from "../../src/decorators/injectable";
@@ -32,6 +36,75 @@ class ServiceD {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+describe("buildModuleGraph", () => {
+  it("builds a pure graph without requiring a container", () => {
+    @Module({ providers: [ServiceA, ServiceB] })
+    class AppModule {}
+
+    const graph = buildModuleGraph(AppModule);
+
+    expect(graph.size).toBe(1);
+    const node = graph.get(AppModule)!;
+    expect(node.ownTokens.has(ServiceA)).toBe(true);
+    expect(node.ownTokens.has(ServiceB)).toBe(true);
+  });
+
+  it("detects circular imports", () => {
+    @Module({})
+    class ModuleA {}
+
+    @Module({ imports: [ModuleA] })
+    class ModuleB {}
+
+    Reflect.defineMetadata(MODULE_METADATA, { imports: [ModuleB] }, ModuleA);
+
+    expect(() => buildModuleGraph(ModuleA)).toThrow(/Circular module import detected/);
+  });
+
+  it("deduplicates visited modules", () => {
+    @Module({ providers: [ServiceA], exports: [ServiceA] })
+    class SharedModule {}
+
+    @Module({ imports: [SharedModule] })
+    class ModuleX {}
+
+    @Module({ imports: [SharedModule] })
+    class ModuleY {}
+
+    @Module({ imports: [ModuleX, ModuleY] })
+    class AppModule {}
+
+    const graph = buildModuleGraph(AppModule);
+
+    expect(graph.size).toBe(4);
+  });
+
+  it("collects providers, controllers, function handlers, and exports", () => {
+    @Controller("/test")
+    class TestController {
+      @Get("/")
+      get() {
+        return "ok";
+      }
+    }
+
+    @Module({
+      providers: [ServiceA],
+      controllers: [TestController],
+      exports: [ServiceA],
+    })
+    class AppModule {}
+
+    const graph = buildModuleGraph(AppModule);
+    const node = graph.get(AppModule)!;
+
+    expect(node.ownTokens.has(ServiceA)).toBe(true);
+    expect(node.ownTokens.has(TestController)).toBe(true);
+    expect(node.controllers).toEqual([TestController]);
+    expect(node.exports.has(ServiceA)).toBe(true);
+  });
+});
 
 describe("walkModuleGraph", () => {
   let container: Container;
