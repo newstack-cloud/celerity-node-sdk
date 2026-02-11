@@ -1,6 +1,10 @@
 {
   "name": "celerity-node-sdk",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/newstack-cloud/celerity-node-sdk.git"
+  },
   "packageManager": "pnpm@9.15.4",
   "engines": {
     "node": ">=22.0.0"

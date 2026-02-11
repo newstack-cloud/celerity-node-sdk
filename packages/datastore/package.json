@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "description": "NoSQL data store abstraction for the Celerity Node SDK (DynamoDB / Cloud Datastore / Cosmos DB)",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/newstack-cloud/celerity-node-sdk.git",
+    "directory": "packages/datastore"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -19,7 +24,9 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "engines": {
     "node": ">=22.0.0"
   },
@@ -41,10 +48,18 @@
     "@azure/cosmos": "^4.0.0"
   },
   "peerDependenciesMeta": {
-    "@aws-sdk/client-dynamodb": { "optional": true },
-    "@aws-sdk/lib-dynamodb": { "optional": true },
-    "@google-cloud/datastore": { "optional": true },
-    "@azure/cosmos": { "optional": true }
+    "@aws-sdk/client-dynamodb": {
+      "optional": true
+    },
+    "@aws-sdk/lib-dynamodb": {
+      "optional": true
+    },
+    "@google-cloud/datastore": {
+      "optional": true
+    },
+    "@azure/cosmos": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public"

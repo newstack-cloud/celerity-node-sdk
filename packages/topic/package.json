@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "description": "Pub/Sub topic abstraction for the Celerity Node SDK (SNS / Pub/Sub / Service Bus Topics)",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/newstack-cloud/celerity-node-sdk.git",
+    "directory": "packages/topic"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -19,7 +24,9 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "engines": {
     "node": ">=22.0.0"
   },
@@ -40,9 +47,15 @@
     "@azure/service-bus": "^7.0.0"
   },
   "peerDependenciesMeta": {
-    "@aws-sdk/client-sns": { "optional": true },
-    "@google-cloud/pubsub": { "optional": true },
-    "@azure/service-bus": { "optional": true }
+    "@aws-sdk/client-sns": {
+      "optional": true
+    },
+    "@google-cloud/pubsub": {
+      "optional": true
+    },
+    "@azure/service-bus": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public"

@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "description": "Core SDK for building Celerity applications — decorators, DI, middleware, guards, and handler adapters",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/newstack-cloud/celerity-node-sdk.git",
+    "directory": "packages/core"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -19,7 +24,9 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "engines": {
     "node": ">=22.0.0"
   },
