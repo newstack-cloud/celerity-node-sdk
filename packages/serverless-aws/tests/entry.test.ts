@@ -26,6 +26,8 @@ const mockExecuteHandlerPipeline = vi.fn();
 
 const mockCreateDefaultSystemLayers = vi.fn(async (..._args: unknown[]): Promise<unknown[]> => []);
 
+const mockResolveHandlerByModuleRef = vi.fn();
+
 vi.mock("@celerity-sdk/core", async () => {
   const actual = await vi.importActual<typeof import("@celerity-sdk/core")>("@celerity-sdk/core");
   return {
@@ -33,6 +35,7 @@ vi.mock("@celerity-sdk/core", async () => {
     bootstrap: (...args: unknown[]) => mockBootstrap(...args),
     executeHandlerPipeline: (...args: unknown[]) => mockExecuteHandlerPipeline(...args),
     createDefaultSystemLayers: (...args: unknown[]) => mockCreateDefaultSystemLayers(...args),
+    resolveHandlerByModuleRef: (...args: unknown[]) => mockResolveHandlerByModuleRef(...args),
     disposeLayers: actual.disposeLayers,
   };
 });
@@ -312,6 +315,7 @@ describe("handler (auto-bootstrap Lambda entry)", () => {
     process.env.CELERITY_HANDLER_ID = "app.module.nonexistent";
 
     mockGetHandlerById.mockReturnValue(undefined);
+    mockResolveHandlerByModuleRef.mockResolvedValue(null);
 
     const resolvedHandler = {
       path: "/items",
@@ -334,7 +338,75 @@ describe("handler (auto-bootstrap Lambda entry)", () => {
     const result = await handlerFn(event, {});
 
     expect(mockGetHandlerById).toHaveBeenCalledWith("app.module.nonexistent");
+    expect(mockResolveHandlerByModuleRef).toHaveBeenCalledWith(
+      "app.module.nonexistent",
+      mockRegistry,
+      expect.any(String),
+    );
     expect(mockGetHandler).toHaveBeenCalledWith("/items", "GET");
     expect(result.statusCode).toBe(200);
+  });
+
+  it("falls back to module resolution when handler ID direct lookup fails", async () => {
+    process.env.CELERITY_HANDLER_ID = "handlers.greet";
+
+    mockGetHandlerById.mockReturnValue(undefined);
+
+    const moduleResolved = {
+      id: "handlers.greet",
+      protectedBy: [],
+      layers: [],
+      isPublic: false,
+      paramMetadata: [],
+      customMetadata: {},
+      handlerFn: vi.fn(),
+      isFunctionHandler: true,
+    };
+
+    mockResolveHandlerByModuleRef.mockResolvedValue(moduleResolved);
+    mockExecuteHandlerPipeline.mockResolvedValue({
+      status: 200,
+      headers: { "content-type": "application/json" },
+      body: '{"greeting":"hello"}',
+    });
+
+    const event = makeApiGatewayEvent("GET", "/greet");
+    const result = await handlerFn(event, {});
+
+    expect(mockGetHandlerById).toHaveBeenCalledWith("handlers.greet");
+    expect(mockResolveHandlerByModuleRef).toHaveBeenCalledWith(
+      "handlers.greet",
+      mockRegistry,
+      expect.any(String),
+    );
+    expect(mockGetHandler).not.toHaveBeenCalled();
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toBe('{"greeting":"hello"}');
+  });
+
+  it("skips module resolution when no handler ID is set", async () => {
+    const resolvedHandler = {
+      path: "/items",
+      method: "GET",
+      protectedBy: [],
+      layers: [],
+      isPublic: true,
+      paramMetadata: [],
+      customMetadata: {},
+      handlerFn: vi.fn(),
+    };
+
+    mockGetHandler.mockReturnValue(resolvedHandler);
+    mockExecuteHandlerPipeline.mockResolvedValue({
+      status: 200,
+      body: '{"items":[]}',
+    });
+
+    const event = makeApiGatewayEvent("GET", "/items");
+    await handlerFn(event, {});
+
+    expect(mockGetHandlerById).not.toHaveBeenCalled();
+    expect(mockResolveHandlerByModuleRef).not.toHaveBeenCalled();
+    expect(mockGetHandler).toHaveBeenCalledWith("/items", "GET");
   });
 });

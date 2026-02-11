@@ -14,9 +14,19 @@ The `AwsLambdaAdapter` implements the `ServerlessAdapter` interface from `@celer
 
 1. Receives an API Gateway v2 proxy event
 2. Maps it to an `HttpRequest` via `mapApiGatewayV2Event`
-3. Resolves the matching handler from the registry
+3. Resolves the matching handler using the three-tier resolution chain (see below)
 4. Executes the full handler pipeline (system layers, app layers, handler layers, handler)
 5. Maps the `HttpResponse` back to an `APIGatewayProxyResultV2`
+
+### Handler Resolution
+
+When `CELERITY_HANDLER_ID` is set (typical for serverless deployments where each Lambda maps to a single handler), the adapter resolves the handler using a three-tier chain:
+
+1. **Direct registry lookup** — `registry.getHandlerById(CELERITY_HANDLER_ID)` for handlers with an explicit ID
+2. **Module resolution fallback** — dynamically imports the handler module and matches the exported function against the registry by reference. Supports formats like `"handlers.hello"` (named export) and `"handlers"` (default export). Dotted module names like `"app.module"` are handled by trying the named export split first, then falling back to the full string as a module with a default export.
+3. **Path/method routing** — falls back to matching the incoming request's HTTP method and path
+
+Resolution is cached: once a handler is matched on cold start, subsequent warm invocations use the cached handler directly without repeating the lookup.
 
 ### Event Mapping
 

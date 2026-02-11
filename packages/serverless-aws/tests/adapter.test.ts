@@ -1,6 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from "aws-lambda";
 import type { ResolvedHandler, PipelineOptions } from "@celerity-sdk/core";
+
+const mockResolveHandlerByModuleRef = vi.fn();
+
+vi.mock("@celerity-sdk/core", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@celerity-sdk/core")>();
+  return {
+    ...actual,
+    resolveHandlerByModuleRef: (...args: unknown[]) => mockResolveHandlerByModuleRef(...args),
+  };
+});
+
 import { AwsLambdaAdapter } from "../src/adapter";
 
 // ---------------------------------------------------------------------------
@@ -111,6 +122,7 @@ describe("AwsLambdaAdapter", () => {
   let adapter: AwsLambdaAdapter;
 
   beforeEach(() => {
+    mockResolveHandlerByModuleRef.mockReset();
     adapter = new AwsLambdaAdapter();
   });
 
@@ -350,6 +362,7 @@ describe("AwsLambdaAdapter", () => {
       const resolvedHandler = createResolvedHandler("/items", "GET");
       const registry = createMockRegistry([resolvedHandler]);
       process.env.CELERITY_HANDLER_ID = "app.module.nonexistent";
+      mockResolveHandlerByModuleRef.mockResolvedValue(null);
       // Construct adapter after setting env var — config is captured at construction time.
       const idAdapter = new AwsLambdaAdapter();
       const handler = idAdapter.createHandler(registry as never, mockOptions);
@@ -360,8 +373,129 @@ describe("AwsLambdaAdapter", () => {
 
       // Assert
       expect(registry.getHandlerById).toHaveBeenCalledWith("app.module.nonexistent");
+      expect(mockResolveHandlerByModuleRef).toHaveBeenCalledWith(
+        "app.module.nonexistent",
+        registry,
+        expect.any(String),
+      );
       expect(registry.getHandler).toHaveBeenCalledWith("/items", "GET");
       expect(result.statusCode).toBe(200);
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // Module resolution fallback
+  // ---------------------------------------------------------------
+  describe("module resolution fallback", () => {
+    afterEach(() => {
+      delete process.env.CELERITY_HANDLER_ID;
+      delete process.env.CELERITY_MODULE_PATH;
+    });
+
+    it("uses module resolution when handler ID lookup fails", async () => {
+      // Arrange
+      process.env.CELERITY_HANDLER_ID = "handlers.greet";
+      const moduleResolved: ResolvedHandler = {
+        id: "handlers.greet",
+        protectedBy: [],
+        layers: [],
+        isPublic: false,
+        paramMetadata: [],
+        customMetadata: {},
+        handlerFn: vi.fn(async () => ({
+          status: 200,
+          headers: { "content-type": "application/json" },
+          body: '{"greeting":"hello"}',
+        })),
+        isFunctionHandler: true,
+      };
+      mockResolveHandlerByModuleRef.mockResolvedValue(moduleResolved);
+
+      const registry = createMockRegistry();
+      const idAdapter = new AwsLambdaAdapter();
+      const handler = idAdapter.createHandler(registry as never, mockOptions);
+      const event = createApiGatewayEvent("GET", "/greet");
+
+      // Act
+      const result = (await handler(event, {})) as APIGatewayProxyStructuredResultV2;
+
+      // Assert
+      expect(registry.getHandlerById).toHaveBeenCalledWith("handlers.greet");
+      expect(mockResolveHandlerByModuleRef).toHaveBeenCalledWith(
+        "handlers.greet",
+        registry,
+        expect.any(String),
+      );
+      expect(registry.getHandler).not.toHaveBeenCalled();
+      expect(result.statusCode).toBe(200);
+      expect(result.body).toBe('{"greeting":"hello"}');
+    });
+
+    it("falls through to path/method when module resolution also fails", async () => {
+      // Arrange
+      process.env.CELERITY_HANDLER_ID = "handlers.missing";
+      mockResolveHandlerByModuleRef.mockResolvedValue(null);
+
+      const resolvedHandler = createResolvedHandler("/items", "GET");
+      const registry = createMockRegistry([resolvedHandler]);
+      const idAdapter = new AwsLambdaAdapter();
+      const handler = idAdapter.createHandler(registry as never, mockOptions);
+      const event = createApiGatewayEvent("GET", "/items");
+
+      // Act
+      const result = (await handler(event, {})) as APIGatewayProxyStructuredResultV2;
+
+      // Assert
+      expect(registry.getHandlerById).toHaveBeenCalledWith("handlers.missing");
+      expect(mockResolveHandlerByModuleRef).toHaveBeenCalled();
+      expect(registry.getHandler).toHaveBeenCalledWith("/items", "GET");
+      expect(result.statusCode).toBe(200);
+    });
+
+    it("skips module resolution when no handler ID is set", async () => {
+      // Arrange
+      const resolvedHandler = createResolvedHandler("/items", "GET");
+      const registry = createMockRegistry([resolvedHandler]);
+      const handler = adapter.createHandler(registry as never, mockOptions);
+      const event = createApiGatewayEvent("GET", "/items");
+
+      // Act
+      await handler(event, {});
+
+      // Assert
+      expect(mockResolveHandlerByModuleRef).not.toHaveBeenCalled();
+    });
+
+    it("caches handler resolved via module resolution", async () => {
+      // Arrange
+      process.env.CELERITY_HANDLER_ID = "handlers.greet";
+      const moduleResolved: ResolvedHandler = {
+        id: "handlers.greet",
+        protectedBy: [],
+        layers: [],
+        isPublic: false,
+        paramMetadata: [],
+        customMetadata: {},
+        handlerFn: vi.fn(async () => ({
+          status: 200,
+          headers: { "content-type": "application/json" },
+          body: '{"greeting":"hello"}',
+        })),
+        isFunctionHandler: true,
+      };
+      mockResolveHandlerByModuleRef.mockResolvedValue(moduleResolved);
+
+      const registry = createMockRegistry();
+      const idAdapter = new AwsLambdaAdapter();
+      const handler = idAdapter.createHandler(registry as never, mockOptions);
+      const event = createApiGatewayEvent("GET", "/greet");
+
+      // Act — invoke twice
+      await handler(event, {});
+      await handler(event, {});
+
+      // Assert — module resolution called only once (cached on second call)
+      expect(mockResolveHandlerByModuleRef).toHaveBeenCalledTimes(1);
     });
   });
 

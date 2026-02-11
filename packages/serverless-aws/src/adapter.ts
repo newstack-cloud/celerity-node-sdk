@@ -1,3 +1,4 @@
+import { dirname, resolve } from "node:path";
 import createDebug from "debug";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import type {
@@ -6,13 +7,14 @@ import type {
   ResolvedHandler,
   PipelineOptions,
 } from "@celerity-sdk/core";
-import { executeHandlerPipeline } from "@celerity-sdk/core";
+import { executeHandlerPipeline, resolveHandlerByModuleRef } from "@celerity-sdk/core";
 import { mapApiGatewayV2Event, mapHttpResponseToResult } from "./event-mapper";
 
 const debug = createDebug("celerity:serverless-aws");
 
 type AwsLambdaAdapterConfig = {
   handlerId?: string;
+  moduleDir: string;
 };
 
 export class AwsLambdaAdapter implements ServerlessAdapter {
@@ -41,10 +43,22 @@ export class AwsLambdaAdapter implements ServerlessAdapter {
           httpRequest.method,
           httpRequest.path,
         );
+
         cachedHandler =
           (this.config.handlerId ? registry.getHandlerById(this.config.handlerId) : undefined) ??
-          registry.getHandler(httpRequest.path, httpRequest.method) ??
           null;
+
+        if (!cachedHandler && this.config.handlerId) {
+          cachedHandler = await resolveHandlerByModuleRef(
+            this.config.handlerId,
+            registry,
+            this.config.moduleDir,
+          );
+        }
+
+        if (!cachedHandler) {
+          cachedHandler = registry.getHandler(httpRequest.path, httpRequest.method) ?? null;
+        }
       } else {
         debug("adapter: using cached handler for %s %s", httpRequest.method, httpRequest.path);
       }
@@ -67,7 +81,9 @@ export class AwsLambdaAdapter implements ServerlessAdapter {
 }
 
 function captureAwsLambdaConfig(): AwsLambdaAdapterConfig {
+  const modulePath = process.env.CELERITY_MODULE_PATH;
   return {
     handlerId: process.env.CELERITY_HANDLER_ID,
+    moduleDir: modulePath ? dirname(resolve(modulePath)) : process.cwd(),
   };
 }
