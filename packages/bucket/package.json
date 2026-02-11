@@ -1,6 +1,6 @@
 {
   "name": "@celerity-sdk/bucket",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "Object storage abstraction for the Celerity Node SDK (S3 / GCS / Azure Blob)",
   "license": "Apache-2.0",
   "repository": {

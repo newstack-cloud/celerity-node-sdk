@@ -1,15 +1,15 @@
 {
   "packages/types": "0.2.1",
-  "packages/common": "0.2.0",
-  "packages/config": "0.2.0",
+  "packages/common": "0.2.1",
+  "packages/config": "0.2.1",
   "packages/core": "0.2.1",
-  "packages/bucket": "0.1.0",
-  "packages/queue": "0.1.0",
-  "packages/topic": "0.1.0",
-  "packages/datastore": "0.1.0",
-  "packages/sql-database": "0.1.0",
-  "packages/cache": "0.1.0",
+  "packages/bucket": "0.2.1",
+  "packages/queue": "0.2.1",
+  "packages/topic": "0.2.1",
+  "packages/datastore": "0.2.1",
+  "packages/sql-database": "0.2.1",
+  "packages/cache": "0.2.1",
   "packages/serverless-aws": "0.2.1",
-  "packages/telemetry": "0.2.0",
-  "packages/cli": "0.2.0"
+  "packages/telemetry": "0.2.1",
+  "packages/cli": "0.2.1"
 }

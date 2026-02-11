@@ -1,6 +1,6 @@
 {
   "name": "@celerity-sdk/queue",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "Queue abstraction for the Celerity Node SDK (SQS / Pub/Sub / Service Bus)",
   "license": "Apache-2.0",
   "repository": {
