@@ -3,6 +3,11 @@
   "version": "0.2.0",
   "description": "Core SDK for building Celerity applications — decorators, DI, middleware, guards, and handler adapters",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/newstack-cloud/celerity-node-sdk.git",
+    "directory": "packages/core"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -33,9 +38,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@celerity-sdk/common": "workspace:*",
-    "@celerity-sdk/types": "workspace:*",
-    "@celerity-sdk/config": "workspace:*",
+    "@celerity-sdk/common": "workspace:^",
+    "@celerity-sdk/types": "workspace:^",
+    "@celerity-sdk/config": "workspace:^",
+    "debug": "^4.4.0",
     "reflect-metadata": "^0.2.0"
   },
   "peerDependencies": {

@@ -1,5 +1,8 @@
+import createDebug from "debug";
 import type { HttpMethod, HttpRequest, HttpResponse } from "@celerity-sdk/types";
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from "aws-lambda";
+
+const debug = createDebug("celerity:serverless-aws");
 
 function parseBody(event: APIGatewayProxyEventV2): {
   textBody: string | null;
@@ -62,7 +65,7 @@ export function mapApiGatewayV2Event(event: APIGatewayProxyEventV2): HttpRequest
   const contentType = (headers["content-type"] as string | undefined) ?? null;
   const xrayHeader = (headers["x-amzn-trace-id"] as string | undefined) ?? null;
 
-  return {
+  const request: HttpRequest = {
     method,
     path: event.rawPath,
     pathParams: parsePathParams(event),
@@ -80,6 +83,16 @@ export function mapApiGatewayV2Event(event: APIGatewayProxyEventV2): HttpRequest
     userAgent: event.requestContext.http.userAgent ?? null,
     matchedRoute: event.routeKey ?? null,
   };
+
+  debug(
+    "mapEvent: %s %s (auth=%s, traceContext=%s)",
+    method,
+    event.rawPath,
+    !!authorizer?.jwt?.claims,
+    !!xrayHeader,
+  );
+
+  return request;
 }
 
 export function mapHttpResponseToResult(response: HttpResponse): APIGatewayProxyStructuredResultV2 {

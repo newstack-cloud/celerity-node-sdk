@@ -1,3 +1,4 @@
+import createDebug from "debug";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
@@ -10,6 +11,8 @@ import { AWSXRayIdGenerator } from "@opentelemetry/id-generator-aws-xray";
 import { readTelemetryEnv } from "./env";
 import { buildInstrumentations } from "./instrumentations";
 
+const debug = createDebug("celerity:telemetry");
+
 let initialized = false;
 let sdk: NodeSDK | null = null;
 
@@ -18,13 +21,25 @@ export function isInitialized(): boolean {
 }
 
 export async function initTelemetry(): Promise<void> {
-  if (initialized) return;
+  if (initialized) {
+    debug("initTelemetry: already initialized, skipping");
+    return;
+  }
 
   const config = readTelemetryEnv();
-  if (!config.tracingEnabled) return;
+  if (!config.tracingEnabled) {
+    debug("initTelemetry: tracing disabled, skipping");
+    return;
+  }
 
   const platform = process.env.CELERITY_RUNTIME_PLATFORM ?? "local";
   const isAws = platform === "aws";
+  debug(
+    "initTelemetry: platform=%s endpoint=%s service=%s",
+    platform,
+    config.otlpEndpoint,
+    config.serviceName,
+  );
 
   const instrumentations = await buildInstrumentations();
 
@@ -46,10 +61,12 @@ export async function initTelemetry(): Promise<void> {
 
   sdk.start();
   initialized = true;
+  debug("initTelemetry: SDK started");
 }
 
 export async function shutdownTelemetry(): Promise<void> {
   if (sdk) {
+    debug("shutdownTelemetry: shutting down SDK");
     await sdk.shutdown();
     sdk = null;
     initialized = false;

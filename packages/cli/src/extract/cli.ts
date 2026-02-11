@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 
 import { resolve } from "node:path";
+import createDebug from "debug";
 import { buildScannedModule, validateScannedDependencies } from "./metadata-app";
 import { serializeManifest } from "./serializer";
 import type { Type } from "@celerity-sdk/types";
+
+const debug = createDebug("celerity:cli");
 
 interface CliArgs {
   module: string;
@@ -35,6 +38,7 @@ function parseArgs(argv: string[]): CliArgs {
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv);
+  debug("extract: module=%s projectRoot=%s", args.module, args.projectRoot);
 
   // Dynamically import the user's compiled module
   const imported = (await import(args.module)) as Record<string, unknown>;
@@ -46,12 +50,20 @@ async function main(): Promise<void> {
       `Could not find a module class in "${args.module}". Ensure the module is exported as the default export or as a named export.`,
     );
   }
+  debug("extract: root module found: %s", rootModule.name);
 
   // Scan metadata without instantiating anything
   const scanned = buildScannedModule(rootModule);
+  debug(
+    "extract: scanned %d controllers, %d function handlers, %d providers",
+    scanned.controllerClasses.length,
+    scanned.functionHandlers.length,
+    scanned.providers.length,
+  );
 
   // Validate dependency graph before proceeding
   const diagnostics = validateScannedDependencies(scanned);
+  debug("extract: %d dependency diagnostics", diagnostics.length);
   if (diagnostics.length > 0) {
     const details = diagnostics
       .map(

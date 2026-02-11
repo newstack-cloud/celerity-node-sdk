@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import createDebug from "debug";
 import type {
   Type,
   InjectionToken,
@@ -11,6 +12,8 @@ import {
   getProviderDependencyTokens,
 } from "@celerity-sdk/core";
 import type { ModuleGraph } from "@celerity-sdk/core";
+
+const debug = createDebug("celerity:cli");
 
 export type ScannedProvider = {
   token: InjectionToken;
@@ -64,7 +67,13 @@ export function buildScannedModule(rootModule: Type): ScannedModule {
   const providers: ScannedProvider[] = [];
   const seenTokens = new Set<InjectionToken>();
 
-  for (const [, node] of graph) {
+  for (const [moduleClass, node] of graph) {
+    debug(
+      "scan: module %s — %d providers, %d controllers",
+      moduleClass.name,
+      node.providers.length,
+      node.controllers.length,
+    );
     for (const provider of node.providers) {
       const scanned = scanProvider(provider, seenTokens);
       if (scanned) providers.push(scanned);

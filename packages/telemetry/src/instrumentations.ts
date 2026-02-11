@@ -1,6 +1,9 @@
+import createDebug from "debug";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { UndiciInstrumentation } from "@opentelemetry/instrumentation-undici";
 import type { Instrumentation } from "@opentelemetry/instrumentation";
+
+const debug = createDebug("celerity:telemetry");
 
 export async function buildInstrumentations(): Promise<Instrumentation[]> {
   // Core instrumentation: always active — covers all HTTP/HTTPS and fetch() calls
@@ -24,12 +27,13 @@ export async function buildInstrumentations(): Promise<Instrumentation[]> {
       const mod = (await import(pkg)) as Record<string, unknown>;
       const InstrumentationClass = findInstrumentationExport(mod);
       if (InstrumentationClass) {
+        debug("instrumentation: loaded %s", name);
         instrumentations.push(new InstrumentationClass() as Instrumentation);
       }
     } catch (err) {
       const code = (err as { code?: string }).code;
       if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND") {
-        console.warn(`[celerity] Failed to load optional instrumentation ${name}:`, err);
+        debug("instrumentation: failed to load %s: %O", name, err);
       }
     }
   }
