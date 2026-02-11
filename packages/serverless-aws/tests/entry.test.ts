@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
+import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from "aws-lambda";
 
 // Mock @celerity-sdk/core
 const mockGetHandler = vi.fn();
+const mockGetHandlerById = vi.fn();
 const mockRegistry = {
   getHandler: mockGetHandler,
+  getHandlerById: mockGetHandlerById,
   getAllHandlers: vi.fn(() => []),
   scanModule: vi.fn(async () => {}),
 };
@@ -13,16 +15,16 @@ const mockContainer = {
   closeAll: vi.fn().mockResolvedValue(undefined),
 };
 
-const mockBootstrap = vi.fn(async () => ({
+const mockBootstrap = vi.fn(async (..._args: unknown[]) => ({
   container: mockContainer,
   registry: mockRegistry,
 }));
 
-const mockDiscoverModule = vi.fn(async () => class TestModule {});
+const mockDiscoverModule = vi.fn(async (..._args: unknown[]) => class TestModule {});
 
 const mockExecuteHandlerPipeline = vi.fn();
 
-const mockCreateDefaultSystemLayers = vi.fn(async () => []);
+const mockCreateDefaultSystemLayers = vi.fn(async (..._args: unknown[]): Promise<unknown[]> => []);
 
 vi.mock("@celerity-sdk/core", async () => {
   const actual = await vi.importActual<typeof import("@celerity-sdk/core")>("@celerity-sdk/core");
@@ -37,18 +39,19 @@ vi.mock("@celerity-sdk/core", async () => {
 
 // Must re-import to get fresh module state — use dynamic import
 // and reset the cached registry between tests
-let handlerFn: (event: unknown, context: unknown) => Promise<APIGatewayProxyResultV2>;
+let handlerFn: (event: unknown, context: unknown) => Promise<APIGatewayProxyStructuredResultV2>;
 
 beforeEach(async () => {
   vi.clearAllMocks();
   // Re-import the module fresh to reset cachedRegistry
   vi.resetModules();
   const entry = await import("../src/entry");
-  handlerFn = entry.handler;
+  handlerFn = entry.handler as (event: unknown, context: unknown) => Promise<APIGatewayProxyStructuredResultV2>;
 });
 
 afterEach(() => {
   delete process.env.CELERITY_MODULE_PATH;
+  delete process.env.CELERITY_HANDLER_ID;
   process.removeAllListeners("SIGTERM");
 });
 
@@ -185,7 +188,6 @@ describe("handler (auto-bootstrap Lambda entry)", () => {
     });
 
     const mockLayer = {
-      init: vi.fn(),
       handle: vi.fn(),
       dispose: vi.fn(async () => {
         order.push("layer");
@@ -246,5 +248,93 @@ describe("handler (auto-bootstrap Lambda entry)", () => {
     expect(exitSpy).toHaveBeenCalledWith(0);
 
     exitSpy.mockRestore();
+  });
+
+  it("resolves handler by CELERITY_HANDLER_ID when env var is set", async () => {
+    process.env.CELERITY_HANDLER_ID = "app.module.getOrder";
+
+    const resolvedHandler = {
+      id: "app.module.getOrder",
+      path: undefined,
+      method: undefined,
+      protectedBy: [],
+      layers: [],
+      isPublic: false,
+      paramMetadata: [],
+      customMetadata: {},
+      handlerFn: vi.fn(),
+      isFunctionHandler: true,
+    };
+
+    mockGetHandlerById.mockReturnValue(resolvedHandler);
+    mockExecuteHandlerPipeline.mockResolvedValue({
+      status: 200,
+      headers: { "content-type": "application/json" },
+      body: '{"orderId":"123"}',
+    });
+
+    const event = makeApiGatewayEvent("GET", "/orders/123");
+    const result = await handlerFn(event, {});
+
+    expect(mockGetHandlerById).toHaveBeenCalledWith("app.module.getOrder");
+    expect(mockGetHandler).not.toHaveBeenCalled();
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toBe('{"orderId":"123"}');
+  });
+
+  it("falls back to path/method when CELERITY_HANDLER_ID is not set", async () => {
+    const resolvedHandler = {
+      path: "/items",
+      method: "GET",
+      protectedBy: [],
+      layers: [],
+      isPublic: true,
+      paramMetadata: [],
+      customMetadata: {},
+      handlerFn: vi.fn(),
+    };
+
+    mockGetHandler.mockReturnValue(resolvedHandler);
+    mockExecuteHandlerPipeline.mockResolvedValue({
+      status: 200,
+      body: '{"items":[]}',
+    });
+
+    const event = makeApiGatewayEvent("GET", "/items");
+    const result = await handlerFn(event, {});
+
+    expect(mockGetHandlerById).not.toHaveBeenCalled();
+    expect(mockGetHandler).toHaveBeenCalledWith("/items", "GET");
+    expect(result.statusCode).toBe(200);
+  });
+
+  it("falls back to path/method when CELERITY_HANDLER_ID yields no match", async () => {
+    process.env.CELERITY_HANDLER_ID = "app.module.nonexistent";
+
+    mockGetHandlerById.mockReturnValue(undefined);
+
+    const resolvedHandler = {
+      path: "/items",
+      method: "GET",
+      protectedBy: [],
+      layers: [],
+      isPublic: true,
+      paramMetadata: [],
+      customMetadata: {},
+      handlerFn: vi.fn(),
+    };
+
+    mockGetHandler.mockReturnValue(resolvedHandler);
+    mockExecuteHandlerPipeline.mockResolvedValue({
+      status: 200,
+      body: '{"items":[]}',
+    });
+
+    const event = makeApiGatewayEvent("GET", "/items");
+    const result = await handlerFn(event, {});
+
+    expect(mockGetHandlerById).toHaveBeenCalledWith("app.module.nonexistent");
+    expect(mockGetHandler).toHaveBeenCalledWith("/items", "GET");
+    expect(result.statusCode).toBe(200);
   });
 });

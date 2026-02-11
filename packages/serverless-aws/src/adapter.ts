@@ -11,7 +11,20 @@ import { mapApiGatewayV2Event, mapHttpResponseToResult } from "./event-mapper";
 
 const debug = createDebug("celerity:serverless-aws");
 
+type AwsLambdaAdapterConfig = {
+  handlerId?: string;
+};
+
 export class AwsLambdaAdapter implements ServerlessAdapter {
+  config: AwsLambdaAdapterConfig;
+
+  constructor() {
+    // Capture config from environment variables on construction
+    // to take a snapshot at the initialisation phase similarly to
+    // how layers capture config.
+    this.config = captureAwsLambdaConfig();
+  }
+
   createHandler(
     registry: HandlerRegistry,
     options: PipelineOptions,
@@ -28,7 +41,10 @@ export class AwsLambdaAdapter implements ServerlessAdapter {
           httpRequest.method,
           httpRequest.path,
         );
-        cachedHandler = registry.getHandler(httpRequest.path, httpRequest.method) ?? null;
+        cachedHandler =
+          (this.config.handlerId ? registry.getHandlerById(this.config.handlerId) : undefined) ??
+          registry.getHandler(httpRequest.path, httpRequest.method) ??
+          null;
       } else {
         debug("adapter: using cached handler for %s %s", httpRequest.method, httpRequest.path);
       }
@@ -48,4 +64,10 @@ export class AwsLambdaAdapter implements ServerlessAdapter {
       return mapHttpResponseToResult(httpResponse);
     };
   }
+}
+
+function captureAwsLambdaConfig(): AwsLambdaAdapterConfig {
+  return {
+    handlerId: process.env.CELERITY_HANDLER_ID,
+  };
 }

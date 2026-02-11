@@ -57,7 +57,10 @@ export async function handler(event: unknown, _context: unknown): Promise<APIGat
   const httpRequest = mapApiGatewayV2Event(apiEvent);
   debug("entry: %s %s", httpRequest.method, httpRequest.path);
 
-  const resolved = registry.getHandler(httpRequest.path, httpRequest.method);
+  const handlerId = process.env.CELERITY_HANDLER_ID;
+  const resolved =
+    (handlerId ? registry.getHandlerById(handlerId) : undefined) ??
+    registry.getHandler(httpRequest.path, httpRequest.method);
   if (!resolved) {
     return {
       statusCode: 404,

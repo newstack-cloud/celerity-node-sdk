@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from "aws-lambda";
 import type { ResolvedHandler, PipelineOptions } from "@celerity-sdk/core";
 import { AwsLambdaAdapter } from "../src/adapter";
@@ -15,6 +15,9 @@ function createMockRegistry(handlers: ResolvedHandler[] = []) {
   return {
     getHandler: vi.fn((path: string, method: string) => {
       return handlers.find((h) => h.path != null && matchRoute(h.path, path) && h.method === method);
+    }),
+    getHandlerById: vi.fn((id: string) => {
+      return handlers.find((h) => h.id === id);
     }),
     getAllHandlers: vi.fn(() => [...handlers]),
     scanModule: vi.fn(async () => {}),
@@ -283,6 +286,82 @@ describe("AwsLambdaAdapter", () => {
 
       // Assert — getHandler should be called each time since null was never cached
       expect(registry.getHandler).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // CELERITY_HANDLER_ID env var lookup
+  // ---------------------------------------------------------------
+  describe("CELERITY_HANDLER_ID lookup", () => {
+    afterEach(() => {
+      delete process.env.CELERITY_HANDLER_ID;
+    });
+
+    it("resolves handler by CELERITY_HANDLER_ID when env var is set", async () => {
+      // Arrange
+      const resolvedHandler: ResolvedHandler = {
+        id: "app.module.getOrder",
+        protectedBy: [],
+        layers: [],
+        isPublic: false,
+        paramMetadata: [],
+        customMetadata: {},
+        handlerFn: vi.fn(async () => ({
+          status: 200,
+          headers: { "content-type": "application/json" },
+          body: '{"orderId":"123"}',
+        })),
+        isFunctionHandler: true,
+      };
+      const registry = createMockRegistry([resolvedHandler]);
+      process.env.CELERITY_HANDLER_ID = "app.module.getOrder";
+      // Construct adapter after setting env var — config is captured at construction time.
+      const idAdapter = new AwsLambdaAdapter();
+      const handler = idAdapter.createHandler(registry as never, mockOptions);
+      const event = createApiGatewayEvent("GET", "/orders/123");
+
+      // Act
+      const result = (await handler(event, {})) as APIGatewayProxyStructuredResultV2;
+
+      // Assert
+      expect(registry.getHandlerById).toHaveBeenCalledWith("app.module.getOrder");
+      expect(registry.getHandler).not.toHaveBeenCalled();
+      expect(result.statusCode).toBe(200);
+    });
+
+    it("falls back to path/method when CELERITY_HANDLER_ID is not set", async () => {
+      // Arrange
+      const resolvedHandler = createResolvedHandler("/items", "GET");
+      const registry = createMockRegistry([resolvedHandler]);
+      const handler = adapter.createHandler(registry as never, mockOptions);
+      const event = createApiGatewayEvent("GET", "/items");
+
+      // Act
+      const result = (await handler(event, {})) as APIGatewayProxyStructuredResultV2;
+
+      // Assert
+      expect(registry.getHandlerById).not.toHaveBeenCalled();
+      expect(registry.getHandler).toHaveBeenCalledWith("/items", "GET");
+      expect(result.statusCode).toBe(200);
+    });
+
+    it("falls back to path/method when CELERITY_HANDLER_ID yields no match", async () => {
+      // Arrange
+      const resolvedHandler = createResolvedHandler("/items", "GET");
+      const registry = createMockRegistry([resolvedHandler]);
+      process.env.CELERITY_HANDLER_ID = "app.module.nonexistent";
+      // Construct adapter after setting env var — config is captured at construction time.
+      const idAdapter = new AwsLambdaAdapter();
+      const handler = idAdapter.createHandler(registry as never, mockOptions);
+      const event = createApiGatewayEvent("GET", "/items");
+
+      // Act
+      const result = (await handler(event, {})) as APIGatewayProxyStructuredResultV2;
+
+      // Assert
+      expect(registry.getHandlerById).toHaveBeenCalledWith("app.module.nonexistent");
+      expect(registry.getHandler).toHaveBeenCalledWith("/items", "GET");
+      expect(result.statusCode).toBe(200);
     });
   });
 
