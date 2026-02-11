@@ -1,5 +1,8 @@
 import { resolve } from "node:path";
+import createDebug from "debug";
 import type { Type } from "@celerity-sdk/types";
+
+const debug = createDebug("celerity:core:bootstrap");
 
 /** Discover and dynamically import the user's root module. */
 export async function discoverModule(modulePath?: string): Promise<Type> {
@@ -11,6 +14,7 @@ export async function discoverModule(modulePath?: string): Promise<Type> {
   }
 
   const absolutePath = resolve(resolved);
+  debug("discoverModule: importing %s", absolutePath);
   const imported = (await import(absolutePath)) as Record<string, unknown>;
   const rootModule = imported.default ?? findModuleExport(imported);
 
@@ -18,6 +22,7 @@ export async function discoverModule(modulePath?: string): Promise<Type> {
     throw new Error(`No module class found in "${resolved}"`);
   }
 
+  debug("discoverModule: found %s", (rootModule as Type).name);
   return rootModule as Type;
 }
 

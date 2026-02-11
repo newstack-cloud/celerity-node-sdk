@@ -1,8 +1,11 @@
+import createDebug from "debug";
 import type { CelerityLayer, HandlerContext, HandlerResponse } from "@celerity-sdk/types";
 import type { AwsStoreKind } from "./backends/types";
 import { CelerityConfig, DeployTarget, Platform } from "./env";
 import { resolveBackend } from "./backends/resolve";
 import { ConfigService, ConfigNamespace } from "./config-service";
+
+const debug = createDebug("celerity:config");
 
 const CONFIG_SERVICE_TOKEN = "ConfigService";
 
@@ -33,9 +36,18 @@ export class ConfigLayer implements CelerityLayer {
     if (!this.initialized) {
       const platform = CelerityConfig.getPlatform();
       this.settings = captureConfigLayerSettings(platform);
+      debug(
+        "ConfigLayer: platform=%s storeId=%s storeKind=%s deployTarget=%s refreshIntervalMs=%s",
+        this.settings.platform,
+        this.settings.storeId || "(none)",
+        this.settings.storeKind ?? "(default)",
+        this.settings.deployTarget,
+        this.settings.refreshIntervalMs ?? "disabled",
+      );
       const service = buildConfigService(this.settings);
 
       context.container.register(CONFIG_SERVICE_TOKEN, { useValue: service });
+      debug("ConfigLayer: registered ConfigService");
       this.initialized = true;
     }
 
@@ -67,6 +79,7 @@ function buildConfigService(settings: ConfigLayerSettings): ConfigService {
   const service = new ConfigService();
   const namespaces = discoverNamespaces(settings);
 
+  debug("ConfigLayer: %d namespaces discovered", namespaces.length);
   if (namespaces.length === 0) {
     return service;
   }

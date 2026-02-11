@@ -1,3 +1,4 @@
+import createDebug from "debug";
 import { context as otelContext } from "@opentelemetry/api";
 import type {
   CelerityLayer,
@@ -15,6 +16,8 @@ import { extractTraceContext } from "./context";
 import { OTelTracer } from "./tracer";
 import { NoopTracer } from "./noop";
 import { LOGGER_TOKEN, TRACER_TOKEN } from "./tokens";
+
+const debugLog = createDebug("celerity:telemetry");
 
 const LOG_LEVEL_CONFIG_KEYS = [
   "CELERITY_LOG_LEVEL",
@@ -54,6 +57,11 @@ export class TelemetryLayer implements CelerityLayer {
     }
 
     if (!this.rootLogger) {
+      debugLog(
+        "creating root logger (format=%s, level=%s)",
+        this.config.logFormat,
+        this.config.logLevel,
+      );
       this.rootLogger = createLogger(this.config);
       context.container.register(LOGGER_TOKEN, {
         useValue: new ContextAwareLogger(this.rootLogger),
@@ -61,6 +69,7 @@ export class TelemetryLayer implements CelerityLayer {
       context.container.register(TRACER_TOKEN, {
         useValue: this.config.tracingEnabled ? new OTelTracer() : new NoopTracer(),
       });
+      debugLog("registered logger and tracer (tracing=%s)", this.config.tracingEnabled);
     }
 
     await this.refreshLogLevelFromConfig(context.container);
@@ -97,6 +106,7 @@ export class TelemetryLayer implements CelerityLayer {
       for (const key of LOG_LEVEL_CONFIG_KEYS) {
         const value = await configService.get(key);
         if (value && VALID_LOG_LEVELS.has(value) && value !== this.currentLevel) {
+          debugLog("log level changed %s → %s", this.currentLevel, value);
           this.rootLogger?.setLevel(value as LogLevel);
           this.currentLevel = value as LogLevel;
           return;

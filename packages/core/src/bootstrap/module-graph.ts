@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import createDebug from "debug";
 import type {
   Type,
   InjectionToken,
@@ -10,6 +11,8 @@ import { MODULE_METADATA } from "../metadata/constants";
 import type { Container } from "../di/container";
 import { tokenToString } from "../di/container";
 import { getClassDependencyTokens, getProviderDependencyTokens } from "../di/dependency-tokens";
+
+const debug = createDebug("celerity:core:bootstrap");
 
 export type ModuleNode = {
   moduleClass: Type;
@@ -34,7 +37,10 @@ export function buildModuleGraph(rootModule: Type): ModuleGraph {
   const resolving = new Set<Type>();
 
   function walk(moduleClass: Type, importChain: Type[]): void {
-    if (graph.has(moduleClass)) return;
+    if (graph.has(moduleClass)) {
+      debug("walk %s → already visited", moduleClass.name);
+      return;
+    }
 
     if (resolving.has(moduleClass)) {
       const cyclePath = [...importChain, moduleClass].map((m) => m.name).join(" → ");
@@ -90,6 +96,13 @@ export function buildModuleGraph(rootModule: Type): ModuleGraph {
     const exportTokens = new Set<InjectionToken>(metadata.exports ?? []);
 
     resolving.delete(moduleClass);
+    debug(
+      "walk %s: %d providers, %d controllers, %d imports",
+      moduleClass.name,
+      providers.length,
+      controllers.length,
+      imports.length,
+    );
     graph.set(moduleClass, {
       moduleClass,
       ownTokens,
@@ -217,6 +230,8 @@ export function validateModuleGraph(graph: ModuleGraph, container: Container): v
       );
     }
   }
+
+  debug("validateModuleGraph: %d modules, %d diagnostics", graph.size, diagnostics.length);
 
   if (diagnostics.length > 0) {
     const details = diagnostics.map((d) => `  ${d.message}`).join("\n");

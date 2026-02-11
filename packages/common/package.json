@@ -3,6 +3,11 @@
   "version": "0.2.0",
   "description": "Shared runtime utilities for the Celerity Node SDK",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/newstack-cloud/celerity-node-sdk.git",
+    "directory": "packages/common"
+  },
   "type": "module",
   "exports": {
     ".": {

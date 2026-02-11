@@ -23,12 +23,15 @@ importers:
       '@swc/core':
         specifier: ^1.15.11
         version: 1.15.11
+      '@types/debug':
+        specifier: ^4.1.0
+        version: 4.1.12
       '@types/node':
         specifier: ^25.2.2
         version: 25.2.2
       '@vitest/coverage-v8':
         specifier: ^3.2.4
-        version: 3.2.4(vitest@3.2.4(@types/node@25.2.2)(jiti@2.6.1))
+        version: 3.2.4(vitest@3.2.4(@types/debug@4.1.12)(@types/node@25.2.2)(jiti@2.6.1))
       eslint:
         specifier: ^9.0.0
         version: 9.39.2(jiti@2.6.1)
@@ -52,37 +55,40 @@ importers:
         version: 1.5.9(@swc/core@1.15.11)(rollup@4.57.1)
       vitest:
         specifier: ^3.0.0
-        version: 3.2.4(@types/node@25.2.2)(jiti@2.6.1)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@25.2.2)(jiti@2.6.1)
 
   packages/bucket:
     dependencies:
       '@celerity-sdk/config':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../config
       '@celerity-sdk/types':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../types
 
   packages/cache:
     dependencies:
       '@celerity-sdk/config':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../config
       '@celerity-sdk/types':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../types
 
   packages/cli:
     dependencies:
       '@celerity-sdk/common':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../common
       '@celerity-sdk/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@celerity-sdk/types':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../types
+      debug:
+        specifier: ^4.4.0
+        version: 4.4.3
       reflect-metadata:
         specifier: ^0.2.0
         version: 0.2.2
@@ -96,8 +102,11 @@ importers:
   packages/config:
     dependencies:
       '@celerity-sdk/types':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../types
+      debug:
+        specifier: ^4.4.0
+        version: 4.4.3
     devDependencies:
       '@aws-sdk/client-secrets-manager':
         specifier: ^3.750.0
@@ -112,14 +121,17 @@ importers:
   packages/core:
     dependencies:
       '@celerity-sdk/common':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../common
       '@celerity-sdk/config':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../config
       '@celerity-sdk/types':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../types
+      debug:
+        specifier: ^4.4.0
+        version: 4.4.3
       reflect-metadata:
         specifier: ^0.2.0
         version: 0.2.2
@@ -127,29 +139,32 @@ importers:
   packages/datastore:
     dependencies:
       '@celerity-sdk/config':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../config
       '@celerity-sdk/types':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../types
 
   packages/queue:
     dependencies:
       '@celerity-sdk/config':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../config
       '@celerity-sdk/types':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../types
 
   packages/serverless-aws:
     dependencies:
       '@celerity-sdk/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@celerity-sdk/types':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../types
+      debug:
+        specifier: ^4.4.0
+        version: 4.4.3
     devDependencies:
       '@types/aws-lambda':
         specifier: ^8.10.160
@@ -158,19 +173,19 @@ importers:
   packages/sql-database:
     dependencies:
       '@celerity-sdk/config':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../config
       '@celerity-sdk/types':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../types
 
   packages/telemetry:
     dependencies:
       '@celerity-sdk/common':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../common
       '@celerity-sdk/types':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../types
       '@opentelemetry/api':
         specifier: ^1.9.0
@@ -217,6 +232,9 @@ importers:
       '@opentelemetry/semantic-conventions':
         specifier: ^1.25.0
         version: 1.39.0
+      debug:
+        specifier: ^4.4.0
+        version: 4.4.3
       pino:
         specifier: ^10.0.0
         version: 10.3.1
@@ -228,10 +246,10 @@ importers:
   packages/topic:
     dependencies:
       '@celerity-sdk/config':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../config
       '@celerity-sdk/types':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../types
 
   packages/types: {}
@@ -1421,6 +1439,9 @@ packages:
   '@types/conventional-commits-parser@5.0.2':
     resolution: {integrity: sha512-BgT2szDXnVypgpNxOK8aL5SGjUdaQbC++WZNjF1Qge3Og2+zhHj+RWhmehLhYyvQwqAmvezruVfOf8+3m74W+g==}
 
+  '@types/debug@4.1.12':
+    resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
+
   '@types/deep-eql@4.0.2':
     resolution: {integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==}
 
@@ -1429,6 +1450,9 @@ packages:
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
+
+  '@types/ms@2.1.0':
+    resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
 
   '@types/node@25.2.2':
     resolution: {integrity: sha512-BkmoP5/FhRYek5izySdkOneRyXYN35I860MFAGupTdebyE66uZaR+bXLHq8k4DirE5DwQi3NuhvRU1jqTVwUrQ==}
@@ -4233,11 +4257,17 @@ snapshots:
     dependencies:
       '@types/node': 25.2.2
 
+  '@types/debug@4.1.12':
+    dependencies:
+      '@types/ms': 2.1.0
+
   '@types/deep-eql@4.0.2': {}
 
   '@types/estree@1.0.8': {}
 
   '@types/json-schema@7.0.15': {}
+
+  '@types/ms@2.1.0': {}
 
   '@types/node@25.2.2':
     dependencies:
@@ -4336,7 +4366,7 @@ snapshots:
       '@typescript-eslint/types': 8.54.0
       eslint-visitor-keys: 4.2.1
 
-  '@vitest/coverage-v8@3.2.4(vitest@3.2.4(@types/node@25.2.2)(jiti@2.6.1))':
+  '@vitest/coverage-v8@3.2.4(vitest@3.2.4(@types/debug@4.1.12)(@types/node@25.2.2)(jiti@2.6.1))':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@bcoe/v8-coverage': 1.0.2
@@ -4351,7 +4381,7 @@ snapshots:
       std-env: 3.10.0
       test-exclude: 7.0.1
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/node@25.2.2)(jiti@2.6.1)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@25.2.2)(jiti@2.6.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -5474,7 +5504,7 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.6.1
 
-  vitest@3.2.4(@types/node@25.2.2)(jiti@2.6.1):
+  vitest@3.2.4(@types/debug@4.1.12)(@types/node@25.2.2)(jiti@2.6.1):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.4
@@ -5500,6 +5530,7 @@ snapshots:
       vite-node: 3.2.4(@types/node@25.2.2)(jiti@2.6.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
+      '@types/debug': 4.1.12
       '@types/node': 25.2.2
     transitivePeerDependencies:
       - jiti
