@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/types/v0.2.0...types/v0.2.1) (2026-02-11)
+
+
+### Bug Fixes
+
+* **types:** add optional handler id to function handler definition ([6f07735](https://github.com/newstack-cloud/celerity-node-sdk/commit/6f0773590a5e896a789492f80afe2fc32fcda294))
+
 ## [0.2.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/types/v0.1.0...types/v0.2.0) (2026-02-11)
 
 
