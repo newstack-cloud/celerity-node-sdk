@@ -1,6 +1,6 @@
 {
   "name": "@celerity-sdk/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Core SDK for building Celerity applications — decorators, DI, middleware, guards, and handler adapters",
   "license": "Apache-2.0",
   "type": "module",
@@ -19,7 +19,9 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "engines": {
     "node": ">=22.0.0"
   },
