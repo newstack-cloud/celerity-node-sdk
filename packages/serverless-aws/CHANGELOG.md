@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/serverless-aws/v0.2.1...serverless-aws/v0.3.0) (2026-02-11)
+
+
+### Bug Fixes
+
+* **serverless-aws:** ensure module.export handler resolution works ([283d98d](https://github.com/newstack-cloud/celerity-node-sdk/commit/283d98d05466f979d960f19df9a804ea4cbe5db0))
+
 ## [0.2.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/serverless-aws/v0.2.0...serverless-aws/v0.2.1) (2026-02-11)
 
 

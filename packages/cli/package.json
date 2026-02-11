@@ -1,6 +1,6 @@
 {
   "name": "@celerity-sdk/cli",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Build-time extraction tool for Celerity decorator metadata",
   "license": "Apache-2.0",
   "repository": {
