@@ -1,0 +1,55 @@
+{
+  "name": "@celerity-sdk/serverless-aws",
+  "version": "0.1.0",
+  "description": "AWS Lambda adapter for the Celerity Node SDK — converts API Gateway events to SDK types",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./handler": {
+      "import": {
+        "types": "./dist/entry.d.ts",
+        "default": "./dist/entry.js"
+      },
+      "require": {
+        "types": "./dist/entry.d.cts",
+        "default": "./dist/entry.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@celerity-sdk/core": "workspace:*",
+    "@celerity-sdk/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.160"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
