@@ -1,5 +1,9 @@
 # Celerity Node SDK
 
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_celerity-node-sdk&metric=coverage)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_celerity-node-sdk)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_celerity-node-sdk&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_celerity-node-sdk)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_celerity-node-sdk&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_celerity-node-sdk)
+
 The official Node.js SDK for building [Celerity](https://celerityframework.com) applications.
 
 ## Packages
