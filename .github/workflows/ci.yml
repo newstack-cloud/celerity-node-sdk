@@ -30,9 +30,9 @@ jobs:
       - name: Generate ESLint report for SonarCloud
         run: pnpm run lint:report
 
-      - run: pnpm run typecheck
-
       - run: pnpm run build
+
+      - run: pnpm run typecheck
 
       - name: Run all tests with coverage
         run: pnpm run test:all
