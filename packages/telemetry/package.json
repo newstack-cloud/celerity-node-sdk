@@ -1,6 +1,6 @@
 {
   "name": "@celerity-sdk/telemetry",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Observability layer for the Celerity Node SDK — pino-based logger and OTel-based tracing",
   "license": "Apache-2.0",
   "type": "module",
@@ -22,7 +22,9 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "engines": {
     "node": ">=22.0.0"
   },
@@ -63,10 +65,18 @@
     "@opentelemetry/instrumentation-mysql2": "^0.50.0"
   },
   "peerDependenciesMeta": {
-    "@opentelemetry/instrumentation-aws-sdk": { "optional": true },
-    "@opentelemetry/instrumentation-ioredis": { "optional": true },
-    "@opentelemetry/instrumentation-pg": { "optional": true },
-    "@opentelemetry/instrumentation-mysql2": { "optional": true }
+    "@opentelemetry/instrumentation-aws-sdk": {
+      "optional": true
+    },
+    "@opentelemetry/instrumentation-ioredis": {
+      "optional": true
+    },
+    "@opentelemetry/instrumentation-pg": {
+      "optional": true
+    },
+    "@opentelemetry/instrumentation-mysql2": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public"
