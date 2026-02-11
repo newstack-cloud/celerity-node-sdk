@@ -1,3 +1,4 @@
+import createDebug from "debug";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import type {
   HandlerRegistry,
@@ -7,6 +8,8 @@ import type {
 } from "@celerity-sdk/core";
 import { executeHandlerPipeline } from "@celerity-sdk/core";
 import { mapApiGatewayV2Event, mapHttpResponseToResult } from "./event-mapper";
+
+const debug = createDebug("celerity:serverless-aws");
 
 export class AwsLambdaAdapter implements ServerlessAdapter {
   createHandler(
@@ -20,10 +23,18 @@ export class AwsLambdaAdapter implements ServerlessAdapter {
       const httpRequest = mapApiGatewayV2Event(apiEvent);
 
       if (!cachedHandler) {
+        debug(
+          "adapter: cache miss, looking up handler for %s %s",
+          httpRequest.method,
+          httpRequest.path,
+        );
         cachedHandler = registry.getHandler(httpRequest.path, httpRequest.method) ?? null;
+      } else {
+        debug("adapter: using cached handler for %s %s", httpRequest.method, httpRequest.path);
       }
 
       if (!cachedHandler) {
+        debug("adapter: no handler found → 404");
         return {
           statusCode: 404,
           headers: { "content-type": "application/json" },
