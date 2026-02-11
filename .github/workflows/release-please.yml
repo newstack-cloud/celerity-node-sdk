@@ -5,7 +5,11 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs: {}
+    inputs:
+      publish_paths:
+        description: 'JSON array of package paths to publish (e.g. ["packages/types"]). Leave empty to run release-please only.'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -13,6 +17,7 @@ permissions:
 
 jobs:
   release-please:
+    if: ${{ !inputs.publish_paths }}
     runs-on: ubuntu-latest
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
@@ -51,6 +56,39 @@ jobs:
         run: |
           PATHS_RELEASED='${{ needs.release-please.outputs.paths_released }}'
           for path in $(echo "$PATHS_RELEASED" | jq -r '.[]'); do
+            echo "Publishing $path..."
+            cd "$path"
+            pnpm publish --no-git-checks --access public --provenance
+            cd "$GITHUB_WORKSPACE"
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  manual-publish:
+    if: ${{ inputs.publish_paths }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm run build
+
+      - name: Publish specified packages
+        run: |
+          PATHS='${{ inputs.publish_paths }}'
+          for path in $(echo "$PATHS" | jq -r '.[]'); do
             echo "Publishing $path..."
             cd "$path"
             pnpm publish --no-git-checks --access public --provenance
