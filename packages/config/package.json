@@ -31,7 +31,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@celerity-sdk/types": "workspace:*"
+    "@celerity-sdk/types": "workspace:^",
+    "debug": "^4.4.0"
   },
   "devDependencies": {
     "@aws-sdk/client-secrets-manager": "^3.750.0",
