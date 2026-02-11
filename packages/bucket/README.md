@@ -4,9 +4,9 @@ Object storage abstraction for the Celerity Node SDK.
 
 Provides a unified `BucketClient` interface for working with object storage across cloud providers:
 
-- **AWS** — Amazon S3
-- **GCP** — Google Cloud Storage
-- **Azure** — Azure Blob Storage
+- **AWS**:Amazon S3
+- **GCP**:Google Cloud Storage
+- **Azure**:Azure Blob Storage
 
 ## Installation
 
@@ -29,7 +29,7 @@ pnpm add @azure/storage-blob
 
 ## Status
 
-This package is a stub — the interface and provider implementations are planned but not yet implemented.
+This package is a stub:the interface and provider implementations are planned but not yet implemented.
 
 ## Part of the Celerity Framework
 

@@ -12,7 +12,7 @@ pnpm add @celerity-sdk/sql-database
 
 ## Status
 
-This package is a stub — the interface and provider implementations are planned but not yet implemented.
+This package is a stub:the interface and provider implementations are planned but not yet implemented.
 
 ## Part of the Celerity Framework
 

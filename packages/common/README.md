@@ -2,7 +2,7 @@
 
 Shared runtime utilities for the Celerity Node SDK.
 
-This package provides small, general-purpose helpers used across multiple SDK packages. It has **no internal dependencies** — only `@celerity-sdk/types` is required.
+This package provides small, general-purpose helpers used across multiple SDK packages. It has **no internal dependencies** and only requires `@celerity-sdk/types`.
 
 ## Installation
 

@@ -2,7 +2,7 @@
 
 Shared TypeScript interfaces and types for the Celerity Node SDK.
 
-This is the foundation package — all other `@celerity-sdk/*` packages depend on it. It contains **no runtime code**, only type definitions and behavioral interfaces.
+This is the foundation package that all other `@celerity-sdk/*` packages depend on. It contains **no runtime code**, only type definitions and behavioral interfaces.
 
 ## Installation
 
@@ -28,4 +28,4 @@ pnpm add @celerity-sdk/types
 
 ## Part of the Celerity Framework
 
-See [celerityframework.com](https://celerityframework.com) for full documentation.
+See [celerityframework.io](https://celerityframework.io) for full documentation.

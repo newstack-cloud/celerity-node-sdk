@@ -4,9 +4,9 @@ Cache abstraction for the Celerity Node SDK.
 
 Provides a unified `CacheClient` interface for working with managed cache services across cloud providers:
 
-- **AWS** — Amazon ElastiCache
-- **GCP** — Google Cloud Memorystore
-- **Azure** — Azure Cache for Redis
+- **AWS**:Amazon ElastiCache
+- **GCP**:Google Cloud Memorystore
+- **Azure**:Azure Cache for Redis
 
 ## Installation
 
@@ -22,7 +22,7 @@ pnpm add ioredis
 
 ## Status
 
-This package is a stub — the interface and provider implementations are planned but not yet implemented.
+This package is a stub:the interface and provider implementations are planned but not yet implemented.
 
 ## Part of the Celerity Framework
 

@@ -2,7 +2,7 @@
 
 Build-time extraction tool for Celerity decorator metadata.
 
-Scans a compiled Celerity application module and produces a JSON handler manifest describing all registered handlers, their routing annotations, guard declarations, custom metadata, and provider dependency graph — without instantiating any classes or running application code.
+Scans a compiled Celerity application module and produces a JSON handler manifest describing all registered handlers, their routing annotations, guard declarations, custom metadata, and provider dependency graph. No classes are instantiated and no application code is executed.
 
 ## Installation
 
@@ -20,9 +20,9 @@ The Go-based Celerity CLI invokes this tool during the build phase to merge code
 
 ## How It Works
 
-1. **Module scan** (`scanModuleMetadata`) — walks the module tree (imports, controllers, function handlers, providers) using `reflect-metadata`, collecting all metadata without side effects.
-2. **Serialization** (`serializeManifest`) — converts scanned metadata into a structured manifest with handler entries, annotations, and a dependency graph.
-3. **Validation** (`validateScannedDependencies`) — checks that all provider dependencies are resolvable, reporting diagnostics for missing tokens.
+1. **Module scan** (`scanModuleMetadata`) - walks the module tree (imports, controllers, function handlers, providers) using `reflect-metadata`, collecting all metadata without side effects.
+2. **Serialization** (`serializeManifest`) - converts scanned metadata into a structured manifest with handler entries, annotations, and a dependency graph.
+3. **Validation** (`validateScannedDependencies`) - checks that all provider dependencies are resolvable, reporting diagnostics for missing tokens.
 
 ## Manifest Structure
 

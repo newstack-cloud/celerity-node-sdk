@@ -1,6 +1,6 @@
 # @celerity-sdk/telemetry
 
-Observability layer for the Celerity Node SDK — pino-based structured logging and OpenTelemetry-based distributed tracing.
+Observability layer for the Celerity Node SDK. Provides pino-based structured logging and OpenTelemetry-based distributed tracing.
 
 ## Installation
 

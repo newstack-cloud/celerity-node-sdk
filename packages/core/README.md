@@ -1,6 +1,6 @@
 # @celerity-sdk/core
 
-Core SDK for building Celerity applications — decorators, dependency injection, layers, guards, handler adapters, and the application factory.
+Core SDK for building Celerity applications - decorators, dependency injection, layers, guards, handler adapters, and the application factory.
 
 ## Installation
 
@@ -108,20 +108,20 @@ const app = await CelerityFactory.create(AppModule);
 
 When a handler is invoked by ID (e.g. from a blueprint's `spec.handler` field), the SDK resolves it using a multi-step strategy:
 
-1. **Direct registry ID match** — looks up the handler by its explicit `id` (set via decorator or `createHttpHandler`).
-2. **Module resolution fallback** — if the direct lookup fails, the ID is treated as a module reference and dynamically imported:
-   - `"handlers.hello"` — named export `hello` from module `handlers`
-   - `"handlers"` — default export from module `handlers`
-   - `"app.module"` — tries named export split first (`module: "app"`, `export: "module"`), then falls back to default export from module `app.module`
-3. **Path/method routing** — if both ID-based lookups fail, falls back to matching the incoming request's HTTP method and path against the registry.
+1. **Direct registry ID match** - looks up the handler by its explicit `id` (set via decorator or `createHttpHandler`).
+2. **Module resolution fallback** - if the direct lookup fails, the ID is treated as a module reference and dynamically imported:
+   - `"handlers.hello"` - named export `hello` from module `handlers`
+   - `"handlers"` - default export from module `handlers`
+   - `"app.module"` - tries named export split first (`module: "app"`, `export: "module"`), then falls back to default export from module `app.module`
+3. **Path/method routing** - if both ID-based lookups fail, falls back to matching the incoming request's HTTP method and path against the registry.
 
-Module resolution matches the imported function against the registry by reference (`===`). Once matched, the handler ID is assigned and subsequent invocations use the direct lookup — no repeated imports.
+Module resolution matches the imported function against the registry by reference (`===`). Once matched, the handler ID is assigned and subsequent invocations use the direct lookup without repeated imports.
 
 This is primarily relevant for blueprint-first function handlers where `spec.handler` references like `"handlers.hello"` map to exported functions that have no routing information in code.
 
 ## Guards
 
-Guards are declarative — they annotate handlers with protection requirements but do not execute in the Node.js process. Guard enforcement happens at the Rust runtime layer (containers) or API Gateway (serverless).
+Guards are declarative. They annotate handlers with protection requirements but do not execute in the Node.js process. Guard enforcement happens at the Rust runtime layer (containers) or API Gateway (serverless).
 
 ## Testing
 
