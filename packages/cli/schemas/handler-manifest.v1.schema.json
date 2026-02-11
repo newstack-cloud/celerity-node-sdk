@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://celerityframework.com/schemas/handler-manifest.v1.schema.json",
+  "title": "Celerity Handler Manifest",
+  "description": "Output schema for the celerity-extract CLI tool. Describes all handlers discovered in a Celerity application module via decorator/metadata scanning. Consumed by the Celerity CLI to merge with blueprint infrastructure configuration.",
+  "type": "object",
+  "required": ["version", "handlers", "functionHandlers", "dependencyGraph"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": "1.0.0",
+      "description": "Schema version. Consumers should check this field to ensure compatibility."
+    },
+    "handlers": {
+      "type": "array",
+      "description": "Class-based handlers discovered from @Controller-decorated classes.",
+      "items": { "$ref": "#/$defs/ClassHandlerEntry" }
+    },
+    "functionHandlers": {
+      "type": "array",
+      "description": "Function-based handlers registered via createHttpHandler / httpGet / httpPost / etc.",
+      "items": { "$ref": "#/$defs/FunctionHandlerEntry" }
+    },
+    "dependencyGraph": { "$ref": "#/$defs/DependencyGraph" }
+  },
+  "$defs": {
+    "AnnotationValue": {
+      "description": "Annotation values are serialized as strings, string arrays, or booleans. Complex objects are JSON-stringified into a string.",
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        { "type": "boolean" }
+      ]
+    },
+    "Annotations": {
+      "type": "object",
+      "description": "Key-value annotations using the 'celerity.handler.*' namespace. Well-known keys:\n- celerity.handler.http (boolean) — true if this is an HTTP handler\n- celerity.handler.http.method (string) — HTTP method (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS)\n- celerity.handler.http.path (string) — full route path using {param} format\n- celerity.handler.guard.protectedBy (string[]) — guard names protecting this handler\n- celerity.handler.guard.custom (string) — custom guard name from @Guard decorator\n- celerity.handler.public (boolean) — true if handler opts out of guards via @Public\n- celerity.handler.metadata.* (any annotation value) — user-defined metadata from @SetMetadata / @Action",
+      "additionalProperties": { "$ref": "#/$defs/AnnotationValue" }
+    },
+    "ClassHandlerSpec": {
+      "type": "object",
+      "description": "Deployment specification for a class-based handler.",
+      "required": ["handlerName", "codeLocation", "handler"],
+      "additionalProperties": false,
+      "properties": {
+        "handlerName": {
+          "type": "string",
+          "description": "Unique handler identifier. Format: ClassName-methodName (e.g. 'OrdersHandler-getOrder')."
+        },
+        "codeLocation": {
+          "type": "string",
+          "description": "Relative directory path from project root, prefixed with './' (e.g. './src/handlers')."
+        },
+        "handler": {
+          "type": "string",
+          "description": "Fully qualified handler function reference. Format: moduleBaseName.ClassName.methodName (e.g. 'app.module.OrdersHandler.getOrder')."
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Handler timeout in seconds. Optional — omitted when not explicitly configured."
+        }
+      }
+    },
+    "FunctionHandlerSpec": {
+      "type": "object",
+      "description": "Deployment specification for a function-based handler.",
+      "required": ["handlerName", "codeLocation", "handler"],
+      "additionalProperties": false,
+      "properties": {
+        "handlerName": {
+          "type": "string",
+          "description": "Handler identifier derived from the export name."
+        },
+        "codeLocation": {
+          "type": "string",
+          "description": "Relative directory path from project root, prefixed with './' (e.g. './src')."
+        },
+        "handler": {
+          "type": "string",
+          "description": "Fully qualified handler function reference. Format: moduleBaseName.exportName (e.g. 'app.module.getOrder')."
+        }
+      }
+    },
+    "ClassHandlerEntry": {
+      "type": "object",
+      "description": "A single handler method discovered from a @Controller-decorated class.",
+      "required": ["resourceName", "className", "methodName", "sourceFile", "handlerType", "annotations", "spec"],
+      "additionalProperties": false,
+      "properties": {
+        "resourceName": {
+          "type": "string",
+          "description": "Blueprint resource name. Format: camelCase(className)_methodName (e.g. 'ordersHandler_getOrder')."
+        },
+        "className": {
+          "type": "string",
+          "description": "Name of the controller class (e.g. 'OrdersHandler')."
+        },
+        "methodName": {
+          "type": "string",
+          "description": "Name of the handler method (e.g. 'getOrder')."
+        },
+        "sourceFile": {
+          "type": "string",
+          "description": "Absolute path to the source file containing the handler."
+        },
+        "handlerType": {
+          "type": "string",
+          "enum": ["http", "websocket", "consumer", "schedule"],
+          "description": "The type of handler, derived from the method decorators."
+        },
+        "annotations": { "$ref": "#/$defs/Annotations" },
+        "spec": { "$ref": "#/$defs/ClassHandlerSpec" }
+      }
+    },
+    "FunctionHandlerEntry": {
+      "type": "object",
+      "description": "A function-based handler registered via createHttpHandler or shorthand helpers. Function handlers provide identity only — routing configuration comes from the blueprint.",
+      "required": ["resourceName", "exportName", "sourceFile", "spec"],
+      "additionalProperties": false,
+      "properties": {
+        "resourceName": {
+          "type": "string",
+          "description": "Blueprint resource name derived from the export name."
+        },
+        "exportName": {
+          "type": "string",
+          "description": "The named export used to register this handler."
+        },
+        "sourceFile": {
+          "type": "string",
+          "description": "Absolute path to the source file containing the handler."
+        },
+        "annotations": { "$ref": "#/$defs/Annotations" },
+        "spec": { "$ref": "#/$defs/FunctionHandlerSpec" }
+      }
+    },
+    "DependencyNode": {
+      "type": "object",
+      "description": "A provider or controller in the DI dependency graph.",
+      "required": ["token", "tokenType", "providerType", "dependencies"],
+      "additionalProperties": false,
+      "properties": {
+        "token": {
+          "type": "string",
+          "description": "Serialized DI token. Class name for class tokens, raw string for string tokens, description for symbol tokens."
+        },
+        "tokenType": {
+          "type": "string",
+          "enum": ["class", "string", "symbol"],
+          "description": "The kind of DI token."
+        },
+        "providerType": {
+          "type": "string",
+          "enum": ["class", "factory", "value"],
+          "description": "How this provider is registered (useClass, useFactory, or useValue)."
+        },
+        "dependencies": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Serialized tokens of direct dependencies. Derived from constructor params (class) or inject array (factory)."
+        }
+      }
+    },
+    "DependencyGraph": {
+      "type": "object",
+      "description": "Full service dependency graph extracted from module metadata. Includes all providers and controllers with their DI dependencies.",
+      "required": ["nodes"],
+      "additionalProperties": false,
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/DependencyNode" }
+        }
+      }
+    }
+  }
+}
