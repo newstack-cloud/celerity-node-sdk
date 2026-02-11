@@ -25,6 +25,8 @@ jobs:
 
       - run: pnpm run format:check
 
+      - run: pnpm audit --audit-level high
+
       - run: pnpm run lint
 
       - name: Generate ESLint report for SonarCloud
