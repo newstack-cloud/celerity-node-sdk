@@ -2,6 +2,7 @@ import type { Type, InjectionToken, Provider } from "./common";
 
 export type FunctionHandlerDefinition = {
   __celerity_handler: true;
+  id?: string;
   type: "http" | "consumer" | "schedule" | "websocket";
   metadata: Record<string, unknown>;
   handler: (...args: unknown[]) => unknown;
