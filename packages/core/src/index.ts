@@ -65,6 +65,7 @@ export { TestingApplication, mockRequest } from "./testing/test-app";
 // Handler pipeline
 export { executeHandlerPipeline } from "./handlers/pipeline";
 export { HandlerRegistry } from "./handlers/registry";
+export { resolveHandlerByModuleRef } from "./handlers/module-resolver";
 
 // Metadata constants (used by extraction tools)
 export {

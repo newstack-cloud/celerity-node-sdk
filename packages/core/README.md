@@ -101,8 +101,23 @@ class OrdersHandler {
 import { CelerityFactory } from "@celerity-sdk/core";
 
 const app = await CelerityFactory.create(AppModule);
-// Auto-detects platform from CELERITY_RUNTIME_PLATFORM env var
+// Auto-detects platform from CELERITY_PLATFORM env var
 ```
+
+## Handler Resolution
+
+When a handler is invoked by ID (e.g. from a blueprint's `spec.handler` field), the SDK resolves it using a multi-step strategy:
+
+1. **Direct registry ID match** — looks up the handler by its explicit `id` (set via decorator or `createHttpHandler`).
+2. **Module resolution fallback** — if the direct lookup fails, the ID is treated as a module reference and dynamically imported:
+   - `"handlers.hello"` — named export `hello` from module `handlers`
+   - `"handlers"` — default export from module `handlers`
+   - `"app.module"` — tries named export split first (`module: "app"`, `export: "module"`), then falls back to default export from module `app.module`
+3. **Path/method routing** — if both ID-based lookups fail, falls back to matching the incoming request's HTTP method and path against the registry.
+
+Module resolution matches the imported function against the registry by reference (`===`). Once matched, the handler ID is assigned and subsequent invocations use the direct lookup — no repeated imports.
+
+This is primarily relevant for blueprint-first function handlers where `spec.handler` references like `"handlers.hello"` map to exported functions that have no routing information in code.
 
 ## Guards
 
@@ -116,6 +131,18 @@ import { TestingApplication, mockRequest } from "@celerity-sdk/core";
 const app = new TestingApplication(AppModule);
 const response = await app.handle(mockRequest({ method: "GET", path: "/orders/1" }));
 ```
+
+## Advanced Exports
+
+The following exports are available for adapter authors building custom serverless or runtime adapters:
+
+| Export | Purpose |
+|---|---|
+| `resolveHandlerByModuleRef(id, registry, baseDir)` | Resolve a handler ID as a module reference via dynamic import |
+| `executeHandlerPipeline(handler, request, options)` | Execute the full layer + handler pipeline |
+| `HandlerRegistry` | Handler registry class with route and ID-based lookups |
+| `bootstrapForRuntime(modulePath?, systemLayers?)` | Bootstrap for the Celerity runtime host |
+| `mapRuntimeRequest` / `mapToRuntimeResponse` | Runtime request/response mappers |
 
 ## Part of the Celerity Framework
 
