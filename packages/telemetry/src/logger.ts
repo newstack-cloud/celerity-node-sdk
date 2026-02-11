@@ -49,8 +49,7 @@ export class CelerityLoggerImpl implements CelerityLogger {
 export function createLogger(config: TelemetryConfig): CelerityLoggerImpl {
   const streams: pino.StreamEntry[] = [];
 
-  const isLocal =
-    !process.env.CELERITY_RUNTIME_PLATFORM || process.env.CELERITY_RUNTIME_PLATFORM === "local";
+  const isLocal = !process.env.CELERITY_PLATFORM || process.env.CELERITY_PLATFORM === "local";
   const useHumanFormat = config.logFormat === "human" || (config.logFormat === "auto" && isLocal);
 
   if (useHumanFormat) {

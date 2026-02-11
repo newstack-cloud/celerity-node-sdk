@@ -32,7 +32,7 @@ export async function initTelemetry(): Promise<void> {
     return;
   }
 
-  const platform = process.env.CELERITY_RUNTIME_PLATFORM ?? "local";
+  const platform = process.env.CELERITY_PLATFORM ?? "local";
   const isAws = platform === "aws";
   debug(
     "initTelemetry: platform=%s endpoint=%s service=%s",

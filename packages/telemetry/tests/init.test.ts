@@ -56,7 +56,7 @@ describe("init", () => {
     // Reset module state by re-importing
     vi.resetModules();
     delete process.env.CELERITY_TELEMETRY_ENABLED;
-    delete process.env.CELERITY_RUNTIME_PLATFORM;
+    delete process.env.CELERITY_PLATFORM;
   });
 
   afterEach(() => {

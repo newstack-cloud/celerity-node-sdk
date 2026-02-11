@@ -121,7 +121,7 @@ describe("createLogger", () => {
   const originalEnv = { ...process.env };
 
   beforeEach(() => {
-    delete process.env.CELERITY_RUNTIME_PLATFORM;
+    delete process.env.CELERITY_PLATFORM;
     delete process.env.CELERITY_LOG_REDACT_KEYS;
   });
 
@@ -169,7 +169,7 @@ describe("createLogger", () => {
   });
 
   it("should auto-detect human format for local platform", () => {
-    delete process.env.CELERITY_RUNTIME_PLATFORM;
+    delete process.env.CELERITY_PLATFORM;
     const config: TelemetryConfig = {
       ...baseConfig,
       logFormat: "auto",
@@ -179,7 +179,7 @@ describe("createLogger", () => {
   });
 
   it("should use JSON format for deployed platforms with auto", () => {
-    process.env.CELERITY_RUNTIME_PLATFORM = "aws";
+    process.env.CELERITY_PLATFORM = "aws";
     const config: TelemetryConfig = {
       ...baseConfig,
       logFormat: "auto",
