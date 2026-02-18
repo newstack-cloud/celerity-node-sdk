@@ -42,14 +42,14 @@
     "debug": "^4.4.0"
   },
   "devDependencies": {
-    "@aws-sdk/client-secrets-manager": "^3.750.0",
-    "@aws-sdk/client-ssm": "^3.750.0",
-    "ioredis": "^5.0.0"
+    "@aws-sdk/client-secrets-manager": "^3.992.0",
+    "@aws-sdk/client-ssm": "^3.992.0",
+    "ioredis": "^5.9.3"
   },
   "peerDependencies": {
     "@aws-sdk/client-secrets-manager": "^3.0.0",
     "@aws-sdk/client-ssm": "^3.0.0",
-    "ioredis": "^5.0.0"
+    "ioredis": "^5.9.3"
   },
   "peerDependenciesMeta": {
     "@aws-sdk/client-secrets-manager": {
