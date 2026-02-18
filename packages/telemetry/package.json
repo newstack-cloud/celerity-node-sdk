@@ -1,6 +1,6 @@
 {
   "name": "@celerity-sdk/telemetry",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Observability layer for the Celerity Node SDK — pino-based logger and OTel-based tracing",
   "license": "Apache-2.0",
   "repository": {
