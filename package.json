@@ -43,5 +43,10 @@
     "typescript-eslint": "^8.0.0",
     "unplugin-swc": "^1.5.9",
     "vitest": "^3.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "fast-xml-parser": "^5.3.6"
+    }
   }
 }
