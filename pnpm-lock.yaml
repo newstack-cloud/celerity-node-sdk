@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       '@celerity-sdk/runtime':
-        specifier: ^0.2.2
-        version: 0.2.2
+        specifier: ^0.2.3
+        version: 0.2.3
       '@commitlint/cli':
         specifier: ^19.0.0
         version: 19.8.1(@types/node@25.2.2)(typescript@5.9.3)
@@ -406,62 +406,62 @@ packages:
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
     engines: {node: '>=18'}
 
-  '@celerity-sdk/runtime-darwin-arm64@0.2.2':
-    resolution: {integrity: sha512-Pa2488xgpwT8QU4EkhTV/mJFQALCAWYFLRyhSfGFebK+hmrODkR/FVqljhOP0GBJMLz/5h16l1t4OZWQOfiuBg==}
+  '@celerity-sdk/runtime-darwin-arm64@0.2.3':
+    resolution: {integrity: sha512-NKuOCQ6b640yNKQ12Q4imZvFV04LR1qMwznoXx7l5VeBa2gEcnrgwdsmED1DcnTaFZQNA7taH/qIHprbaZUArA==}
     engines: {node: '>= 22'}
     cpu: [arm64]
     os: [darwin]
 
-  '@celerity-sdk/runtime-darwin-x64@0.2.2':
-    resolution: {integrity: sha512-5D+AgkGTUsiBRNG3nQ7FbNHALVTBEj/3/b+dhoiKcCHMKWLeX9MvmfkCNmSoCVzv/DZm58BsrZnBmc87XqjLgQ==}
+  '@celerity-sdk/runtime-darwin-x64@0.2.3':
+    resolution: {integrity: sha512-DI8YSNjfVe5sKVzrYaBqPmdUwY9W24mdedvkOBA3U7tek/RZLTIL/IQF7AFjYmzZmnSMQzuIwBbQlqNqccPFRQ==}
     engines: {node: '>= 22'}
     cpu: [x64]
     os: [darwin]
 
-  '@celerity-sdk/runtime-freebsd-x64@0.2.2':
-    resolution: {integrity: sha512-56Us65Gw3KTOtFvldgZt8UufjAiVzTys5RDz70FGUzkV2Ph0lkrau2LXyebGI34DFHyx6fsTmb2HJuCBGgBzYA==}
+  '@celerity-sdk/runtime-freebsd-x64@0.2.3':
+    resolution: {integrity: sha512-LqnnKvItxsg0qWIl1Ykk/5gExZPABr3sPyocx9SXwbDSP3ivOk3wHdGnNCrnSfW5qWUi70KEf+69+ob68iQOyQ==}
     engines: {node: '>= 22'}
     cpu: [x64]
     os: [freebsd]
 
-  '@celerity-sdk/runtime-linux-arm64-gnu@0.2.2':
-    resolution: {integrity: sha512-3XSTQumhVrmffyw5vgswC2xGPyI3/2mQC75j+MABk5qz7LWoitByAR7uSC3bHHFPFdKR/f/4epk+iU00ptUv7A==}
+  '@celerity-sdk/runtime-linux-arm64-gnu@0.2.3':
+    resolution: {integrity: sha512-um4utipPjt1hXyr06UDwvFRRQ8n30UyFC/xRMvZMAd8CPM22Sq/pRP2ZKPfwiDrYCoRb+bjTF386NpqoHB24ig==}
     engines: {node: '>= 22'}
     cpu: [arm64]
     os: [linux]
 
-  '@celerity-sdk/runtime-linux-arm64-musl@0.2.2':
-    resolution: {integrity: sha512-f5uL6MmlOPogpeaKd6vHM8aR9C8gqbhC0i/dnY2adXqfrPHb4VasKSGJd2ZgV7Epvz4P9mcPrrDuGDb3VMk6zQ==}
+  '@celerity-sdk/runtime-linux-arm64-musl@0.2.3':
+    resolution: {integrity: sha512-LVPAeHL9dABMfU/+Zhn3+oiOFdSmAQfH2Y1ehj4u14K79yFF284gTrpf/R30glyMiQA9DIjZS4tMbExPF8t9/Q==}
     engines: {node: '>= 22'}
     cpu: [arm64]
     os: [linux]
 
-  '@celerity-sdk/runtime-linux-x64-gnu@0.2.2':
-    resolution: {integrity: sha512-M5YUpIh+GB7r2SjOH2tlBC8goWx3260HojSwrQdDEfa9NzNiJe1jOAcJRxr2cbduWo0cNzTpiHaGVSblSpMrUA==}
+  '@celerity-sdk/runtime-linux-x64-gnu@0.2.3':
+    resolution: {integrity: sha512-OH6qi2kjxn4P6RSz/pbfFChj0aC7mWFwC0bb+F0t/cTB1V0Dev8TTUkP0Gd+ZlUU+1luqW2pZt+iZqoOrbXcAQ==}
     engines: {node: '>= 22'}
     cpu: [x64]
     os: [linux]
 
-  '@celerity-sdk/runtime-linux-x64-musl@0.2.2':
-    resolution: {integrity: sha512-M8qMp2lg2i1imWdd2QH5MA41CsScuW808PXDQ2yqqjKY8/EGHx5dyO8BmB/1UFGcnPEZsXv3Ms3nFvGZ5VeohA==}
+  '@celerity-sdk/runtime-linux-x64-musl@0.2.3':
+    resolution: {integrity: sha512-ywD0OxkxMa7dxVkbRQpf3Mra6YPlNpAsToRVDXZuwloysHwl2sWt5P5tLb4yuY1D/jjXMc67+uak7tLU/4CQhg==}
     engines: {node: '>= 22'}
     cpu: [x64]
     os: [linux]
 
-  '@celerity-sdk/runtime-win32-arm64-msvc@0.2.2':
-    resolution: {integrity: sha512-29LAusLlHj7AjHn4yyIbpWqljo7uZvblk91Bw8IJqRi4Qm1CH54+bFk1G9ee3RL3Mj/Jva0LbyWUscTbluYHPg==}
+  '@celerity-sdk/runtime-win32-arm64-msvc@0.2.3':
+    resolution: {integrity: sha512-UdvIGWboXOW4WIEq++PZlzPrDyPgzaFTOvvqLBC6s9KJMHXoumUZakRaKonUv7JDAqWJoDf3BqyJWhuKftfJFA==}
     engines: {node: '>= 22'}
     cpu: [arm64]
     os: [win32]
 
-  '@celerity-sdk/runtime-win32-x64-msvc@0.2.2':
-    resolution: {integrity: sha512-dU/Rf72/cJkRzdiDdQmkBZGkd5qJYROxav7dyOQjsUFU2jn6GhAOdMHQwiQPAUrB2n10wZOzvT2f/Rt2q8Q84w==}
+  '@celerity-sdk/runtime-win32-x64-msvc@0.2.3':
+    resolution: {integrity: sha512-ZRC8o2cpwp47dPBbUjJIZ3KfE31uQ5Y+Iwhk9kfr1sZt4CWVxd+DJ2y1HcyCWUZb9fo4v0MkC+SVNljTpTGjBA==}
     engines: {node: '>= 22'}
     cpu: [x64]
     os: [win32]
 
-  '@celerity-sdk/runtime@0.2.2':
-    resolution: {integrity: sha512-xXCvecACNN1POHoZnx+i8cp1oJJcJsDP/vqpzQP6jlGnJWhnYv6SNw6rLJG+vIIsHKMvOyEDy2993bJfndvXTw==}
+  '@celerity-sdk/runtime@0.2.3':
+    resolution: {integrity: sha512-7pzaMyWSNA8lBG/5LSEAgdqF4zJXE+XkasdE2wFoG2QJ/SA/FDnhtcYIRGS0sh/cIi14IhUsvGFBGzBJkRgRgg==}
     engines: {node: '>= 22'}
 
   '@commitlint/cli@19.8.1':
@@ -3175,44 +3175,44 @@ snapshots:
 
   '@bcoe/v8-coverage@1.0.2': {}
 
-  '@celerity-sdk/runtime-darwin-arm64@0.2.2':
+  '@celerity-sdk/runtime-darwin-arm64@0.2.3':
     optional: true
 
-  '@celerity-sdk/runtime-darwin-x64@0.2.2':
+  '@celerity-sdk/runtime-darwin-x64@0.2.3':
     optional: true
 
-  '@celerity-sdk/runtime-freebsd-x64@0.2.2':
+  '@celerity-sdk/runtime-freebsd-x64@0.2.3':
     optional: true
 
-  '@celerity-sdk/runtime-linux-arm64-gnu@0.2.2':
+  '@celerity-sdk/runtime-linux-arm64-gnu@0.2.3':
     optional: true
 
-  '@celerity-sdk/runtime-linux-arm64-musl@0.2.2':
+  '@celerity-sdk/runtime-linux-arm64-musl@0.2.3':
     optional: true
 
-  '@celerity-sdk/runtime-linux-x64-gnu@0.2.2':
+  '@celerity-sdk/runtime-linux-x64-gnu@0.2.3':
     optional: true
 
-  '@celerity-sdk/runtime-linux-x64-musl@0.2.2':
+  '@celerity-sdk/runtime-linux-x64-musl@0.2.3':
     optional: true
 
-  '@celerity-sdk/runtime-win32-arm64-msvc@0.2.2':
+  '@celerity-sdk/runtime-win32-arm64-msvc@0.2.3':
     optional: true
 
-  '@celerity-sdk/runtime-win32-x64-msvc@0.2.2':
+  '@celerity-sdk/runtime-win32-x64-msvc@0.2.3':
     optional: true
 
-  '@celerity-sdk/runtime@0.2.2':
+  '@celerity-sdk/runtime@0.2.3':
     optionalDependencies:
-      '@celerity-sdk/runtime-darwin-arm64': 0.2.2
-      '@celerity-sdk/runtime-darwin-x64': 0.2.2
-      '@celerity-sdk/runtime-freebsd-x64': 0.2.2
-      '@celerity-sdk/runtime-linux-arm64-gnu': 0.2.2
-      '@celerity-sdk/runtime-linux-arm64-musl': 0.2.2
-      '@celerity-sdk/runtime-linux-x64-gnu': 0.2.2
-      '@celerity-sdk/runtime-linux-x64-musl': 0.2.2
-      '@celerity-sdk/runtime-win32-arm64-msvc': 0.2.2
-      '@celerity-sdk/runtime-win32-x64-msvc': 0.2.2
+      '@celerity-sdk/runtime-darwin-arm64': 0.2.3
+      '@celerity-sdk/runtime-darwin-x64': 0.2.3
+      '@celerity-sdk/runtime-freebsd-x64': 0.2.3
+      '@celerity-sdk/runtime-linux-arm64-gnu': 0.2.3
+      '@celerity-sdk/runtime-linux-arm64-musl': 0.2.3
+      '@celerity-sdk/runtime-linux-x64-gnu': 0.2.3
+      '@celerity-sdk/runtime-linux-x64-musl': 0.2.3
+      '@celerity-sdk/runtime-win32-arm64-msvc': 0.2.3
+      '@celerity-sdk/runtime-win32-x64-msvc': 0.2.3
 
   '@commitlint/cli@19.8.1(@types/node@25.2.2)(typescript@5.9.3)':
     dependencies:

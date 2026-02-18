@@ -45,7 +45,7 @@
     "reflect-metadata": "^0.2.0"
   },
   "peerDependencies": {
-    "@celerity-sdk/runtime": "^0.2.2"
+    "@celerity-sdk/runtime": "^0.2.3"
   },
   "peerDependenciesMeta": {
     "@celerity-sdk/runtime": {

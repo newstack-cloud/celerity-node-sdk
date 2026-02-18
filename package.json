@@ -27,7 +27,7 @@
     "clean": "pnpm -r run clean"
   },
   "devDependencies": {
-    "@celerity-sdk/runtime": "^0.2.2",
+    "@celerity-sdk/runtime": "^0.2.3",
     "@commitlint/cli": "^19.0.0",
     "@commitlint/config-conventional": "^19.0.0",
     "@eslint/js": "^9.0.0",
