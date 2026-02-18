@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.3.0...core/v0.3.1) (2026-02-18)
+
+
+### Dependencies
+
+* **core:** update runtime lib to 0.2.3 ([755f523](https://github.com/newstack-cloud/celerity-node-sdk/commit/755f52306f4a3a1eba761cffa50ab8c351aa3115))
+
 ## [0.3.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.2.1...core/v0.3.0) (2026-02-11)
 
 

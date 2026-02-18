@@ -1,6 +1,6 @@
 {
   "name": "@celerity-sdk/topic",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Pub/Sub topic abstraction for the Celerity Node SDK (SNS / Pub/Sub / Service Bus Topics)",
   "license": "Apache-2.0",
   "repository": {
