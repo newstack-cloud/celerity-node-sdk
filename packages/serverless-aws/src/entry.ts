@@ -10,13 +10,13 @@ import {
   disposeLayers,
   resolveHandlerByModuleRef,
 } from "@celerity-sdk/core";
-import type { HandlerRegistry } from "@celerity-sdk/core";
+import type { HttpHandlerRegistry } from "@celerity-sdk/core";
 import { mapApiGatewayV2Event, mapHttpResponseToResult } from "./event-mapper";
 
 const debug = createDebug("celerity:serverless-aws");
 
 let cached: {
-  registry: HandlerRegistry;
+  registry: HttpHandlerRegistry;
   options: PipelineOptions;
   moduleDir: string;
 } | null = null;
@@ -35,7 +35,7 @@ function registerShutdownHandler(options: PipelineOptions): void {
 }
 
 async function ensureBootstrapped(): Promise<{
-  registry: HandlerRegistry;
+  registry: HttpHandlerRegistry;
   options: PipelineOptions;
   moduleDir: string;
 }> {

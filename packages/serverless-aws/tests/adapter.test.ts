@@ -127,15 +127,15 @@ describe("AwsLambdaAdapter", () => {
   });
 
   // ---------------------------------------------------------------
-  // createHandler returns a function
+  // createHttpHandler returns a function
   // ---------------------------------------------------------------
-  describe("createHandler", () => {
+  describe("createHttpHandler", () => {
     it("returns a function", () => {
       // Arrange
       const registry = createMockRegistry();
 
       // Act
-      const handler = adapter.createHandler(registry as never, mockOptions);
+      const handler = adapter.createHttpHandler(registry as never, mockOptions);
 
       // Assert
       expect(typeof handler).toBe("function");
@@ -146,7 +146,7 @@ describe("AwsLambdaAdapter", () => {
       const registry = createMockRegistry();
 
       // Act
-      const handler = adapter.createHandler(registry as never, mockOptions);
+      const handler = adapter.createHttpHandler(registry as never, mockOptions);
 
       // Assert
       // async functions have a constructor named AsyncFunction
@@ -161,7 +161,7 @@ describe("AwsLambdaAdapter", () => {
     it("returns 404 with a JSON body when no handler matches the route", async () => {
       // Arrange
       const registry = createMockRegistry();
-      const handler = adapter.createHandler(registry as never, mockOptions);
+      const handler = adapter.createHttpHandler(registry as never, mockOptions);
       const event = createApiGatewayEvent("GET", "/nonexistent");
 
       // Act
@@ -181,7 +181,7 @@ describe("AwsLambdaAdapter", () => {
       // Arrange
       const getHandler = createResolvedHandler("/items", "GET");
       const registry = createMockRegistry([getHandler]);
-      const handler = adapter.createHandler(registry as never, mockOptions);
+      const handler = adapter.createHttpHandler(registry as never, mockOptions);
       const event = createApiGatewayEvent("POST", "/items");
 
       // Act
@@ -196,7 +196,7 @@ describe("AwsLambdaAdapter", () => {
     it("includes the method and path in the 404 error message", async () => {
       // Arrange
       const registry = createMockRegistry();
-      const handler = adapter.createHandler(registry as never, mockOptions);
+      const handler = adapter.createHttpHandler(registry as never, mockOptions);
       const event = createApiGatewayEvent("DELETE", "/resources/42");
 
       // Act
@@ -219,7 +219,7 @@ describe("AwsLambdaAdapter", () => {
         users: ["Alice", "Bob"],
       });
       const registry = createMockRegistry([usersHandler]);
-      const handler = adapter.createHandler(registry as never, mockOptions);
+      const handler = adapter.createHttpHandler(registry as never, mockOptions);
       const event = createApiGatewayEvent("GET", "/users");
 
       // Act
@@ -236,7 +236,7 @@ describe("AwsLambdaAdapter", () => {
     it("calls registry.getHandler with the correct path and method", async () => {
       // Arrange
       const registry = createMockRegistry();
-      const handler = adapter.createHandler(registry as never, mockOptions);
+      const handler = adapter.createHttpHandler(registry as never, mockOptions);
       const event = createApiGatewayEvent("POST", "/orders");
 
       // Act
@@ -255,7 +255,7 @@ describe("AwsLambdaAdapter", () => {
       // Arrange
       const usersHandler = createResolvedHandler("/users", "GET");
       const registry = createMockRegistry([usersHandler]);
-      const handler = adapter.createHandler(registry as never, mockOptions);
+      const handler = adapter.createHttpHandler(registry as never, mockOptions);
       const event = createApiGatewayEvent("GET", "/users");
 
       // Act — invoke twice
@@ -271,7 +271,7 @@ describe("AwsLambdaAdapter", () => {
       const responseBody = { cached: true };
       const cachedHandler = createResolvedHandler("/data", "GET", responseBody);
       const registry = createMockRegistry([cachedHandler]);
-      const handler = adapter.createHandler(registry as never, mockOptions);
+      const handler = adapter.createHttpHandler(registry as never, mockOptions);
       const event = createApiGatewayEvent("GET", "/data");
 
       // Act — invoke three times
@@ -289,7 +289,7 @@ describe("AwsLambdaAdapter", () => {
     it("does not cache a null handler — retries lookup on each call when no match", async () => {
       // Arrange
       const registry = createMockRegistry();
-      const handler = adapter.createHandler(registry as never, mockOptions);
+      const handler = adapter.createHttpHandler(registry as never, mockOptions);
       const event = createApiGatewayEvent("GET", "/missing");
 
       // Act — invoke twice with no registered handlers
@@ -329,7 +329,7 @@ describe("AwsLambdaAdapter", () => {
       process.env.CELERITY_HANDLER_ID = "app.module.getOrder";
       // Construct adapter after setting env var — config is captured at construction time.
       const idAdapter = new AwsLambdaAdapter();
-      const handler = idAdapter.createHandler(registry as never, mockOptions);
+      const handler = idAdapter.createHttpHandler(registry as never, mockOptions);
       const event = createApiGatewayEvent("GET", "/orders/123");
 
       // Act
@@ -345,7 +345,7 @@ describe("AwsLambdaAdapter", () => {
       // Arrange
       const resolvedHandler = createResolvedHandler("/items", "GET");
       const registry = createMockRegistry([resolvedHandler]);
-      const handler = adapter.createHandler(registry as never, mockOptions);
+      const handler = adapter.createHttpHandler(registry as never, mockOptions);
       const event = createApiGatewayEvent("GET", "/items");
 
       // Act
@@ -365,7 +365,7 @@ describe("AwsLambdaAdapter", () => {
       mockResolveHandlerByModuleRef.mockResolvedValue(null);
       // Construct adapter after setting env var — config is captured at construction time.
       const idAdapter = new AwsLambdaAdapter();
-      const handler = idAdapter.createHandler(registry as never, mockOptions);
+      const handler = idAdapter.createHttpHandler(registry as never, mockOptions);
       const event = createApiGatewayEvent("GET", "/items");
 
       // Act
@@ -413,7 +413,7 @@ describe("AwsLambdaAdapter", () => {
 
       const registry = createMockRegistry();
       const idAdapter = new AwsLambdaAdapter();
-      const handler = idAdapter.createHandler(registry as never, mockOptions);
+      const handler = idAdapter.createHttpHandler(registry as never, mockOptions);
       const event = createApiGatewayEvent("GET", "/greet");
 
       // Act
@@ -439,7 +439,7 @@ describe("AwsLambdaAdapter", () => {
       const resolvedHandler = createResolvedHandler("/items", "GET");
       const registry = createMockRegistry([resolvedHandler]);
       const idAdapter = new AwsLambdaAdapter();
-      const handler = idAdapter.createHandler(registry as never, mockOptions);
+      const handler = idAdapter.createHttpHandler(registry as never, mockOptions);
       const event = createApiGatewayEvent("GET", "/items");
 
       // Act
@@ -456,7 +456,7 @@ describe("AwsLambdaAdapter", () => {
       // Arrange
       const resolvedHandler = createResolvedHandler("/items", "GET");
       const registry = createMockRegistry([resolvedHandler]);
-      const handler = adapter.createHandler(registry as never, mockOptions);
+      const handler = adapter.createHttpHandler(registry as never, mockOptions);
       const event = createApiGatewayEvent("GET", "/items");
 
       // Act
@@ -487,7 +487,7 @@ describe("AwsLambdaAdapter", () => {
 
       const registry = createMockRegistry();
       const idAdapter = new AwsLambdaAdapter();
-      const handler = idAdapter.createHandler(registry as never, mockOptions);
+      const handler = idAdapter.createHttpHandler(registry as never, mockOptions);
       const event = createApiGatewayEvent("GET", "/greet");
 
       // Act — invoke twice
@@ -500,18 +500,18 @@ describe("AwsLambdaAdapter", () => {
   });
 
   // ---------------------------------------------------------------
-  // Each createHandler call gets its own isolated cache
+  // Each createHttpHandler call gets its own isolated cache
   // ---------------------------------------------------------------
   describe("handler isolation", () => {
-    it("each createHandler call produces an independent handler with its own cache", async () => {
+    it("each createHttpHandler call produces an independent handler with its own cache", async () => {
       // Arrange
       const handlerA = createResolvedHandler("/a", "GET", { route: "a" });
       const handlerB = createResolvedHandler("/b", "GET", { route: "b" });
       const registryA = createMockRegistry([handlerA]);
       const registryB = createMockRegistry([handlerB]);
 
-      const fnA = adapter.createHandler(registryA as never, mockOptions);
-      const fnB = adapter.createHandler(registryB as never, mockOptions);
+      const fnA = adapter.createHttpHandler(registryA as never, mockOptions);
+      const fnB = adapter.createHttpHandler(registryB as never, mockOptions);
 
       // Act
       const resultA = (await fnA(

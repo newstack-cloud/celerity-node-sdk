@@ -2,7 +2,7 @@ import { dirname, resolve } from "node:path";
 import createDebug from "debug";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import type {
-  HandlerRegistry,
+  HttpHandlerRegistry,
   ServerlessAdapter,
   ResolvedHandler,
   PipelineOptions,
@@ -27,8 +27,8 @@ export class AwsLambdaAdapter implements ServerlessAdapter {
     this.config = captureAwsLambdaConfig();
   }
 
-  createHandler(
-    registry: HandlerRegistry,
+  createHttpHandler(
+    registry: HttpHandlerRegistry,
     options: PipelineOptions,
   ): (event: unknown, context: unknown) => Promise<unknown> {
     let cachedHandler: ResolvedHandler | null = null;
