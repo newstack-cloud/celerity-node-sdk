@@ -4,7 +4,7 @@
   "title": "Celerity Handler Manifest",
   "description": "Output schema for the celerity-extract CLI tool. Describes all handlers discovered in a Celerity application module via decorator/metadata scanning. Consumed by the Celerity CLI to merge with blueprint infrastructure configuration.",
   "type": "object",
-  "required": ["version", "handlers", "functionHandlers", "dependencyGraph"],
+  "required": ["version", "handlers", "functionHandlers", "guardHandlers", "dependencyGraph"],
   "additionalProperties": false,
   "properties": {
     "version": {
@@ -20,6 +20,11 @@
       "type": "array",
       "description": "Function-based handlers registered via createHttpHandler / httpGet / httpPost / etc.",
       "items": { "$ref": "#/$defs/FunctionHandlerEntry" }
+    },
+    "guardHandlers": {
+      "type": "array",
+      "description": "Guard handlers discovered from @Guard-decorated classes or createGuard function definitions.",
+      "items": { "$ref": "#/$defs/GuardHandlerEntry" }
     },
     "dependencyGraph": { "$ref": "#/$defs/DependencyGraph" }
   },
@@ -136,6 +141,41 @@
         },
         "annotations": { "$ref": "#/$defs/Annotations" },
         "spec": { "$ref": "#/$defs/FunctionHandlerSpec" }
+      }
+    },
+    "GuardHandlerEntry": {
+      "type": "object",
+      "description": "A guard handler discovered from a @Guard-decorated class or a createGuard function definition.",
+      "required": ["resourceName", "guardName", "sourceFile", "guardType", "annotations", "spec"],
+      "additionalProperties": false,
+      "properties": {
+        "resourceName": {
+          "type": "string",
+          "description": "Blueprint resource name for the guard."
+        },
+        "guardName": {
+          "type": "string",
+          "description": "The guard name as declared via @Guard(name) or createGuard(name, ...)."
+        },
+        "sourceFile": {
+          "type": "string",
+          "description": "Absolute path to the source file containing the guard."
+        },
+        "guardType": {
+          "type": "string",
+          "enum": ["class", "function"],
+          "description": "Whether this guard was defined as a class or a function."
+        },
+        "className": {
+          "type": "string",
+          "description": "Name of the guard class. Present for class-based guards only."
+        },
+        "exportName": {
+          "type": "string",
+          "description": "The named export used to register this guard. Present for function-based guards only."
+        },
+        "annotations": { "$ref": "#/$defs/Annotations" },
+        "spec": { "$ref": "#/$defs/ClassHandlerSpec" }
       }
     },
     "DependencyNode": {

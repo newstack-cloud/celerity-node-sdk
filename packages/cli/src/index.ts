@@ -14,4 +14,9 @@ export {
   deriveFunctionHandlerFunction,
   deriveCodeLocation,
 } from "./extract/identity";
-export type { HandlerManifest, ClassHandlerEntry, FunctionHandlerEntry } from "./extract/types";
+export type {
+  HandlerManifest,
+  ClassHandlerEntry,
+  FunctionHandlerEntry,
+  GuardHandlerEntry,
+} from "./extract/types";

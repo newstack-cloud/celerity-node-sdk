@@ -5,6 +5,7 @@ import type {
   InjectionToken,
   Provider,
   FunctionHandlerDefinition,
+  GuardDefinition,
 } from "@celerity-sdk/types";
 import {
   buildModuleGraph,
@@ -24,6 +25,8 @@ export type ScannedProvider = {
 export type ScannedModule = {
   controllerClasses: Type[];
   functionHandlers: FunctionHandlerDefinition[];
+  guardClasses: Type[];
+  functionGuards: GuardDefinition[];
   providers: ScannedProvider[];
 };
 
@@ -64,15 +67,18 @@ export function buildScannedModule(rootModule: Type): ScannedModule {
   const graph: ModuleGraph = buildModuleGraph(rootModule);
   const controllerClasses: Type[] = [];
   const functionHandlers: FunctionHandlerDefinition[] = [];
+  const guardClasses: Type[] = [];
+  const functionGuards: GuardDefinition[] = [];
   const providers: ScannedProvider[] = [];
   const seenTokens = new Set<InjectionToken>();
 
   for (const [moduleClass, node] of graph) {
     debug(
-      "scan: module %s — %d providers, %d controllers",
+      "scan: module %s — %d providers, %d controllers, %d guards",
       moduleClass.name,
       node.providers.length,
       node.controllers.length,
+      node.guards.length,
     );
     for (const provider of node.providers) {
       const scanned = scanProvider(provider, seenTokens);
@@ -91,10 +97,26 @@ export function buildScannedModule(rootModule: Type): ScannedModule {
       }
     }
 
+    for (const guard of node.guards) {
+      if (typeof guard === "function") {
+        guardClasses.push(guard);
+        if (!seenTokens.has(guard)) {
+          seenTokens.add(guard);
+          providers.push({
+            token: guard,
+            providerType: "class",
+            dependencies: getClassDependencyTokens(guard),
+          });
+        }
+      } else {
+        functionGuards.push(guard);
+      }
+    }
+
     functionHandlers.push(...node.functionHandlers);
   }
 
-  return { controllerClasses, functionHandlers, providers };
+  return { controllerClasses, functionHandlers, guardClasses, functionGuards, providers };
 }
 
 export type DependencyDiagnostic = {

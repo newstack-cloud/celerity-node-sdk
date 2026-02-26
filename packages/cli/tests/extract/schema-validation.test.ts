@@ -221,7 +221,7 @@ describe("handler manifest JSON schema validation", () => {
   });
 
   it("rejects a manifest with an invalid version", () => {
-    const invalid = { version: "2.0.0", handlers: [], functionHandlers: [], dependencyGraph: { nodes: [] } };
+    const invalid = { version: "2.0.0", handlers: [], functionHandlers: [], guardHandlers: [], dependencyGraph: { nodes: [] } };
     expect(validate(invalid)).toBe(false);
   });
 
@@ -244,6 +244,7 @@ describe("handler manifest JSON schema validation", () => {
         },
       ],
       functionHandlers: [],
+      guardHandlers: [],
       dependencyGraph: { nodes: [] },
     };
     expect(validate(invalid)).toBe(false);
@@ -268,6 +269,7 @@ describe("handler manifest JSON schema validation", () => {
         },
       ],
       functionHandlers: [],
+      guardHandlers: [],
       dependencyGraph: { nodes: [] },
     };
     expect(validate(invalid)).toBe(false);

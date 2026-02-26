@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import type { Type, HttpMethod, InjectionToken } from "@celerity-sdk/types";
+import type { Type, HttpMethod, InjectionToken, GuardDefinition } from "@celerity-sdk/types";
 import {
   CONTROLLER_METADATA,
   HTTP_METHOD_METADATA,
@@ -15,6 +15,7 @@ import type {
   HandlerManifest,
   ClassHandlerEntry,
   FunctionHandlerEntry,
+  GuardHandlerEntry,
   DependencyGraph,
   DependencyNode,
 } from "./types";
@@ -39,6 +40,7 @@ export function serializeManifest(
 ): HandlerManifest {
   const handlers: ClassHandlerEntry[] = [];
   const functionHandlers: FunctionHandlerEntry[] = [];
+  const guardHandlers: GuardHandlerEntry[] = [];
 
   for (const controllerClass of scanned.controllerClasses) {
     const entries = serializeClassHandler(controllerClass, sourceFile, options);
@@ -52,10 +54,25 @@ export function serializeManifest(
     }
   }
 
+  for (const guardClass of scanned.guardClasses) {
+    const entry = serializeClassGuard(guardClass, sourceFile, options);
+    if (entry) {
+      guardHandlers.push(entry);
+    }
+  }
+
+  for (const fnGuard of scanned.functionGuards) {
+    const entry = serializeFunctionGuard(fnGuard, sourceFile, options);
+    if (entry) {
+      guardHandlers.push(entry);
+    }
+  }
+
   return {
     version: "1.0.0",
     handlers,
     functionHandlers,
+    guardHandlers,
     dependencyGraph: serializeDependencyGraph(scanned),
   };
 }
@@ -202,6 +219,94 @@ function serializeFunctionHandler(
     exportName,
     sourceFile,
     ...(Object.keys(annotations).length > 0 ? { annotations } : {}),
+    spec: {
+      handlerName: exportName,
+      codeLocation: deriveCodeLocation(sourceFile, options.projectRoot),
+      handler: deriveFunctionHandlerFunction(sourceFile, exportName),
+    },
+  };
+}
+
+type GuardMeta = {
+  guardName: string;
+  customMetadata: Record<string, unknown>;
+};
+
+function extractGuardMeta(guardClass: Type): GuardMeta | null {
+  const guardName: string | undefined = Reflect.getOwnMetadata(GUARD_CUSTOM_METADATA, guardClass);
+  if (!guardName) return null;
+
+  return {
+    guardName,
+    customMetadata: Reflect.getOwnMetadata(CUSTOM_METADATA, guardClass) ?? {},
+  };
+}
+
+function serializeClassGuard(
+  guardClass: Type,
+  sourceFile: string,
+  options: SerializeOptions,
+): GuardHandlerEntry | null {
+  const meta = extractGuardMeta(guardClass);
+  if (!meta) return null;
+
+  const className = guardClass.name;
+  const methodName = "check";
+  const annotations: Record<string, string | string[] | boolean> = {
+    "celerity.handler.guard.custom": meta.guardName,
+  };
+
+  for (const [key, value] of Object.entries(meta.customMetadata)) {
+    if (value === undefined) continue;
+    annotations[`celerity.handler.metadata.${key}`] = serializeAnnotationValue(value);
+  }
+
+  return {
+    resourceName: deriveClassResourceName(className, methodName),
+    guardName: meta.guardName,
+    sourceFile,
+    guardType: "class",
+    className,
+    annotations,
+    spec: {
+      handlerName: deriveClassHandlerName(className, methodName),
+      codeLocation: deriveCodeLocation(sourceFile, options.projectRoot),
+      handler: deriveClassHandlerFunction(sourceFile, className, methodName),
+    },
+  };
+}
+
+function serializeFunctionGuard(
+  definition: GuardDefinition,
+  sourceFile: string,
+  options: SerializeOptions,
+): GuardHandlerEntry | null {
+  const guardName = definition.name;
+  if (!guardName) return null;
+
+  const meta = (definition.metadata ?? {}) as {
+    customMetadata?: Record<string, unknown>;
+  };
+  const customMetadata = meta.customMetadata ?? {};
+
+  const annotations: Record<string, string | string[] | boolean> = {
+    "celerity.handler.guard.custom": guardName,
+  };
+
+  for (const [key, value] of Object.entries(customMetadata)) {
+    if (value === undefined) continue;
+    annotations[`celerity.handler.metadata.${key}`] = serializeAnnotationValue(value);
+  }
+
+  const exportName = guardName;
+
+  return {
+    resourceName: deriveFunctionResourceName(exportName),
+    guardName,
+    sourceFile,
+    guardType: "function",
+    exportName,
+    annotations,
     spec: {
       handlerName: exportName,
       codeLocation: deriveCodeLocation(sourceFile, options.projectRoot),

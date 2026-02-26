@@ -13,6 +13,7 @@ export type HandlerManifest = {
   version: "1.0.0";
   handlers: ClassHandlerEntry[];
   functionHandlers: FunctionHandlerEntry[];
+  guardHandlers: GuardHandlerEntry[];
   dependencyGraph: DependencyGraph;
 };
 
@@ -36,6 +37,21 @@ export type FunctionHandlerEntry = {
   exportName: string;
   sourceFile: string;
   annotations?: Record<string, string | string[] | boolean>;
+  spec: {
+    handlerName: string;
+    codeLocation: string;
+    handler: string;
+  };
+};
+
+export type GuardHandlerEntry = {
+  resourceName: string;
+  guardName: string;
+  sourceFile: string;
+  guardType: "class" | "function";
+  className?: string;
+  exportName?: string;
+  annotations: Record<string, string | string[] | boolean>;
   spec: {
     handlerName: string;
     codeLocation: string;

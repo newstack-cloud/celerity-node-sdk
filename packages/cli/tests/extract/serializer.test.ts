@@ -418,7 +418,13 @@ describe("dependency graph serialization", () => {
     const providers: ScannedProvider[] = [
       { token: MyService, providerType: "class", dependencies: [] },
     ];
-    const scanned = { controllerClasses: [], functionHandlers: [], providers };
+    const scanned = {
+      controllerClasses: [],
+      functionHandlers: [],
+      guardClasses: [],
+      functionGuards: [],
+      providers,
+    };
     const manifest = serializeManifest(scanned, SOURCE_FILE, OPTIONS);
 
     expect(manifest.dependencyGraph).toBeDefined();
@@ -430,7 +436,13 @@ describe("dependency graph serialization", () => {
     const providers: ScannedProvider[] = [
       { token: MyService, providerType: "class", dependencies: [] },
     ];
-    const scanned = { controllerClasses: [], functionHandlers: [], providers };
+    const scanned = {
+      controllerClasses: [],
+      functionHandlers: [],
+      guardClasses: [],
+      functionGuards: [],
+      providers,
+    };
     const manifest = serializeManifest(scanned, SOURCE_FILE, OPTIONS);
 
     const node = manifest.dependencyGraph.nodes[0];
@@ -442,7 +454,13 @@ describe("dependency graph serialization", () => {
     const providers: ScannedProvider[] = [
       { token: "API_KEY", providerType: "value", dependencies: [] },
     ];
-    const scanned = { controllerClasses: [], functionHandlers: [], providers };
+    const scanned = {
+      controllerClasses: [],
+      functionHandlers: [],
+      guardClasses: [],
+      functionGuards: [],
+      providers,
+    };
     const manifest = serializeManifest(scanned, SOURCE_FILE, OPTIONS);
 
     const node = manifest.dependencyGraph.nodes[0];
@@ -454,7 +472,13 @@ describe("dependency graph serialization", () => {
     const providers: ScannedProvider[] = [
       { token: MyService, providerType: "class", dependencies: [DepService, "CONFIG"] },
     ];
-    const scanned = { controllerClasses: [], functionHandlers: [], providers };
+    const scanned = {
+      controllerClasses: [],
+      functionHandlers: [],
+      guardClasses: [],
+      functionGuards: [],
+      providers,
+    };
     const manifest = serializeManifest(scanned, SOURCE_FILE, OPTIONS);
 
     const node = manifest.dependencyGraph.nodes[0];
