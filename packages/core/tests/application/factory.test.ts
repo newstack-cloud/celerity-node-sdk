@@ -8,7 +8,7 @@ import { Get, Post } from "../../src/decorators/http";
 import { Injectable } from "../../src/decorators/injectable";
 import { Body, Param } from "../../src/decorators/params";
 import { Container } from "../../src/di/container";
-import { HandlerRegistry } from "../../src/handlers/registry";
+import { HttpHandlerRegistry } from "../../src/handlers/registry";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -83,7 +83,7 @@ describe("CelerityFactory.createTestingApp", () => {
     const allHandlers = registry.getAllHandlers();
 
     // Assert
-    expect(registry).toBeInstanceOf(HandlerRegistry);
+    expect(registry).toBeInstanceOf(HttpHandlerRegistry);
     expect(allHandlers.length).toBeGreaterThanOrEqual(3);
   });
 

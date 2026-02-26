@@ -8,6 +8,7 @@ export type ParamType =
   | "param"
   | "headers"
   | "auth"
+  | "token"
   | "request"
   | "cookies"
   | "requestId";
@@ -74,6 +75,10 @@ export function Headers(keyOrSchema?: string | Schema, schema?: Schema): Paramet
 
 export function Auth(): ParameterDecorator {
   return createParamDecorator("auth");
+}
+
+export function Token(): ParameterDecorator {
+  return createParamDecorator("token");
 }
 
 export function Req(): ParameterDecorator {

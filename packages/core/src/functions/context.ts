@@ -20,7 +20,7 @@ export type HttpHandlerRequest<TBody = unknown> = {
   contentType: string | null;
 };
 
-export type HttpHandlerContext = {
+export type HttpFunctionContext = {
   requestId: string;
   requestTime: string;
   metadata: HandlerMetadata;
@@ -66,7 +66,7 @@ export function buildHttpContext(
   metadata: HandlerMetadata,
   container: ServiceContainer,
   logger?: CelerityLogger,
-): HttpHandlerContext {
+): HttpFunctionContext {
   return {
     requestId: request.requestId,
     requestTime: request.requestTime,

@@ -3,7 +3,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { resolve } from "node:path";
 import { bootstrapForRuntime } from "../../src/bootstrap/runtime-entry";
 import { Container } from "../../src/di/container";
-import { HandlerRegistry } from "../../src/handlers/registry";
+import { HttpHandlerRegistry } from "../../src/handlers/registry";
 
 const fixturesDir = resolve(import.meta.dirname, "fixtures");
 
@@ -17,7 +17,7 @@ describe("bootstrapForRuntime", () => {
     const result = await bootstrapForRuntime(modulePath);
 
     expect(result.container).toBeInstanceOf(Container);
-    expect(result.registry).toBeInstanceOf(HandlerRegistry);
+    expect(result.registry).toBeInstanceOf(HttpHandlerRegistry);
   });
 
   it("creates a route callback for a matching handler", async () => {

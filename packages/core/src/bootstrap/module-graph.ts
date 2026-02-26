@@ -6,6 +6,7 @@ import type {
   Provider,
   ModuleMetadata,
   FunctionHandlerDefinition,
+  GuardDefinition,
 } from "@celerity-sdk/types";
 import { MODULE_METADATA } from "../metadata/constants";
 import type { Container } from "../di/container";
@@ -21,6 +22,7 @@ export type ModuleNode = {
   imports: Type[];
   controllers: Type[];
   functionHandlers: FunctionHandlerDefinition[];
+  guards: (Type | GuardDefinition)[];
   providers: (Type | (Provider & { provide: InjectionToken }))[];
 };
 
@@ -63,6 +65,7 @@ export function buildModuleGraph(rootModule: Type): ModuleGraph {
         imports: [],
         controllers: [],
         functionHandlers: [],
+        guards: [],
         providers: [],
       });
       return;
@@ -92,17 +95,27 @@ export function buildModuleGraph(rootModule: Type): ModuleGraph {
       ownTokens.add(controller);
     }
 
+    // Class-based guards are also own tokens (for DI resolution)
+    const guards = metadata.guards ?? [];
+    for (const guard of guards) {
+      if (typeof guard === "function") {
+        ownTokens.add(guard);
+      }
+    }
+
     // Build exports set — defaults to empty (nothing exported) when omitted
     const exportTokens = new Set<InjectionToken>(metadata.exports ?? []);
 
     resolving.delete(moduleClass);
     debug(
-      "walk %s: %d providers, %d controllers, %d imports",
+      "walk %s: %d providers, %d controllers, %d guards, %d imports",
       moduleClass.name,
       providers.length,
       controllers.length,
+      guards.length,
       imports.length,
     );
+
     graph.set(moduleClass, {
       moduleClass,
       ownTokens,
@@ -110,6 +123,7 @@ export function buildModuleGraph(rootModule: Type): ModuleGraph {
       imports,
       controllers,
       functionHandlers: metadata.functionHandlers ?? [],
+      guards,
       providers,
     });
   }
@@ -136,6 +150,12 @@ export function registerModuleGraph(graph: ModuleGraph, container: Container): v
     for (const controller of node.controllers) {
       if (!container.has(controller)) {
         container.registerClass(controller);
+      }
+    }
+
+    for (const guard of node.guards) {
+      if (typeof guard === "function" && !container.has(guard)) {
+        container.registerClass(guard);
       }
     }
   }
@@ -228,6 +248,22 @@ export function validateModuleGraph(graph: ModuleGraph, container: Container): v
         container,
         diagnostics,
       );
+    }
+
+    // Validate each class-based guard's dependencies
+    for (const guard of node.guards) {
+      if (typeof guard === "function") {
+        const depTokens = getClassDependencyTokens(guard);
+        checkDependencies(
+          guard,
+          depTokens,
+          visibleTokens,
+          node.moduleClass,
+          graph,
+          container,
+          diagnostics,
+        );
+      }
     }
   }
 

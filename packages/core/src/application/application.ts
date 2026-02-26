@@ -1,14 +1,14 @@
 import createDebug from "debug";
 import type { CelerityLayer, Type } from "@celerity-sdk/types";
 import type { Container } from "../di/container";
-import type { HandlerRegistry } from "../handlers/registry";
+import type { HttpHandlerRegistry } from "../handlers/registry";
 import { disposeLayers } from "../layers/dispose";
 
 const debug = createDebug("celerity:core:factory");
 
 export class CelerityApplication {
   constructor(
-    private registry: HandlerRegistry,
+    private registry: HttpHandlerRegistry,
     private container: Container,
     private systemLayers: (CelerityLayer | Type<CelerityLayer>)[] = [],
     private appLayers: (CelerityLayer | Type<CelerityLayer>)[] = [],
@@ -37,7 +37,7 @@ export class CelerityApplication {
     return this.container;
   }
 
-  getRegistry(): HandlerRegistry {
+  getRegistry(): HttpHandlerRegistry {
     return this.registry;
   }
 

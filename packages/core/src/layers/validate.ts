@@ -1,4 +1,4 @@
-import type { CelerityLayer, HandlerContext, HandlerResponse, Schema } from "@celerity-sdk/types";
+import type { CelerityLayer, HttpHandlerContext, Schema } from "@celerity-sdk/types";
 import { BadRequestException } from "../errors/http-exception";
 
 export type ValidationSchemas = {
@@ -11,10 +11,7 @@ export type ValidationSchemas = {
 class ValidationLayer implements CelerityLayer {
   constructor(private schemas: ValidationSchemas) {}
 
-  async handle(
-    context: HandlerContext,
-    next: () => Promise<HandlerResponse>,
-  ): Promise<HandlerResponse> {
+  async handle(context: HttpHandlerContext, next: () => Promise<unknown>): Promise<unknown> {
     const { request } = context;
 
     if (this.schemas.body && request.textBody) {

@@ -4,6 +4,7 @@ import type {
   HttpMethod,
   CelerityLayer,
   FunctionHandlerDefinition,
+  GuardDefinition,
   Type,
   Schema,
   InjectionToken,
@@ -15,6 +16,7 @@ import {
   ROUTE_PATH_METADATA,
   PARAM_METADATA,
   GUARD_PROTECTEDBY_METADATA,
+  GUARD_CUSTOM_METADATA,
   LAYER_METADATA,
   PUBLIC_METADATA,
   CUSTOM_METADATA,
@@ -29,8 +31,19 @@ import type { ModuleGraph } from "../bootstrap/module-graph";
 
 const debug = createDebug("celerity:core:registry");
 
-export class HandlerRegistry {
+export type ResolvedGuard = {
+  name: string;
+  handlerFn: (...args: unknown[]) => unknown;
+  handlerInstance?: object;
+  paramMetadata: ParamMetadata[];
+  customMetadata: Record<string, unknown>;
+  injectTokens?: InjectionToken[];
+  isFunctionGuard?: boolean;
+};
+
+export class HttpHandlerRegistry {
   private handlers: ResolvedHandler[] = [];
+  private guards: Map<string, ResolvedGuard> = new Map();
 
   getHandler(path: string, method: string): ResolvedHandler | undefined {
     const found = this.handlers.find(
@@ -54,6 +67,16 @@ export class HandlerRegistry {
     return [...this.handlers];
   }
 
+  getGuard(name: string): ResolvedGuard | undefined {
+    const found = this.guards.get(name);
+    debug("getGuard %s → %s", name, found ? "matched" : "not found");
+    return found;
+  }
+
+  getAllGuards(): ResolvedGuard[] {
+    return [...this.guards.values()];
+  }
+
   async populateFromGraph(graph: ModuleGraph, container: Container): Promise<void> {
     for (const [, node] of graph) {
       for (const controllerClass of node.controllers) {
@@ -61,6 +84,13 @@ export class HandlerRegistry {
       }
       for (const fnHandler of node.functionHandlers) {
         this.registerFunctionHandler(fnHandler);
+      }
+      for (const guard of node.guards) {
+        if (typeof guard === "function") {
+          await this.registerClassGuard(guard, container);
+        } else {
+          this.registerFunctionGuard(guard);
+        }
       }
     }
   }
@@ -140,6 +170,56 @@ export class HandlerRegistry {
         handlerInstance: instance,
       });
     }
+  }
+
+  private async registerClassGuard(guardClass: Type, container: Container): Promise<void> {
+    const guardName: string | undefined = Reflect.getOwnMetadata(GUARD_CUSTOM_METADATA, guardClass);
+    if (!guardName) return;
+
+    const instance = await container.resolve<object>(guardClass);
+    const prototype = Object.getPrototypeOf(instance) as object;
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, "check");
+    if (!descriptor?.value || typeof descriptor.value !== "function") {
+      debug("registerClassGuard: %s has no check() method, skipping", guardClass.name);
+      return;
+    }
+
+    const paramMetadata: ParamMetadata[] =
+      Reflect.getOwnMetadata(PARAM_METADATA, prototype, "check") ?? [];
+    const customMetadata: Record<string, unknown> =
+      Reflect.getOwnMetadata(CUSTOM_METADATA, guardClass) ?? {};
+
+    debug("registerClassGuard: %s (name=%s)", guardClass.name, guardName);
+    this.guards.set(guardName, {
+      name: guardName,
+      handlerFn: descriptor.value as (...args: unknown[]) => unknown,
+      handlerInstance: instance,
+      paramMetadata,
+      customMetadata,
+    });
+  }
+
+  private registerFunctionGuard(definition: GuardDefinition): void {
+    const name = definition.name;
+    if (!name) {
+      debug("registerFunctionGuard: no name, skipping");
+      return;
+    }
+
+    const meta = (definition.metadata ?? {}) as {
+      inject?: InjectionToken[];
+      customMetadata?: Record<string, unknown>;
+    };
+
+    debug("registerFunctionGuard: %s", name);
+    this.guards.set(name, {
+      name,
+      handlerFn: definition.handler,
+      customMetadata: meta.customMetadata ?? {},
+      paramMetadata: [],
+      isFunctionGuard: true,
+      injectTokens: meta.inject ?? [],
+    });
   }
 
   private registerFunctionHandler(definition: FunctionHandlerDefinition): void {

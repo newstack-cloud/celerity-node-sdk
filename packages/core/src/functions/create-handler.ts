@@ -6,7 +6,7 @@ import type {
   InjectionToken,
   Schema,
 } from "@celerity-sdk/types";
-import type { HttpHandlerRequest, HttpHandlerContext } from "./context";
+import type { HttpHandlerRequest, HttpFunctionContext } from "./context";
 
 export type HttpHandlerConfig<TBody = unknown> = {
   path?: string;
@@ -26,7 +26,7 @@ type HttpHandlerOptions<TBody = unknown> = Omit<HttpHandlerConfig<TBody>, "path"
 
 type HttpHandlerFn<TBody = unknown> = (
   req: HttpHandlerRequest<TBody>,
-  ctx: HttpHandlerContext,
+  ctx: HttpFunctionContext,
   ...deps: unknown[]
 ) => unknown;
 

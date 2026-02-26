@@ -3,7 +3,17 @@ import "reflect-metadata";
 // Decorators
 export { Controller } from "./decorators/controller";
 export { Get, Post, Put, Patch, Delete, Head, Options } from "./decorators/http";
-export { Body, Query, Param, Headers, Auth, Req, Cookies, RequestId } from "./decorators/params";
+export {
+  Body,
+  Query,
+  Param,
+  Headers,
+  Auth,
+  Token,
+  Req,
+  Cookies,
+  RequestId,
+} from "./decorators/params";
 export { Guard, ProtectedBy, Public } from "./decorators/guards";
 export { UseLayer, UseLayers } from "./decorators/layer";
 export { SetMetadata, Action } from "./decorators/metadata";
@@ -38,6 +48,7 @@ export {
   httpPatch,
   httpDelete,
 } from "./functions/create-handler";
+export { createGuard } from "./functions/create-guard";
 
 // Errors
 export {
@@ -64,8 +75,11 @@ export { TestingApplication, mockRequest } from "./testing/test-app";
 
 // Handler pipeline
 export { executeHandlerPipeline } from "./handlers/pipeline";
-export { HandlerRegistry } from "./handlers/registry";
+export { HttpHandlerRegistry } from "./handlers/registry";
 export { resolveHandlerByModuleRef } from "./handlers/module-resolver";
+
+// Guard pipeline
+export { executeGuardPipeline } from "./handlers/guard-pipeline";
 
 // Metadata constants (used by extraction tools)
 export {
@@ -104,21 +118,35 @@ export type {
   HttpRequest,
   HttpResponse,
   HandlerMetadata,
-  HandlerContext,
+  BaseHandlerContext,
+  HttpHandlerContext,
   HandlerResponse,
+  NextFunction,
   CelerityLayer,
   Schema,
   ModuleMetadata,
   FunctionHandlerDefinition,
   ServiceContainer,
+  GuardDefinition,
+  GuardHandlerContext,
+  GuardHandlerRequest,
+  CelerityLogger,
 } from "@celerity-sdk/types";
 
 // Re-export types defined in core
 export type { ControllerMetadata } from "./decorators/controller";
 export type { ParamType, ParamMetadata } from "./decorators/params";
 export type { ResolvedHandler, PipelineOptions } from "./handlers/pipeline";
-export type { HttpHandlerRequest, HttpHandlerContext } from "./functions/context";
+export type { HttpHandlerRequest, HttpFunctionContext } from "./functions/context";
 export type { HttpHandlerConfig } from "./functions/create-handler";
+export type {
+  GuardConfig,
+  GuardHandlerFn,
+  GuardRequest,
+  GuardContext,
+} from "./functions/create-guard";
+export type { ResolvedGuard } from "./handlers/registry";
+export type { GuardInput, GuardResult, GuardPipelineOptions } from "./handlers/guard-pipeline";
 export type { ValidationSchemas } from "./layers/validate";
 export type { CreateOptions } from "./application/factory";
 export type { MockRequestOptions } from "./testing/test-app";

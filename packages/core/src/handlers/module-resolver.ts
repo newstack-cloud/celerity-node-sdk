@@ -6,7 +6,7 @@ import type {
   Type,
 } from "@celerity-sdk/types";
 import createDebug from "debug";
-import type { HandlerRegistry } from "./registry";
+import type { HttpHandlerRegistry } from "./registry";
 import type { ResolvedHandler } from "./pipeline";
 
 const debug = createDebug("celerity:core:module-resolver");
@@ -30,7 +30,7 @@ const debug = createDebug("celerity:core:module-resolver");
  */
 export async function resolveHandlerByModuleRef(
   handlerId: string,
-  registry: HandlerRegistry,
+  registry: HttpHandlerRegistry,
   baseDir: string,
 ): Promise<ResolvedHandler | null> {
   const lastDot = handlerId.lastIndexOf(".");
@@ -49,7 +49,7 @@ async function tryResolveExport(
   moduleName: string,
   exportName: string,
   handlerId: string,
-  registry: HandlerRegistry,
+  registry: HttpHandlerRegistry,
 ): Promise<ResolvedHandler | null> {
   const handlerModulePath = resolve(baseDir, moduleName);
 

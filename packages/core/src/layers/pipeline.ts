@@ -1,19 +1,19 @@
 import createDebug from "debug";
-import type { CelerityLayer, HandlerContext, HandlerResponse, Type } from "@celerity-sdk/types";
+import type { BaseHandlerContext, CelerityLayer, Type } from "@celerity-sdk/types";
 
 const debug = createDebug("celerity:core:layers");
 
-export function runLayerPipeline(
-  layers: (CelerityLayer | Type<CelerityLayer>)[],
-  context: HandlerContext,
-  handler: () => Promise<HandlerResponse>,
-): Promise<HandlerResponse> {
+export function runLayerPipeline<TContext extends BaseHandlerContext>(
+  layers: (CelerityLayer<TContext> | Type<CelerityLayer<TContext>>)[],
+  context: TContext,
+  handler: () => Promise<unknown>,
+): Promise<unknown> {
   const resolved = layers.map((layer) => (typeof layer === "function" ? new layer() : layer));
   debug("runLayerPipeline: %d layers", resolved.length);
 
   let index = -1;
 
-  function dispatch(i: number): Promise<HandlerResponse> {
+  function dispatch(i: number): Promise<unknown> {
     if (i <= index) {
       return Promise.reject(new Error("next() called multiple times"));
     }

@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { HandlerRegistry } from "../../src/handlers/registry";
+import { HttpHandlerRegistry } from "../../src/handlers/registry";
 import { Container } from "../../src/di/container";
 import { Controller } from "../../src/decorators/controller";
 import { Get, Post, Delete } from "../../src/decorators/http";
@@ -11,8 +11,7 @@ import { SetMetadata, Action } from "../../src/decorators/metadata";
 import { Module } from "../../src/decorators/module";
 import type {
   CelerityLayer,
-  HandlerContext,
-  HandlerResponse,
+  HttpHandlerContext,
   FunctionHandlerDefinition,
 } from "@celerity-sdk/types";
 
@@ -53,9 +52,9 @@ class ItemHandler {
 
 class LoggingLayer implements CelerityLayer {
   async handle(
-    _ctx: HandlerContext,
-    next: () => Promise<HandlerResponse>,
-  ): Promise<HandlerResponse> {
+    _ctx: HttpHandlerContext,
+    next: () => Promise<unknown>,
+  ): Promise<unknown> {
     return next();
   }
 }
@@ -91,12 +90,12 @@ class AppModule {}
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("HandlerRegistry", () => {
-  let registry: HandlerRegistry;
+describe("HttpHandlerRegistry", () => {
+  let registry: HttpHandlerRegistry;
   let container: Container;
 
   beforeEach(() => {
-    registry = new HandlerRegistry();
+    registry = new HttpHandlerRegistry();
     container = new Container();
   });
 
@@ -969,9 +968,9 @@ describe("HandlerRegistry", () => {
 
       class CustomLayer implements CelerityLayer {
         async handle(
-          _ctx: HandlerContext,
-          next: () => Promise<HandlerResponse>,
-        ): Promise<HandlerResponse> {
+          _ctx: HttpHandlerContext,
+          next: () => Promise<unknown>,
+        ): Promise<unknown> {
           return next();
         }
       }

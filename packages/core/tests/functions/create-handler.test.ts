@@ -10,11 +10,10 @@ import {
 } from "../../src/functions/create-handler";
 import type {
   CelerityLayer,
-  HandlerContext,
-  HandlerResponse,
+  HttpHandlerContext,
   FunctionHandlerDefinition,
 } from "@celerity-sdk/types";
-import type { HttpHandlerRequest, HttpHandlerContext } from "../../src/functions/context";
+import type { HttpHandlerRequest, HttpFunctionContext } from "../../src/functions/context";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -96,9 +95,9 @@ describe("createHttpHandler", () => {
     // Arrange
     class TestLayer implements CelerityLayer {
       async handle(
-        _ctx: HandlerContext,
-        next: () => Promise<HandlerResponse>,
-      ): Promise<HandlerResponse> {
+        _ctx: HttpHandlerContext,
+        next: () => Promise<unknown>,
+      ): Promise<unknown> {
         return next();
       }
     }
@@ -131,7 +130,7 @@ describe("createHttpHandler", () => {
 
   it("preserves the handler function reference", () => {
     // Arrange
-    const myHandler = (req: HttpHandlerRequest, _ctx: HttpHandlerContext) => ({ hello: req.params.name });
+    const myHandler = (req: HttpHandlerRequest, _ctx: HttpFunctionContext) => ({ hello: req.params.name });
 
     // Act
     const result = createHttpHandler(
@@ -363,9 +362,9 @@ describe("shorthand overloads with options", () => {
     // Arrange
     class TestLayer implements CelerityLayer {
       async handle(
-        _ctx: HandlerContext,
-        next: () => Promise<HandlerResponse>,
-      ): Promise<HandlerResponse> {
+        _ctx: HttpHandlerContext,
+        next: () => Promise<unknown>,
+      ): Promise<unknown> {
         return next();
       }
     }

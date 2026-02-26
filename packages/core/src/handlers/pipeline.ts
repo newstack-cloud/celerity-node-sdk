@@ -2,7 +2,7 @@ import createDebug from "debug";
 import type {
   HttpRequest,
   HttpResponse,
-  HandlerContext,
+  HttpHandlerContext,
   CelerityLayer,
   Type,
   ServiceContainer,
@@ -35,6 +35,7 @@ export type PipelineOptions = {
   container: ServiceContainer;
   systemLayers?: (CelerityLayer | Type<CelerityLayer>)[];
   appLayers?: (CelerityLayer | Type<CelerityLayer>)[];
+  handlerName?: string;
 };
 
 export async function executeHandlerPipeline(
@@ -42,9 +43,12 @@ export async function executeHandlerPipeline(
   request: HttpRequest,
   options: PipelineOptions,
 ): Promise<HttpResponse> {
-  const context: HandlerContext = {
+  const context: HttpHandlerContext = {
     request,
-    metadata: new HandlerMetadataStore(handler.customMetadata ?? {}),
+    metadata: new HandlerMetadataStore({
+      ...(handler.customMetadata ?? {}),
+      ...(options.handlerName ? { handlerName: options.handlerName } : {}),
+    }),
     container: options.container,
   };
 
@@ -57,14 +61,14 @@ export async function executeHandlerPipeline(
   debug("%s %s — %d layers", request.method, request.path, allLayers.length);
 
   try {
-    const response = await runLayerPipeline(allLayers, context, async () => {
+    const response = (await runLayerPipeline(allLayers, context, async () => {
       const handlerType = handler.isFunctionHandler ? "function" : "class";
       debug("invoking %s handler", handlerType);
       const result = handler.isFunctionHandler
         ? await invokeFunctionHandler(handler, context)
         : await invokeClassHandler(handler, context);
       return normalizeResponse(result);
-    });
+    })) as HttpResponse;
 
     debug("response %d", response.status);
     return response;
@@ -100,7 +104,7 @@ export async function executeHandlerPipeline(
 
 async function invokeClassHandler(
   handler: ResolvedHandler,
-  context: HandlerContext,
+  context: HttpHandlerContext,
 ): Promise<unknown> {
   const args: unknown[] = [];
   const sorted = [...handler.paramMetadata].sort((a, b) => a.index - b.index);
@@ -128,7 +132,7 @@ function extractValidatedParam(
   type: ParamType,
   key: string | undefined,
   request: HttpRequest,
-  metadata: HandlerContext["metadata"],
+  metadata: HttpHandlerContext["metadata"],
 ): unknown {
   const metaKey = VALIDATED_METADATA_KEYS[type];
   if (metaKey) {
@@ -145,7 +149,7 @@ function extractValidatedParam(
 
 async function invokeFunctionHandler(
   handler: ResolvedHandler,
-  context: HandlerContext,
+  context: HttpHandlerContext,
 ): Promise<unknown> {
   const req = buildHttpRequest(context.request, context.metadata);
   const ctx = buildHttpContext(

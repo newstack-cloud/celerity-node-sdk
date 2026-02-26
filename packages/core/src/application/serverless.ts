@@ -1,6 +1,6 @@
 import type { CelerityLayer, Type } from "@celerity-sdk/types";
 import type { Container } from "../di/container";
-import type { HandlerRegistry } from "../handlers/registry";
+import type { HttpHandlerRegistry } from "../handlers/registry";
 import type { ServerlessAdapter, ServerlessHandler } from "../adapters/interfaces";
 import { disposeLayers } from "../layers/dispose";
 
@@ -8,7 +8,7 @@ export class ServerlessApplication {
   private handler: ServerlessHandler | null = null;
 
   constructor(
-    private registry: HandlerRegistry,
+    private registry: HttpHandlerRegistry,
     private container: Container,
     private adapter: ServerlessAdapter,
     private systemLayers: (CelerityLayer | Type<CelerityLayer>)[] = [],
@@ -16,7 +16,7 @@ export class ServerlessApplication {
   ) {}
 
   async start(): Promise<ServerlessHandler> {
-    this.handler = this.adapter.createHandler(this.registry, {
+    this.handler = this.adapter.createHttpHandler(this.registry, {
       container: this.container,
       systemLayers: this.systemLayers,
       appLayers: this.appLayers,
@@ -40,7 +40,7 @@ export class ServerlessApplication {
     return this.container;
   }
 
-  getRegistry(): HandlerRegistry {
+  getRegistry(): HttpHandlerRegistry {
     return this.registry;
   }
 }

@@ -2,19 +2,25 @@ import "reflect-metadata";
 import {
   GUARD_PROTECTEDBY_METADATA,
   GUARD_CUSTOM_METADATA,
+  INJECTABLE_METADATA,
   PUBLIC_METADATA,
 } from "../metadata/constants";
 
 /**
- * Marks a handler class as a custom guard implementation.
- * The handler IS the guard — in serverless it becomes a Lambda Authorizer,
- * in containers the Rust runtime invokes it before protected handlers.
+ * Marks a class as a custom guard implementation.
+ * The class must have a `check()` method that the runtime invokes before protected handlers.
+ *
+ * In serverless mode, the guard becomes a Lambda Authorizer.
+ * In container mode, the Rust runtime invokes it via `registerGuardHandler`.
  *
  * Other handlers reference this guard via `@ProtectedBy("name")`.
  */
 export function Guard(name: string): ClassDecorator {
   return (target) => {
     Reflect.defineMetadata(GUARD_CUSTOM_METADATA, name, target);
+    if (!Reflect.hasOwnMetadata(INJECTABLE_METADATA, target)) {
+      Reflect.defineMetadata(INJECTABLE_METADATA, true, target);
+    }
   };
 }
 

@@ -6,13 +6,13 @@ import type {
   Type,
 } from "@celerity-sdk/types";
 import type { Container } from "../di/container";
-import type { HandlerRegistry } from "../handlers/registry";
+import type { HttpHandlerRegistry } from "../handlers/registry";
 import { executeHandlerPipeline } from "../handlers/pipeline";
 import { NotFoundException } from "../errors/http-exception";
 
 export class TestingApplication {
   constructor(
-    private registry: HandlerRegistry,
+    private registry: HttpHandlerRegistry,
     private container: Container,
     private systemLayers: (CelerityLayer | Type<CelerityLayer>)[] = [],
     private appLayers: (CelerityLayer | Type<CelerityLayer>)[] = [],
@@ -34,7 +34,7 @@ export class TestingApplication {
     return this.container;
   }
 
-  getRegistry(): HandlerRegistry {
+  getRegistry(): HttpHandlerRegistry {
     return this.registry;
   }
 }

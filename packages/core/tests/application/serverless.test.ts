@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { ServerlessApplication } from "../../src/application/serverless";
 import type { Container } from "../../src/di/container";
-import type { HandlerRegistry } from "../../src/handlers/registry";
+import type { HttpHandlerRegistry } from "../../src/handlers/registry";
 import type { ServerlessAdapter } from "../../src/adapters/interfaces";
 import type { CelerityLayer } from "@celerity-sdk/types";
 
@@ -12,12 +12,12 @@ function makeContainer(overrides: Partial<Container> = {}): Container {
   } as unknown as Container;
 }
 
-function makeRegistry(): HandlerRegistry {
-  return { getAllHandlers: vi.fn(() => []) } as unknown as HandlerRegistry;
+function makeRegistry(): HttpHandlerRegistry {
+  return { getAllHandlers: vi.fn(() => []) } as unknown as HttpHandlerRegistry;
 }
 
 function makeAdapter(): ServerlessAdapter {
-  return { createHandler: vi.fn(() => vi.fn()) } as unknown as ServerlessAdapter;
+  return { createHttpHandler: vi.fn(() => vi.fn()) } as unknown as ServerlessAdapter;
 }
 
 describe("ServerlessApplication.close", () => {

@@ -2,10 +2,10 @@ import "reflect-metadata";
 import { describe, it, expect, vi } from "vitest";
 import { runLayerPipeline } from "../../src/layers/pipeline";
 import { HandlerMetadataStore } from "../../src/metadata/handler-metadata";
-import type { HandlerContext, HandlerResponse, CelerityLayer } from "@celerity-sdk/types";
+import type { HttpHandlerContext, CelerityLayer } from "@celerity-sdk/types";
 import { Container } from "../../src";
 
-function makeContext(overrides: Partial<HandlerContext["request"]> = {}): HandlerContext {
+function makeContext(overrides: Partial<HttpHandlerContext["request"]> = {}): HttpHandlerContext {
   return {
     request: {
       method: "GET",
@@ -31,7 +31,7 @@ function makeContext(overrides: Partial<HandlerContext["request"]> = {}): Handle
   };
 }
 
-function makeResponse(status = 200): HandlerResponse {
+function makeResponse(status = 200) {
   return { status, headers: { "content-type": "application/json" }, body: "{}" };
 }
 
@@ -173,16 +173,18 @@ describe("runLayerPipeline", () => {
 
     const transformingLayer: CelerityLayer = {
       handle: async (_ctx, next) => {
-        const response = await next();
+        const response = await next() as { headers: Record<string, unknown> };
         return {
           ...response,
-          headers: { ...response.headers, "x-custom": "added" },
+          headers: { ...(response.headers as Record<string, unknown>), "x-custom": "added" },
         };
       },
     };
 
     // Act
-    const result = await runLayerPipeline([transformingLayer], context, handler);
+    const result = await runLayerPipeline(
+      [transformingLayer], context, handler
+    ) as { headers: Record<string, unknown> };
 
     // Assert
     expect(result.headers).toEqual(
@@ -194,7 +196,7 @@ describe("runLayerPipeline", () => {
     // Arrange
     const context = makeContext();
     const handler = vi.fn(async () => makeResponse());
-    const handleSpy = vi.fn(async (_ctx: HandlerContext, next: () => Promise<HandlerResponse>) => next());
+    const handleSpy = vi.fn(async (_ctx: HttpHandlerContext, next: () => Promise<unknown>) => next());
 
     class TestLayer implements CelerityLayer {
       handle = handleSpy;

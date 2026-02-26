@@ -6,7 +6,7 @@ import { Controller } from "../../src/decorators/controller";
 import { Get, Post } from "../../src/decorators/http";
 import { Injectable } from "../../src/decorators/injectable";
 import { Container } from "../../src/di/container";
-import { HandlerRegistry } from "../../src/handlers/registry";
+import { HttpHandlerRegistry } from "../../src/handlers/registry";
 import { createHttpHandler } from "../../src/functions/create-handler";
 
 @Injectable()
@@ -49,7 +49,7 @@ describe("bootstrap", () => {
     const result = await bootstrap(TestModule);
 
     expect(result.container).toBeInstanceOf(Container);
-    expect(result.registry).toBeInstanceOf(HandlerRegistry);
+    expect(result.registry).toBeInstanceOf(HttpHandlerRegistry);
   });
 
   it("registers providers in the container", async () => {
