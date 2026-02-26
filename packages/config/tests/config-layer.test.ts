@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import type { HandlerContext, HandlerResponse, ServiceContainer } from "@celerity-sdk/types";
+import type { BaseHandlerContext, ServiceContainer } from "@celerity-sdk/types";
 import { ConfigLayer } from "../src/config-layer";
 
-function createMockContext(): HandlerContext {
+function createMockContext(): BaseHandlerContext {
   const providers = new Map<unknown, unknown>();
   const container: ServiceContainer = {
     register: vi.fn((token, provider) => {
@@ -15,24 +15,6 @@ function createMockContext(): HandlerContext {
   };
 
   return {
-    request: {
-      method: "GET",
-      path: "/test",
-      pathParams: {},
-      query: {},
-      headers: {},
-      cookies: {},
-      textBody: null,
-      binaryBody: null,
-      contentType: null,
-      requestId: "test-id",
-      requestTime: new Date().toISOString(),
-      auth: null,
-      clientIp: "127.0.0.1",
-      traceContext: null,
-      userAgent: "test",
-      matchedRoute: null,
-    },
     metadata: {
       get: vi.fn(),
       set: vi.fn(),
@@ -52,7 +34,7 @@ describe("ConfigLayer", () => {
   it("should call next() and return its response", async () => {
     const layer = new ConfigLayer();
     const context = createMockContext();
-    const expectedResponse: HandlerResponse = { status: 200, body: "ok" };
+    const expectedResponse = { status: 200, body: "ok" };
     const next = vi.fn().mockResolvedValue(expectedResponse);
 
     const result = await layer.handle(context, next);

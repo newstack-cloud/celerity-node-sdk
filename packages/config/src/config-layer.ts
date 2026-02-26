@@ -1,5 +1,5 @@
 import createDebug from "debug";
-import type { CelerityLayer, HandlerContext, HandlerResponse } from "@celerity-sdk/types";
+import type { CelerityLayer, BaseHandlerContext } from "@celerity-sdk/types";
 import type { AwsStoreKind } from "./backends/types";
 import { CelerityConfig, DeployTarget, Platform } from "./env";
 import { resolveBackend } from "./backends/resolve";
@@ -25,14 +25,11 @@ type ConfigLayerSettings = {
  * Self-configuring: reads store ID, store kind, and refresh interval
  * from environment variables set by the deploy engine.
  */
-export class ConfigLayer implements CelerityLayer {
+export class ConfigLayer implements CelerityLayer<BaseHandlerContext> {
   private initialized = false;
   private settings: ConfigLayerSettings | null = null;
 
-  async handle(
-    context: HandlerContext,
-    next: () => Promise<HandlerResponse>,
-  ): Promise<HandlerResponse> {
+  async handle(context: BaseHandlerContext, next: () => Promise<unknown>): Promise<unknown> {
     if (!this.initialized) {
       const platform = CelerityConfig.getPlatform();
       this.settings = captureConfigLayerSettings(platform);
