@@ -2,8 +2,9 @@ import createDebug from "debug";
 import { context as otelContext } from "@opentelemetry/api";
 import type {
   CelerityLayer,
-  HandlerContext,
-  HandlerResponse,
+  BaseHandlerContext,
+  HttpHandlerContext,
+  HttpRequest,
   LogLevel,
   ServiceContainer,
 } from "@celerity-sdk/types";
@@ -19,6 +20,10 @@ import { LOGGER_TOKEN, TRACER_TOKEN } from "./tokens";
 
 const debugLog = createDebug("celerity:telemetry");
 
+function isHttpContext(context: BaseHandlerContext): context is HttpHandlerContext {
+  return "request" in context && typeof (context as HttpHandlerContext).request === "object";
+}
+
 const LOG_LEVEL_CONFIG_KEYS = [
   "CELERITY_LOG_LEVEL",
   "celerityLogLevel",
@@ -32,7 +37,7 @@ type ConfigService = {
   get(key: string): Promise<string | undefined>;
 };
 
-export class TelemetryLayer implements CelerityLayer {
+export class TelemetryLayer implements CelerityLayer<BaseHandlerContext> {
   private config: TelemetryConfig;
   private rootLogger: CelerityLoggerImpl | null = null;
   private currentLevel: LogLevel;
@@ -47,10 +52,7 @@ export class TelemetryLayer implements CelerityLayer {
     }
   }
 
-  async handle(
-    context: HandlerContext,
-    next: () => Promise<HandlerResponse>,
-  ): Promise<HandlerResponse> {
+  async handle(context: BaseHandlerContext, next: () => Promise<unknown>): Promise<unknown> {
     if (this.initPromise) {
       await this.initPromise;
       this.initPromise = null;
@@ -62,7 +64,7 @@ export class TelemetryLayer implements CelerityLayer {
         this.config.logFormat,
         this.config.logLevel,
       );
-      this.rootLogger = createLogger(this.config);
+      this.rootLogger = await createLogger(this.config);
       context.container.register(LOGGER_TOKEN, {
         useValue: new ContextAwareLogger(this.rootLogger),
       });
@@ -74,24 +76,41 @@ export class TelemetryLayer implements CelerityLayer {
 
     await this.refreshLogLevelFromConfig(context.container);
 
-    const userId = extractUserId(context.request.auth);
-    const requestLogger = this.rootLogger.child("request", {
-      requestId: context.request.requestId,
-      method: context.request.method,
-      path: context.request.path,
-      matchedRoute: context.request.matchedRoute,
-      clientIp: context.request.clientIp,
-      userAgent: context.request.userAgent,
-      ...(userId ? { userId } : {}),
-    });
+    const handlerName = context.metadata.get("handlerName") as string | undefined;
+    let requestLogger;
+    let traceRequest: HttpRequest | undefined;
+
+    if (isHttpContext(context)) {
+      const userId = extractUserId(context.request.auth);
+      requestLogger = this.rootLogger.child("request", {
+        ...(handlerName ? { handlerName } : {}),
+        requestId: context.request.requestId,
+        method: context.request.method,
+        path: context.request.path,
+        matchedRoute: context.request.matchedRoute,
+        clientIp: context.request.clientIp,
+        userAgent: context.request.userAgent,
+        ...(userId ? { userId } : {}),
+      });
+      traceRequest = context.request;
+    } else {
+      requestLogger = this.rootLogger.child("request", {
+        ...(handlerName ? { handlerName } : {}),
+      });
+    }
+
     context.logger = requestLogger;
 
     const runWithLogger = () => requestStore.run({ logger: requestLogger }, () => next());
 
     if (!this.config.tracingEnabled) return runWithLogger();
 
-    const parentContext = extractTraceContext(context.request);
-    return otelContext.with(parentContext, runWithLogger);
+    if (traceRequest) {
+      const parentContext = extractTraceContext(traceRequest);
+      return otelContext.with(parentContext, runWithLogger);
+    }
+
+    return runWithLogger();
   }
 
   async dispose(): Promise<void> {

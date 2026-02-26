@@ -46,17 +46,21 @@ export class CelerityLoggerImpl implements CelerityLogger {
   }
 }
 
-export function createLogger(config: TelemetryConfig): CelerityLoggerImpl {
+export async function createLogger(config: TelemetryConfig): Promise<CelerityLoggerImpl> {
   const streams: pino.StreamEntry[] = [];
 
   const isLocal = !process.env.CELERITY_PLATFORM || process.env.CELERITY_PLATFORM === "local";
   const useHumanFormat = config.logFormat === "human" || (config.logFormat === "auto" && isLocal);
 
   if (useHumanFormat) {
-    // pino-pretty via worker thread — fine for local dev only
+    // pino-pretty in main thread for consistent output ordering with core runtime logs
+    const pinoPrettyPkg = "pino-pretty";
+    const { default: pinoPretty } = (await import(pinoPrettyPkg)) as {
+      default: (opts: Record<string, unknown>) => NodeJS.WritableStream;
+    };
     streams.push({
       level: config.logLevel,
-      stream: pino.transport({ target: "pino-pretty", options: { destination: 1 } }),
+      stream: pinoPretty({ destination: 1, translateTime: "SYS:standard" }),
     });
   } else {
     // Raw JSON to stdout — synchronous, Lambda-safe

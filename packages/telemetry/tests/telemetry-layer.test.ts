@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type {
   CelerityLogger,
-  HandlerContext,
-  HandlerResponse,
+  HttpHandlerContext,
   HttpRequest,
   ServiceContainer,
 } from "@celerity-sdk/types";
@@ -96,21 +95,25 @@ function createMockContainer(): ServiceContainer & {
   };
 }
 
+function createMockMetadata(data: Record<string, unknown> = {}) {
+  const store = new Map(Object.entries(data));
+  return {
+    get: <T = unknown>(key: string): T | undefined => store.get(key) as T | undefined,
+    set: (key: string, value: unknown): void => { store.set(key, value); },
+    has: (key: string): boolean => store.has(key),
+  };
+}
+
 function createHandlerContext(
-  overrides: Partial<HandlerContext> = {},
-): HandlerContext & { container: ReturnType<typeof createMockContainer> } {
+  overrides: Partial<HttpHandlerContext> = {},
+): HttpHandlerContext & { container: ReturnType<typeof createMockContainer> } {
   const container = createMockContainer();
   return {
     request: createMockRequest(),
-    metadata: {
-      handlerName: "TestHandler",
-      method: "GET",
-      path: "/users",
-      guards: [],
-    },
+    metadata: createMockMetadata(),
     container,
     ...overrides,
-  } as HandlerContext & { container: ReturnType<typeof createMockContainer> };
+  } as HttpHandlerContext & { container: ReturnType<typeof createMockContainer> };
 }
 
 describe("TelemetryLayer", () => {
@@ -159,6 +162,21 @@ describe("TelemetryLayer", () => {
       clientIp: "127.0.0.1",
       userAgent: "TestAgent/1.0",
     });
+  });
+
+  it("should include handlerName in child logger when available in metadata", async () => {
+    const layer = new TelemetryLayer();
+    const context = createHandlerContext({
+      metadata: createMockMetadata({ handlerName: "Orders" }),
+    });
+    const next = vi.fn().mockResolvedValue({ status: 200, headers: {}, body: null });
+
+    await layer.handle(context, next);
+
+    expect(mockPinoChild).toHaveBeenCalledWith(
+      "request",
+      expect.objectContaining({ handlerName: "Orders" }),
+    );
   });
 
   it("should extract userId from JWT guard claims.sub", async () => {
@@ -262,7 +280,7 @@ describe("TelemetryLayer", () => {
   it("should call next() and return its response", async () => {
     const layer = new TelemetryLayer();
     const context = createHandlerContext();
-    const response: HandlerResponse = { status: 201, headers: { "x-id": "1" }, body: "ok" };
+    const response = { status: 201, headers: { "x-id": "1" }, body: "ok" };
     const next = vi.fn().mockResolvedValue(response);
 
     const result = await layer.handle(context, next);

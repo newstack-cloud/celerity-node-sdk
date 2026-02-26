@@ -139,51 +139,49 @@ describe("createLogger", () => {
     logFilePath: null,
   };
 
-  it("should create a logger that outputs JSON to stdout", () => {
-    const logger = createLogger(baseConfig);
+  it("should create a logger that outputs JSON to stdout", async () => {
+    const logger = await createLogger(baseConfig);
     expect(logger).toBeInstanceOf(CelerityLoggerImpl);
   });
 
-  it("should create a logger with redaction when CELERITY_LOG_REDACT_KEYS is set", () => {
+  it("should create a logger with redaction when CELERITY_LOG_REDACT_KEYS is set", async () => {
     process.env.CELERITY_LOG_REDACT_KEYS = "password, secret";
-    const logger = createLogger(baseConfig);
+    const logger = await createLogger(baseConfig);
     // Logger is created — redaction paths are internal to pino
     expect(logger).toBeInstanceOf(CelerityLoggerImpl);
   });
 
-  it("should not throw when creating with file output", () => {
+  it("should not throw when creating with file output", async () => {
     const config: TelemetryConfig = {
       ...baseConfig,
       logFilePath: "/tmp/celerity-test-log.json",
     };
-    expect(() => createLogger(config)).not.toThrow();
+    await expect(createLogger(config)).resolves.not.toThrow();
   });
 
-  it("should use human format when logFormat is 'human'", () => {
+  it("should use human format when logFormat is 'human'", async () => {
     const config: TelemetryConfig = {
       ...baseConfig,
       logFormat: "human",
     };
-    // pino-pretty transport creation — just verify no throw
-    expect(() => createLogger(config)).not.toThrow();
+    await expect(createLogger(config)).resolves.not.toThrow();
   });
 
-  it("should auto-detect human format for local platform", () => {
+  it("should auto-detect human format for local platform", async () => {
     delete process.env.CELERITY_PLATFORM;
     const config: TelemetryConfig = {
       ...baseConfig,
       logFormat: "auto",
     };
-    // local platform (no env) + auto format → human
-    expect(() => createLogger(config)).not.toThrow();
+    await expect(createLogger(config)).resolves.not.toThrow();
   });
 
-  it("should use JSON format for deployed platforms with auto", () => {
+  it("should use JSON format for deployed platforms with auto", async () => {
     process.env.CELERITY_PLATFORM = "aws";
     const config: TelemetryConfig = {
       ...baseConfig,
       logFormat: "auto",
     };
-    expect(() => createLogger(config)).not.toThrow();
+    await expect(createLogger(config)).resolves.not.toThrow();
   });
 });
