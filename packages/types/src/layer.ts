@@ -1,11 +1,11 @@
-import type { HandlerContext } from "./http";
-import type { HttpResponse } from "./http";
+import type { BaseHandlerContext } from "./handler";
+import type { HttpHandlerContext } from "./http";
 
-export type HandlerResponse = HttpResponse;
+export type HandlerResponse = unknown;
 
-export type NextFunction = () => Promise<HandlerResponse>;
+export type NextFunction = () => Promise<unknown>;
 
-export interface CelerityLayer<TContext extends HandlerContext = HandlerContext> {
-  handle(context: TContext, next: NextFunction): Promise<HandlerResponse>;
+export interface CelerityLayer<TContext extends BaseHandlerContext = HttpHandlerContext> {
+  handle(context: TContext, next: NextFunction): Promise<unknown>;
   dispose?(): Promise<void> | void;
 }
