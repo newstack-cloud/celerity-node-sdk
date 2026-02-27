@@ -22,7 +22,7 @@ export type ClassHandlerEntry = {
   className: string;
   methodName: string;
   sourceFile: string;
-  handlerType: "http" | "websocket" | "consumer" | "schedule";
+  handlerType: "http" | "websocket" | "consumer" | "schedule" | "custom";
   annotations: Record<string, string | string[] | boolean>;
   spec: {
     handlerName: string;
@@ -36,6 +36,7 @@ export type FunctionHandlerEntry = {
   resourceName: string;
   exportName: string;
   sourceFile: string;
+  handlerType: "http" | "websocket" | "consumer" | "schedule" | "custom";
   annotations?: Record<string, string | string[] | boolean>;
   spec: {
     handlerName: string;

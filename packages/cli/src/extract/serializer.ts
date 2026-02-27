@@ -1,15 +1,35 @@
 import "reflect-metadata";
-import type { Type, HttpMethod, InjectionToken, GuardDefinition } from "@celerity-sdk/types";
+import type {
+  Type,
+  HttpMethod,
+  InjectionToken,
+  GuardDefinition,
+  FunctionHandlerDefinition,
+} from "@celerity-sdk/types";
 import {
   CONTROLLER_METADATA,
   HTTP_METHOD_METADATA,
   ROUTE_PATH_METADATA,
+  WEBSOCKET_CONTROLLER_METADATA,
+  WEBSOCKET_EVENT_METADATA,
+  CONSUMER_METADATA,
+  CONSUMER_HANDLER_METADATA,
+  SCHEDULE_HANDLER_METADATA,
+  INVOKE_METADATA,
   GUARD_PROTECTEDBY_METADATA,
   GUARD_CUSTOM_METADATA,
   PUBLIC_METADATA,
   CUSTOM_METADATA,
+  USE_RESOURCE_METADATA,
 } from "@celerity-sdk/core";
-import type { ControllerMetadata } from "@celerity-sdk/core";
+import type {
+  ControllerMetadata,
+  WebSocketEventMetadata,
+  ConsumerHandlerMetadata,
+  ScheduleHandlerMetadata,
+  InvokeMetadata,
+  ConsumerMetadata,
+} from "@celerity-sdk/core";
 import type { ScannedModule } from "./metadata-app";
 import type {
   HandlerManifest,
@@ -43,7 +63,7 @@ export function serializeManifest(
   const guardHandlers: GuardHandlerEntry[] = [];
 
   for (const controllerClass of scanned.controllerClasses) {
-    const entries = serializeClassHandler(controllerClass, sourceFile, options);
+    const entries = serializeClassHandlers(controllerClass, sourceFile, options);
     handlers.push(...entries);
   }
 
@@ -77,49 +97,95 @@ export function serializeManifest(
   };
 }
 
-type ClassMeta = {
+// ---------------------------------------------------------------------------
+// Controller meta extraction
+// ---------------------------------------------------------------------------
+
+type ControllerType = "http" | "websocket" | "consumer";
+
+type ControllerMeta = {
+  controllerType: ControllerType;
   prefix: string;
+  sourceId?: string;
   protectedBy: string[];
   customGuardName: string | undefined;
   customMetadata: Record<string, unknown>;
+  resourceRefs: string[];
 };
 
-function extractClassMeta(controllerClass: Type): ClassMeta | null {
-  const controllerMeta: ControllerMetadata | undefined = Reflect.getOwnMetadata(
+function extractControllerMeta(controllerClass: Type): ControllerMeta | null {
+  const httpMeta: ControllerMetadata | undefined = Reflect.getOwnMetadata(
     CONTROLLER_METADATA,
     controllerClass,
   );
-  if (!controllerMeta) return null;
+  if (httpMeta) {
+    return {
+      controllerType: "http",
+      prefix: httpMeta.prefix ?? "",
+      ...extractSharedClassMeta(controllerClass),
+    };
+  }
 
+  const isWebSocket: boolean | undefined = Reflect.getOwnMetadata(
+    WEBSOCKET_CONTROLLER_METADATA,
+    controllerClass,
+  );
+  if (isWebSocket) {
+    return {
+      controllerType: "websocket",
+      prefix: "",
+      ...extractSharedClassMeta(controllerClass),
+    };
+  }
+
+  const consumerMeta: ConsumerMetadata | undefined = Reflect.getOwnMetadata(
+    CONSUMER_METADATA,
+    controllerClass,
+  );
+  if (consumerMeta) {
+    return {
+      controllerType: "consumer",
+      prefix: "",
+      sourceId: consumerMeta.sourceId,
+      ...extractSharedClassMeta(controllerClass),
+    };
+  }
+
+  return null;
+}
+
+function extractSharedClassMeta(controllerClass: Type) {
   return {
-    prefix: controllerMeta.prefix ?? "",
-    protectedBy: Reflect.getOwnMetadata(GUARD_PROTECTEDBY_METADATA, controllerClass) ?? [],
-    customGuardName: Reflect.getOwnMetadata(GUARD_CUSTOM_METADATA, controllerClass),
-    customMetadata: Reflect.getOwnMetadata(CUSTOM_METADATA, controllerClass) ?? {},
+    protectedBy:
+      (Reflect.getOwnMetadata(GUARD_PROTECTEDBY_METADATA, controllerClass) as string[]) ?? [],
+    customGuardName: Reflect.getOwnMetadata(GUARD_CUSTOM_METADATA, controllerClass) as
+      | string
+      | undefined,
+    customMetadata:
+      (Reflect.getOwnMetadata(CUSTOM_METADATA, controllerClass) as Record<string, unknown>) ?? {},
+    resourceRefs:
+      (Reflect.getOwnMetadata(USE_RESOURCE_METADATA, controllerClass) as string[]) ?? [],
   };
 }
 
-function buildMethodAnnotations(
-  classMeta: ClassMeta,
+// ---------------------------------------------------------------------------
+// Shared annotation helpers
+// ---------------------------------------------------------------------------
+
+function appendSharedAnnotations(
+  annotations: Record<string, string | string[] | boolean>,
+  meta: ControllerMeta,
   prototype: object,
   methodName: string,
-  httpMethod: HttpMethod,
-  fullPath: string,
-): Record<string, string | string[] | boolean> {
-  const annotations: Record<string, string | string[] | boolean> = {};
-
-  annotations["celerity.handler.http"] = true;
-  annotations["celerity.handler.http.method"] = httpMethod;
-  annotations["celerity.handler.http.path"] = fullPath;
-
+): void {
   const methodProtectedBy: string[] =
     Reflect.getOwnMetadata(GUARD_PROTECTEDBY_METADATA, prototype, methodName) ?? [];
-  const allProtectedBy = [...classMeta.protectedBy, ...methodProtectedBy];
+  const allProtectedBy = [...meta.protectedBy, ...methodProtectedBy];
   if (allProtectedBy.length > 0) {
     annotations["celerity.handler.guard.protectedBy"] = allProtectedBy;
   }
-  if (classMeta.customGuardName) {
-    annotations["celerity.handler.guard.custom"] = classMeta.customGuardName;
+  if (meta.customGuardName) {
+    annotations["celerity.handler.guard.custom"] = meta.customGuardName;
   }
 
   const isPublic: boolean = Reflect.getOwnMetadata(PUBLIC_METADATA, prototype, methodName) === true;
@@ -129,22 +195,113 @@ function buildMethodAnnotations(
 
   const methodCustomMetadata: Record<string, unknown> =
     Reflect.getOwnMetadata(CUSTOM_METADATA, prototype, methodName) ?? {};
-  const customMetadata = { ...classMeta.customMetadata, ...methodCustomMetadata };
+  const customMetadata = { ...meta.customMetadata, ...methodCustomMetadata };
   for (const [key, value] of Object.entries(customMetadata)) {
     if (value === undefined) continue;
     annotations[`celerity.handler.metadata.${key}`] = serializeAnnotationValue(value);
   }
 
+  const methodResourceRefs: string[] =
+    Reflect.getOwnMetadata(USE_RESOURCE_METADATA, prototype, methodName) ?? [];
+  const allResourceRefs = [...new Set([...meta.resourceRefs, ...methodResourceRefs])];
+  if (allResourceRefs.length > 0) {
+    annotations["celerity.handler.resource.ref"] = allResourceRefs;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Type-specific annotation builders (class handlers)
+// ---------------------------------------------------------------------------
+
+function buildHttpAnnotations(
+  meta: ControllerMeta,
+  prototype: object,
+  methodName: string,
+  httpMethod: HttpMethod,
+  fullPath: string,
+): Record<string, string | string[] | boolean> {
+  const annotations: Record<string, string | string[] | boolean> = {};
+  annotations["celerity.handler.http"] = true;
+  annotations["celerity.handler.http.method"] = httpMethod;
+  annotations["celerity.handler.http.path"] = fullPath;
+  appendSharedAnnotations(annotations, meta, prototype, methodName);
   return annotations;
 }
 
-function serializeClassHandler(
+function buildWebSocketAnnotations(
+  meta: ControllerMeta,
+  prototype: object,
+  methodName: string,
+  wsEvent: WebSocketEventMetadata,
+): Record<string, string | string[] | boolean> {
+  const annotations: Record<string, string | string[] | boolean> = {};
+  annotations["celerity.handler.websocket"] = true;
+  annotations["celerity.handler.websocket.route"] = wsEvent.route;
+  annotations["celerity.handler.websocket.eventType"] = wsEvent.eventType;
+  appendSharedAnnotations(annotations, meta, prototype, methodName);
+  return annotations;
+}
+
+function buildConsumerAnnotations(
+  meta: ControllerMeta,
+  prototype: object,
+  methodName: string,
+  consumerHandler: ConsumerHandlerMetadata,
+): Record<string, string | string[] | boolean> {
+  const annotations: Record<string, string | string[] | boolean> = {};
+  annotations["celerity.handler.consumer"] = true;
+  if (meta.sourceId) {
+    annotations["celerity.handler.consumer.sourceId"] = meta.sourceId;
+  }
+  if (consumerHandler.route) {
+    annotations["celerity.handler.consumer.route"] = consumerHandler.route;
+  }
+  appendSharedAnnotations(annotations, meta, prototype, methodName);
+  return annotations;
+}
+
+function buildScheduleAnnotations(
+  meta: ControllerMeta,
+  prototype: object,
+  methodName: string,
+  scheduleMeta: ScheduleHandlerMetadata,
+): Record<string, string | string[] | boolean> {
+  const annotations: Record<string, string | string[] | boolean> = {};
+  annotations["celerity.handler.schedule"] = true;
+  if (scheduleMeta.scheduleId) {
+    annotations["celerity.handler.schedule.scheduleId"] = scheduleMeta.scheduleId;
+  }
+  if (scheduleMeta.schedule) {
+    annotations["celerity.handler.schedule.expression"] = scheduleMeta.schedule;
+  }
+  appendSharedAnnotations(annotations, meta, prototype, methodName);
+  return annotations;
+}
+
+function buildCustomAnnotations(
+  meta: ControllerMeta,
+  prototype: object,
+  methodName: string,
+  invokeMeta: InvokeMetadata,
+): Record<string, string | string[] | boolean> {
+  const annotations: Record<string, string | string[] | boolean> = {};
+  annotations["celerity.handler.custom"] = true;
+  annotations["celerity.handler.custom.name"] = invokeMeta.name;
+  appendSharedAnnotations(annotations, meta, prototype, methodName);
+  return annotations;
+}
+
+// ---------------------------------------------------------------------------
+// Class handler serialization
+// ---------------------------------------------------------------------------
+
+function serializeClassHandlers(
   controllerClass: Type,
   sourceFile: string,
   options: SerializeOptions,
 ): ClassHandlerEntry[] {
-  const classMeta = extractClassMeta(controllerClass);
-  if (!classMeta) return [];
+  const meta = extractControllerMeta(controllerClass);
+  if (!meta) return [];
 
   const className = controllerClass.name;
   const prototype = controllerClass.prototype as object;
@@ -152,62 +309,200 @@ function serializeClassHandler(
   const entries: ClassHandlerEntry[] = [];
 
   for (const methodName of methods) {
-    const httpMethod: HttpMethod | undefined = Reflect.getOwnMetadata(
-      HTTP_METHOD_METADATA,
-      prototype,
-      methodName,
-    );
-    if (!httpMethod) continue;
-
-    const routePath: string =
-      Reflect.getOwnMetadata(ROUTE_PATH_METADATA, prototype, methodName) ?? "/";
-    const fullPath = joinHandlerPath(classMeta.prefix, routePath);
-    const annotations = buildMethodAnnotations(
-      classMeta,
-      prototype,
-      methodName,
-      httpMethod,
-      fullPath,
-    );
-
-    entries.push({
-      resourceName: deriveClassResourceName(className, methodName),
+    // Type-specific handler decorator for the controller type.
+    const typeEntry = serializeControllerTypeMethod(
+      meta,
       className,
+      prototype,
       methodName,
       sourceFile,
-      handlerType: "http",
-      annotations,
-      spec: {
-        handlerName: deriveClassHandlerName(className, methodName),
-        codeLocation: deriveCodeLocation(sourceFile, options.projectRoot),
-        handler: deriveClassHandlerFunction(sourceFile, className, methodName),
-      },
-    });
+      options,
+    );
+    if (typeEntry) entries.push(typeEntry);
+
+    // Cross-cutting: @ScheduleHandler on any controller type.
+    const scheduleMeta: ScheduleHandlerMetadata | undefined = Reflect.getOwnMetadata(
+      SCHEDULE_HANDLER_METADATA,
+      prototype,
+      methodName,
+    );
+    if (scheduleMeta) {
+      entries.push({
+        resourceName: deriveClassResourceName(className, methodName),
+        className,
+        methodName,
+        sourceFile,
+        handlerType: "schedule",
+        annotations: buildScheduleAnnotations(meta, prototype, methodName, scheduleMeta),
+        spec: {
+          handlerName: deriveClassHandlerName(className, methodName),
+          codeLocation: deriveCodeLocation(sourceFile, options.projectRoot),
+          handler: deriveClassHandlerFunction(sourceFile, className, methodName),
+        },
+      });
+    }
+
+    // Cross-cutting: @Invoke on any controller type.
+    const invokeMeta: InvokeMetadata | undefined = Reflect.getOwnMetadata(
+      INVOKE_METADATA,
+      prototype,
+      methodName,
+    );
+    if (invokeMeta) {
+      entries.push({
+        resourceName: deriveClassResourceName(className, methodName),
+        className,
+        methodName,
+        sourceFile,
+        handlerType: "custom",
+        annotations: buildCustomAnnotations(meta, prototype, methodName, invokeMeta),
+        spec: {
+          handlerName: deriveClassHandlerName(className, methodName),
+          codeLocation: deriveCodeLocation(sourceFile, options.projectRoot),
+          handler: deriveClassHandlerFunction(sourceFile, className, methodName),
+        },
+      });
+    }
   }
 
   return entries;
 }
 
+function serializeControllerTypeMethod(
+  meta: ControllerMeta,
+  className: string,
+  prototype: object,
+  methodName: string,
+  sourceFile: string,
+  options: SerializeOptions,
+): ClassHandlerEntry | null {
+  switch (meta.controllerType) {
+    case "http":
+      return serializeHttpMethod(meta, className, prototype, methodName, sourceFile, options);
+    case "websocket":
+      return serializeWebSocketMethod(meta, className, prototype, methodName, sourceFile, options);
+    case "consumer":
+      return serializeConsumerMethod(meta, className, prototype, methodName, sourceFile, options);
+    default:
+      return null;
+  }
+}
+
+function serializeHttpMethod(
+  meta: ControllerMeta,
+  className: string,
+  prototype: object,
+  methodName: string,
+  sourceFile: string,
+  options: SerializeOptions,
+): ClassHandlerEntry | null {
+  const httpMethod: HttpMethod | undefined = Reflect.getOwnMetadata(
+    HTTP_METHOD_METADATA,
+    prototype,
+    methodName,
+  );
+  if (!httpMethod) return null;
+
+  const routePath: string =
+    Reflect.getOwnMetadata(ROUTE_PATH_METADATA, prototype, methodName) ?? "/";
+  const fullPath = joinHandlerPath(meta.prefix, routePath);
+
+  return {
+    resourceName: deriveClassResourceName(className, methodName),
+    className,
+    methodName,
+    sourceFile,
+    handlerType: "http",
+    annotations: buildHttpAnnotations(meta, prototype, methodName, httpMethod, fullPath),
+    spec: {
+      handlerName: deriveClassHandlerName(className, methodName),
+      codeLocation: deriveCodeLocation(sourceFile, options.projectRoot),
+      handler: deriveClassHandlerFunction(sourceFile, className, methodName),
+    },
+  };
+}
+
+function serializeWebSocketMethod(
+  meta: ControllerMeta,
+  className: string,
+  prototype: object,
+  methodName: string,
+  sourceFile: string,
+  options: SerializeOptions,
+): ClassHandlerEntry | null {
+  const wsEvent: WebSocketEventMetadata | undefined = Reflect.getOwnMetadata(
+    WEBSOCKET_EVENT_METADATA,
+    prototype,
+    methodName,
+  );
+  if (!wsEvent) return null;
+
+  return {
+    resourceName: deriveClassResourceName(className, methodName),
+    className,
+    methodName,
+    sourceFile,
+    handlerType: "websocket",
+    annotations: buildWebSocketAnnotations(meta, prototype, methodName, wsEvent),
+    spec: {
+      handlerName: deriveClassHandlerName(className, methodName),
+      codeLocation: deriveCodeLocation(sourceFile, options.projectRoot),
+      handler: deriveClassHandlerFunction(sourceFile, className, methodName),
+    },
+  };
+}
+
+function serializeConsumerMethod(
+  meta: ControllerMeta,
+  className: string,
+  prototype: object,
+  methodName: string,
+  sourceFile: string,
+  options: SerializeOptions,
+): ClassHandlerEntry | null {
+  const consumerHandler: ConsumerHandlerMetadata | undefined = Reflect.getOwnMetadata(
+    CONSUMER_HANDLER_METADATA,
+    prototype,
+    methodName,
+  );
+  if (!consumerHandler) return null;
+
+  return {
+    resourceName: deriveClassResourceName(className, methodName),
+    className,
+    methodName,
+    sourceFile,
+    handlerType: "consumer",
+    annotations: buildConsumerAnnotations(meta, prototype, methodName, consumerHandler),
+    spec: {
+      handlerName: deriveClassHandlerName(className, methodName),
+      codeLocation: deriveCodeLocation(sourceFile, options.projectRoot),
+      handler: deriveClassHandlerFunction(sourceFile, className, methodName),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Function handler serialization
+// ---------------------------------------------------------------------------
+
 function serializeFunctionHandler(
-  definition: { metadata: Record<string, unknown>; handler: (...args: unknown[]) => unknown },
+  definition: FunctionHandlerDefinition,
   sourceFile: string,
   options: SerializeOptions,
 ): FunctionHandlerEntry | null {
-  // Function handlers don't have a reliable export name from the definition alone.
-  // The CLI entry point will need to derive this from the module's named exports.
-  // For now, use "handler" as a placeholder — the CLI enriches this.
+  // "workflow" is not part of v0 — skip unsupported handler types.
+  const supported = ["http", "websocket", "consumer", "schedule", "custom"] as const;
+  type SupportedType = (typeof supported)[number];
+  if (!supported.includes(definition.type as SupportedType)) return null;
+
   const exportName = (definition.metadata.handlerName as string) ?? "handler";
   const customMetadata = (definition.metadata.customMetadata as Record<string, unknown>) ?? {};
+  const handlerType = definition.type as SupportedType;
 
   const annotations: Record<string, string | string[] | boolean> = {};
 
-  const path = definition.metadata.path as string | undefined;
-  const method = definition.metadata.method as string | undefined;
-  if (path !== undefined && method !== undefined) {
-    annotations["celerity.handler.http"] = true;
-    annotations["celerity.handler.http.method"] = method;
-    annotations["celerity.handler.http.path"] = path;
-  }
+  buildFunctionTypeAnnotations(annotations, definition);
 
   for (const [key, value] of Object.entries(customMetadata)) {
     if (value === undefined) continue;
@@ -218,6 +513,7 @@ function serializeFunctionHandler(
     resourceName: deriveFunctionResourceName(exportName),
     exportName,
     sourceFile,
+    handlerType,
     ...(Object.keys(annotations).length > 0 ? { annotations } : {}),
     spec: {
       handlerName: exportName,
@@ -226,6 +522,66 @@ function serializeFunctionHandler(
     },
   };
 }
+
+function buildFunctionTypeAnnotations(
+  annotations: Record<string, string | string[] | boolean>,
+  definition: FunctionHandlerDefinition,
+): void {
+  const meta = definition.metadata;
+
+  switch (definition.type) {
+    case "http": {
+      const path = meta.path as string | undefined;
+      const method = meta.method as string | undefined;
+      if (path !== undefined && method !== undefined) {
+        annotations["celerity.handler.http"] = true;
+        annotations["celerity.handler.http.method"] = method;
+        annotations["celerity.handler.http.path"] = path;
+      }
+      break;
+    }
+    case "websocket": {
+      annotations["celerity.handler.websocket"] = true;
+      const route = meta.route as string | undefined;
+      if (route) {
+        annotations["celerity.handler.websocket.route"] = route;
+      }
+      break;
+    }
+    case "consumer": {
+      annotations["celerity.handler.consumer"] = true;
+      const route = meta.route as string | undefined;
+      if (route) {
+        annotations["celerity.handler.consumer.route"] = route;
+      }
+      break;
+    }
+    case "schedule": {
+      annotations["celerity.handler.schedule"] = true;
+      const scheduleId = meta.scheduleId as string | undefined;
+      if (scheduleId) {
+        annotations["celerity.handler.schedule.scheduleId"] = scheduleId;
+      }
+      const schedule = meta.schedule as string | undefined;
+      if (schedule) {
+        annotations["celerity.handler.schedule.expression"] = schedule;
+      }
+      break;
+    }
+    case "custom": {
+      annotations["celerity.handler.custom"] = true;
+      const name = meta.name as string | undefined;
+      if (name) {
+        annotations["celerity.handler.custom.name"] = name;
+      }
+      break;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Guard serialization (unchanged)
+// ---------------------------------------------------------------------------
 
 type GuardMeta = {
   guardName: string;
@@ -314,6 +670,10 @@ function serializeFunctionGuard(
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
 
 function serializeAnnotationValue(value: unknown): string | string[] | boolean {
   if (typeof value === "boolean") return value;

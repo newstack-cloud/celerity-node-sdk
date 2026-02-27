@@ -15,6 +15,17 @@ import {
   SetMetadata,
   Action,
   createHttpHandler,
+  WebSocketController,
+  OnConnect,
+  OnMessage,
+  Consumer,
+  MessageHandler,
+  ScheduleHandler,
+  Invoke,
+  createWebSocketHandler,
+  createConsumerHandler,
+  createScheduleHandler,
+  createCustomHandler,
 } from "@celerity-sdk/core";
 import schema from "../../schemas/handler-manifest.v1.schema.json" with { type: "json" };
 
@@ -218,6 +229,90 @@ describe("handler manifest JSON schema validation", () => {
     if (!validate(manifest)) {
       expect.fail(JSON.stringify(validate.errors, null, 2));
     }
+  });
+
+  it("validates a manifest with all handler types (http, websocket, consumer, schedule, custom)", () => {
+    @Controller("/api")
+    class ApiHandler {
+      @Get("/data")
+      getData() {
+        return {};
+      }
+
+      @ScheduleHandler("daily-sync")
+      syncData() {
+        return {};
+      }
+
+      @Invoke("processItem")
+      processItem() {
+        return {};
+      }
+    }
+
+    @WebSocketController()
+    class WsHandler {
+      @OnConnect()
+      connect() {
+        return {};
+      }
+
+      @OnMessage()
+      message() {
+        return {};
+      }
+    }
+
+    @Consumer("orders")
+    class OrderConsumer {
+      @MessageHandler("process")
+      processOrder() {
+        return {};
+      }
+    }
+
+    const wsFunc = createWebSocketHandler({ route: "chat" }, async () => {});
+    const consumerFunc = createConsumerHandler(
+      { route: "events" },
+      async () => ({ success: true }),
+    );
+    const scheduleFunc = createScheduleHandler(
+      "rate(1 hour)",
+      {},
+      async () => ({ success: true }),
+    );
+    const customFunc = createCustomHandler(
+      { name: "doWork" },
+      async () => ({ result: "ok" }),
+    );
+
+    @Module({
+      controllers: [ApiHandler, WsHandler, OrderConsumer],
+      functionHandlers: [wsFunc, consumerFunc, scheduleFunc, customFunc],
+    })
+    class AllTypesModule {}
+
+    const scanned = buildScannedModule(AllTypesModule);
+    const manifest = serializeManifest(scanned, SOURCE_FILE, OPTIONS);
+
+    expect(validate(manifest)).toBe(true);
+    if (!validate(manifest)) {
+      expect.fail(JSON.stringify(validate.errors, null, 2));
+    }
+
+    // Verify all handler types are present
+    const classTypes = new Set(manifest.handlers.map((h) => h.handlerType));
+    expect(classTypes).toContain("http");
+    expect(classTypes).toContain("websocket");
+    expect(classTypes).toContain("consumer");
+    expect(classTypes).toContain("schedule");
+    expect(classTypes).toContain("custom");
+
+    const fnTypes = new Set(manifest.functionHandlers.map((h) => h.handlerType));
+    expect(fnTypes).toContain("websocket");
+    expect(fnTypes).toContain("consumer");
+    expect(fnTypes).toContain("schedule");
+    expect(fnTypes).toContain("custom");
   });
 
   it("rejects a manifest with an invalid version", () => {
