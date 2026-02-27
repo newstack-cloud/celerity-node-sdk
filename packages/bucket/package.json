@@ -39,21 +39,36 @@
   },
   "dependencies": {
     "@celerity-sdk/types": "workspace:^",
-    "@celerity-sdk/config": "workspace:^"
+    "@celerity-sdk/common": "workspace:^",
+    "@celerity-sdk/config": "workspace:^",
+    "debug": "^4.4.0"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-s3": "^3.750.0",
+    "@aws-sdk/s3-request-presigner": "^3.750.0",
+    "reflect-metadata": "^0.2.0"
   },
   "peerDependencies": {
     "@aws-sdk/client-s3": "^3.0.0",
+    "@aws-sdk/s3-request-presigner": "^3.0.0",
     "@google-cloud/storage": "^7.0.0",
-    "@azure/storage-blob": "^12.0.0"
+    "@azure/storage-blob": "^12.0.0",
+    "reflect-metadata": "^0.2.0"
   },
   "peerDependenciesMeta": {
     "@aws-sdk/client-s3": {
+      "optional": true
+    },
+    "@aws-sdk/s3-request-presigner": {
       "optional": true
     },
     "@google-cloud/storage": {
       "optional": true
     },
     "@azure/storage-blob": {
+      "optional": true
+    },
+    "reflect-metadata": {
       "optional": true
     }
   },
