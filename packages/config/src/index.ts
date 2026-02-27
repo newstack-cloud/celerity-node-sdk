@@ -12,3 +12,11 @@ export { AwsSecretsManagerBackend } from "./backends/aws-secrets-manager";
 export { AwsParameterStoreBackend } from "./backends/aws-parameter-store";
 export { AwsLambdaExtensionBackend } from "./backends/aws-lambda-extension";
 export { LocalConfigBackend } from "./backends/local";
+
+export {
+  captureResourceLinks,
+  getLinksOfType,
+  getResourceTypes,
+  RESOURCE_CONFIG_NAMESPACE,
+} from "./resource-links";
+export type { ResourceLink, ResourceLinks } from "./resource-links";

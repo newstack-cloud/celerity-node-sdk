@@ -1,13 +1,12 @@
 import createDebug from "debug";
 import type { CelerityLayer, BaseHandlerContext } from "@celerity-sdk/types";
+import { CONFIG_SERVICE_TOKEN } from "@celerity-sdk/common";
 import type { AwsStoreKind } from "./backends/types";
 import { CelerityConfig, DeployTarget, Platform } from "./env";
 import { resolveBackend } from "./backends/resolve";
 import { ConfigService, ConfigNamespace } from "./config-service";
 
 const debug = createDebug("celerity:config");
-
-const CONFIG_SERVICE_TOKEN = "ConfigService";
 
 type ConfigLayerSettings = {
   platform: Platform;

@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "@celerity-sdk/types": "workspace:^",
+    "@celerity-sdk/common": "workspace:^",
     "debug": "^4.4.0"
   },
   "devDependencies": {
