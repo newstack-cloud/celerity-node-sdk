@@ -8,7 +8,7 @@ export type {
   Provider,
 } from "./common";
 
-export type { BaseHandlerContext } from "./handler";
+export type { HandlerType, BaseHandlerContext } from "./handler";
 
 export type {
   HttpMethod,
@@ -37,8 +37,11 @@ export type {
   WebSocketRequestContext,
   WebSocketHandlerContext,
   WebSocketSendOptions,
-  WebSocketSender,
 } from "./websocket";
+
+// WebSocketSender is both a type (interface) and a value (DI token symbol).
+// The regular export allows both to be re-exported.
+export { WebSocketSender } from "./websocket";
 
 export type {
   ConsumerMessage,

@@ -45,3 +45,9 @@ export interface WebSocketSender {
   /** Send a message to a specific WebSocket connection. */
   sendMessage(connectionId: string, data: unknown, options?: WebSocketSendOptions): Promise<void>;
 }
+
+/**
+ * DI token for WebSocketSender.
+ * TypeScript uses the interface in type position and the symbol in value position.
+ */
+export const WebSocketSender: unique symbol = Symbol.for("celerity:websocket-sender");
