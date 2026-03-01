@@ -1,7 +1,7 @@
 {
   "name": "@celerity-sdk/datastore",
   "version": "0.3.1",
-  "description": "NoSQL data store abstraction for the Celerity Node SDK (DynamoDB / Cloud Datastore / Cosmos DB)",
+  "description": "NoSQL data store abstraction for the Celerity Node SDK (DynamoDB / Cloud Firestore / Cosmos DB)",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -39,13 +39,21 @@
   },
   "dependencies": {
     "@celerity-sdk/types": "workspace:^",
-    "@celerity-sdk/config": "workspace:^"
+    "@celerity-sdk/common": "workspace:^",
+    "@celerity-sdk/config": "workspace:^",
+    "debug": "^4.4.0"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.750.0",
+    "@aws-sdk/lib-dynamodb": "^3.750.0",
+    "reflect-metadata": "^0.2.0"
   },
   "peerDependencies": {
     "@aws-sdk/client-dynamodb": "^3.0.0",
     "@aws-sdk/lib-dynamodb": "^3.0.0",
-    "@google-cloud/datastore": "^9.0.0",
-    "@azure/cosmos": "^4.0.0"
+    "@google-cloud/firestore": "^7.0.0",
+    "@azure/cosmos": "^4.0.0",
+    "reflect-metadata": "^0.2.0"
   },
   "peerDependenciesMeta": {
     "@aws-sdk/client-dynamodb": {
@@ -54,10 +62,13 @@
     "@aws-sdk/lib-dynamodb": {
       "optional": true
     },
-    "@google-cloud/datastore": {
+    "@google-cloud/firestore": {
       "optional": true
     },
     "@azure/cosmos": {
+      "optional": true
+    },
+    "reflect-metadata": {
       "optional": true
     }
   },
