@@ -1,2 +1,1 @@
-export const LOGGER_TOKEN = "CelerityLogger";
-export const TRACER_TOKEN = "CelerityTracer";
+export { LOGGER_TOKEN, TRACER_TOKEN } from "@celerity-sdk/common";

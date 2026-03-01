@@ -52,6 +52,14 @@
     "@celerity-sdk/types": "workspace:^",
     "debug": "^4.4.0"
   },
+  "peerDependencies": {
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-apigatewaymanagementapi": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.160"
   },

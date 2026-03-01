@@ -1,9 +1,15 @@
-import { describe, it, expect } from "vitest";
-import type { APIGatewayProxyEventV2 } from "aws-lambda";
+import { describe, it, expect, afterEach } from "vitest";
+import type { APIGatewayProxyEventV2, APIGatewayProxyWebsocketEventV2, SQSEvent } from "aws-lambda";
+import type { EventBridgeEvent } from "aws-lambda/trigger/eventbridge";
 import type { HttpResponse } from "@celerity-sdk/types";
 import {
   mapApiGatewayV2Event,
   mapHttpResponseToResult,
+  detectEventType,
+  mapApiGatewayWebSocketEvent,
+  mapSqsEvent,
+  mapEventBridgeEvent,
+  mapConsumerResultToSqsBatchResponse,
 } from "../src/event-mapper";
 
 // ---------------------------------------------------------------------------
@@ -752,5 +758,416 @@ describe("mapHttpResponseToResult", () => {
       // Assert
       expect(result).toEqual({ statusCode: 204 });
     });
+  });
+});
+
+// ===========================================================================
+// detectEventType
+// ===========================================================================
+
+describe("detectEventType", () => {
+  afterEach(() => {
+    delete process.env.CELERITY_HANDLER_TYPE;
+  });
+
+  describe("tier 1: env var", () => {
+    it("returns the env var value when CELERITY_HANDLER_TYPE is set to a valid type", () => {
+      process.env.CELERITY_HANDLER_TYPE = "websocket";
+      expect(detectEventType({})).toBe("websocket");
+    });
+
+    it("ignores invalid env var values and falls back to shape detection", () => {
+      process.env.CELERITY_HANDLER_TYPE = "grpc";
+      const httpEvent = createBaseEvent();
+      expect(detectEventType(httpEvent)).toBe("http");
+    });
+
+    it.each(["http", "websocket", "consumer", "schedule", "custom"] as const)(
+      "accepts valid handler type: %s",
+      (type) => {
+        process.env.CELERITY_HANDLER_TYPE = type;
+        expect(detectEventType({})).toBe(type);
+      },
+    );
+  });
+
+  describe("tier 2: event shape detection", () => {
+    it("detects HTTP from requestContext.http", () => {
+      const event = createBaseEvent();
+      expect(detectEventType(event)).toBe("http");
+    });
+
+    it("detects WebSocket from requestContext.connectionId + eventType", () => {
+      const event = {
+        requestContext: {
+          connectionId: "conn-123",
+          eventType: "MESSAGE",
+          routeKey: "$default",
+          requestId: "req-1",
+          domainName: "ws.example.com",
+          stage: "prod",
+          connectedAt: 1000,
+          requestTimeEpoch: 2000,
+          messageId: "msg-1",
+          extendedRequestId: "ext-1",
+          requestTime: "2026-01-01T00:00:00Z",
+          messageDirection: "IN" as const,
+          apiId: "api-1",
+        },
+        isBase64Encoded: false,
+      };
+      expect(detectEventType(event)).toBe("websocket");
+    });
+
+    it("detects Consumer (SQS) from Records with eventSource", () => {
+      const event = {
+        Records: [
+          {
+            eventSource: "aws:sqs",
+            messageId: "msg-1",
+            body: "{}",
+          },
+        ],
+      };
+      expect(detectEventType(event)).toBe("consumer");
+    });
+
+    it("detects Schedule from source + detail-type", () => {
+      const event = {
+        source: "aws.events",
+        "detail-type": "Scheduled Event",
+        detail: {},
+        id: "evt-1",
+        version: "0",
+        account: "123",
+        time: "2026-01-01T00:00:00Z",
+        region: "us-east-1",
+        resources: [],
+      };
+      expect(detectEventType(event)).toBe("schedule");
+    });
+
+    it("falls back to custom for unknown event shapes", () => {
+      expect(detectEventType({ payload: "hello" })).toBe("custom");
+    });
+
+    it("falls back to custom for null/undefined events", () => {
+      expect(detectEventType(null)).toBe("custom");
+      expect(detectEventType(undefined)).toBe("custom");
+    });
+
+    it("falls back to custom for non-object events", () => {
+      expect(detectEventType("string-event")).toBe("custom");
+      expect(detectEventType(42)).toBe("custom");
+    });
+
+    it("does not misdetect empty Records array as consumer", () => {
+      expect(detectEventType({ Records: [] })).toBe("custom");
+    });
+  });
+});
+
+// ===========================================================================
+// mapApiGatewayWebSocketEvent
+// ===========================================================================
+
+function createWsEvent(
+  overrides: Partial<APIGatewayProxyWebsocketEventV2> = {},
+): APIGatewayProxyWebsocketEventV2 {
+  return {
+    requestContext: {
+      routeKey: "$default",
+      messageId: "msg-abc",
+      eventType: "MESSAGE",
+      extendedRequestId: "ext-123",
+      requestTime: "2026-01-15T10:30:00Z",
+      messageDirection: "IN",
+      stage: "prod",
+      connectedAt: 1768470000000,
+      requestTimeEpoch: 1768470600000,
+      requestId: "req-ws-123",
+      domainName: "ws.example.com",
+      connectionId: "conn-abc",
+      apiId: "ws-api-id",
+    },
+    body: undefined,
+    isBase64Encoded: false,
+    ...overrides,
+  } as APIGatewayProxyWebsocketEventV2;
+}
+
+describe("mapApiGatewayWebSocketEvent", () => {
+  it("maps a MESSAGE event with JSON body", () => {
+    const event = createWsEvent({
+      body: '{"action":"chat","text":"hello"}',
+    });
+
+    const { message, routeKey, endpoint } = mapApiGatewayWebSocketEvent(event);
+
+    expect(message.eventType).toBe("message");
+    expect(message.connectionId).toBe("conn-abc");
+    expect(message.messageId).toBe("req-ws-123");
+    expect(message.messageType).toBe("json");
+    expect(message.jsonBody).toEqual({ action: "chat", text: "hello" });
+    expect(message.binaryBody).toBeUndefined();
+    expect(routeKey).toBe("$default");
+    expect(endpoint).toBe("https://ws.example.com/prod");
+  });
+
+  it("maps a CONNECT event", () => {
+    const event = createWsEvent();
+    event.requestContext.eventType = "CONNECT";
+
+    const { message } = mapApiGatewayWebSocketEvent(event);
+    expect(message.eventType).toBe("connect");
+  });
+
+  it("maps a DISCONNECT event", () => {
+    const event = createWsEvent();
+    event.requestContext.eventType = "DISCONNECT";
+
+    const { message } = mapApiGatewayWebSocketEvent(event);
+    expect(message.eventType).toBe("disconnect");
+  });
+
+  it("handles base64-encoded binary body", () => {
+    const payload = Buffer.from("binary-data");
+    const event = createWsEvent({
+      body: payload.toString("base64"),
+      isBase64Encoded: true,
+    });
+
+    const { message } = mapApiGatewayWebSocketEvent(event);
+
+    expect(message.messageType).toBe("binary");
+    expect(message.binaryBody).toBeInstanceOf(Buffer);
+    expect(message.binaryBody!.toString()).toBe("binary-data");
+    expect(message.jsonBody).toBeUndefined();
+  });
+
+  it("handles non-JSON text body gracefully", () => {
+    const event = createWsEvent({ body: "plain text" });
+
+    const { message } = mapApiGatewayWebSocketEvent(event);
+
+    expect(message.messageType).toBe("json");
+    expect(message.jsonBody).toBe("plain text");
+  });
+
+  it("handles absent body", () => {
+    const event = createWsEvent({ body: undefined });
+
+    const { message } = mapApiGatewayWebSocketEvent(event);
+
+    expect(message.jsonBody).toBeUndefined();
+    expect(message.binaryBody).toBeUndefined();
+  });
+
+  it("builds the Management API endpoint from domainName and stage", () => {
+    const event = createWsEvent();
+    event.requestContext.domainName = "abc123.execute-api.us-east-1.amazonaws.com";
+    event.requestContext.stage = "dev";
+
+    const { endpoint } = mapApiGatewayWebSocketEvent(event);
+
+    expect(endpoint).toBe("https://abc123.execute-api.us-east-1.amazonaws.com/dev");
+  });
+
+  it("includes requestContext with timing info", () => {
+    const event = createWsEvent();
+
+    const { message } = mapApiGatewayWebSocketEvent(event);
+
+    expect(message.requestContext).toBeDefined();
+    expect(message.requestContext!.requestId).toBe("req-ws-123");
+    expect(message.requestContext!.requestTime).toBe(1768470600000);
+  });
+});
+
+// ===========================================================================
+// mapSqsEvent
+// ===========================================================================
+
+function createSqsEvent(recordCount = 1): SQSEvent {
+  const Records = Array.from({ length: recordCount }, (_, i) => ({
+    messageId: `msg-${i}`,
+    receiptHandle: `handle-${i}`,
+    body: JSON.stringify({ item: i }),
+    attributes: {
+      ApproximateReceiveCount: "1",
+      SentTimestamp: "1768470600000",
+      SenderId: "sender-1",
+      ApproximateFirstReceiveTimestamp: "1768470600000",
+      ...(i === 0 ? { AWSTraceHeader: "Root=1-trace-abc" } : {}),
+    },
+    messageAttributes: {
+      customAttr: {
+        dataType: "String",
+        stringValue: `value-${i}`,
+      },
+    },
+    md5OfBody: "abc123",
+    eventSource: "aws:sqs",
+    eventSourceARN: "arn:aws:sqs:us-east-1:123456789012:my-queue",
+    awsRegion: "us-east-1",
+  }));
+
+  return { Records };
+}
+
+describe("mapSqsEvent", () => {
+  it("maps a single SQS record to ConsumerEventInput", () => {
+    const event = createSqsEvent(1);
+
+    const result = mapSqsEvent(event, "orders-consumer");
+
+    expect(result.handlerTag).toBe("orders-consumer");
+    expect(result.messages).toHaveLength(1);
+    expect(result.messages[0].messageId).toBe("msg-0");
+    expect(result.messages[0].body).toBe(JSON.stringify({ item: 0 }));
+    expect(result.messages[0].source).toBe("arn:aws:sqs:us-east-1:123456789012:my-queue");
+    expect(result.vendor).toEqual({ eventSource: "aws:sqs" });
+  });
+
+  it("maps multiple SQS records", () => {
+    const event = createSqsEvent(3);
+
+    const result = mapSqsEvent(event, "batch-consumer");
+
+    expect(result.messages).toHaveLength(3);
+    expect(result.messages[0].messageId).toBe("msg-0");
+    expect(result.messages[1].messageId).toBe("msg-1");
+    expect(result.messages[2].messageId).toBe("msg-2");
+  });
+
+  it("extracts trace context from first record's AWSTraceHeader", () => {
+    const event = createSqsEvent(2);
+
+    const result = mapSqsEvent(event, "traced-consumer");
+
+    expect(result.traceContext).toEqual({ "x-amzn-trace-id": "Root=1-trace-abc" });
+  });
+
+  it("sets traceContext to null when no AWSTraceHeader present", () => {
+    const event = createSqsEvent(1);
+    delete (event.Records[0].attributes as unknown as Record<string, unknown>).AWSTraceHeader;
+
+    const result = mapSqsEvent(event, "no-trace");
+
+    expect(result.traceContext).toBeNull();
+  });
+
+  it("includes message attributes in each message", () => {
+    const event = createSqsEvent(1);
+
+    const result = mapSqsEvent(event, "attrs-consumer");
+
+    expect(result.messages[0].messageAttributes).toEqual({
+      customAttr: { dataType: "String", stringValue: "value-0" },
+    });
+  });
+
+  it("includes vendor data in each message", () => {
+    const event = createSqsEvent(1);
+
+    const result = mapSqsEvent(event, "vendor-consumer");
+
+    const vendor = result.messages[0].vendor as Record<string, unknown>;
+    expect(vendor.receiptHandle).toBe("handle-0");
+    expect(vendor.eventSource).toBe("aws:sqs");
+    expect(vendor.awsRegion).toBe("us-east-1");
+  });
+});
+
+// ===========================================================================
+// mapEventBridgeEvent
+// ===========================================================================
+
+function createEventBridgeEvent(
+  overrides: Partial<EventBridgeEvent<string, unknown>> = {},
+): EventBridgeEvent<string, unknown> {
+  return {
+    id: "evt-123",
+    version: "0",
+    account: "123456789012",
+    time: "2026-01-15T10:30:00Z",
+    region: "us-east-1",
+    resources: ["arn:aws:events:us-east-1:123456789012:rule/daily-sync"],
+    source: "aws.events",
+    "detail-type": "Scheduled Event",
+    detail: { key: "value" },
+    ...overrides,
+  };
+}
+
+describe("mapEventBridgeEvent", () => {
+  it("maps an EventBridge event to ScheduleEventInput", () => {
+    const event = createEventBridgeEvent();
+
+    const result = mapEventBridgeEvent(event, "daily-sync");
+
+    expect(result.handlerTag).toBe("daily-sync");
+    expect(result.scheduleId).toBe("evt-123");
+    expect(result.messageId).toBe("evt-123");
+    expect(result.input).toEqual({ key: "value" });
+    expect(result.traceContext).toBeNull();
+  });
+
+  it("includes vendor data with source, detailType, account, region", () => {
+    const event = createEventBridgeEvent();
+
+    const result = mapEventBridgeEvent(event, "sync");
+
+    const vendor = result.vendor as Record<string, unknown>;
+    expect(vendor.source).toBe("aws.events");
+    expect(vendor.detailType).toBe("Scheduled Event");
+    expect(vendor.account).toBe("123456789012");
+    expect(vendor.region).toBe("us-east-1");
+  });
+
+  it("passes through complex detail payloads", () => {
+    const event = createEventBridgeEvent({
+      detail: { nested: { data: [1, 2, 3] }, flag: true },
+    });
+
+    const result = mapEventBridgeEvent(event, "complex-schedule");
+
+    expect(result.input).toEqual({ nested: { data: [1, 2, 3] }, flag: true });
+  });
+
+  it("handles null/undefined detail", () => {
+    const event = createEventBridgeEvent({ detail: null });
+
+    const result = mapEventBridgeEvent(event, "null-detail");
+
+    expect(result.input).toBeNull();
+  });
+});
+
+// ===========================================================================
+// mapConsumerResultToSqsBatchResponse
+// ===========================================================================
+
+describe("mapConsumerResultToSqsBatchResponse", () => {
+  it("maps failures to batchItemFailures", () => {
+    const result = mapConsumerResultToSqsBatchResponse([
+      { messageId: "msg-1" },
+      { messageId: "msg-3" },
+    ]);
+
+    expect(result.batchItemFailures).toEqual([
+      { itemIdentifier: "msg-1" },
+      { itemIdentifier: "msg-3" },
+    ]);
+  });
+
+  it("returns empty batchItemFailures when no failures", () => {
+    const result = mapConsumerResultToSqsBatchResponse(undefined);
+    expect(result.batchItemFailures).toEqual([]);
+  });
+
+  it("returns empty batchItemFailures for empty array", () => {
+    const result = mapConsumerResultToSqsBatchResponse([]);
+    expect(result.batchItemFailures).toEqual([]);
   });
 });
