@@ -8,7 +8,21 @@ export {
 } from "./module-graph";
 export type { ModuleNode, ModuleGraph } from "./module-graph";
 export { discoverModule } from "./discovery";
-export { mapRuntimeRequest, mapToRuntimeResponse, flattenMultiValueRecord } from "./runtime-mapper";
+export {
+  mapRuntimeRequest,
+  mapToRuntimeResponse,
+  mapWebSocketMessage,
+  mapConsumerEventInput,
+  mapScheduleEventInput,
+  mapToNapiEventResult,
+  flattenMultiValueRecord,
+} from "./runtime-mapper";
+export type {
+  JsWebSocketMessageInfo,
+  JsConsumerEventInput,
+  JsScheduleEventInput,
+  JsEventResult,
+} from "./runtime-mapper";
 export { bootstrapForRuntime } from "./runtime-entry";
 export type { RuntimeBootstrapResult } from "./runtime-entry";
 export { startRuntime } from "./runtime-orchestrator";

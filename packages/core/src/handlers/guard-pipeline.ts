@@ -2,7 +2,7 @@ import createDebug from "debug";
 import type { ServiceContainer, GuardHandlerContext, CelerityLogger } from "@celerity-sdk/types";
 import { HttpException } from "../errors/http-exception";
 import { HandlerMetadataStore } from "../metadata/handler-metadata";
-import type { ResolvedGuard } from "./registry";
+import type { ResolvedGuard } from "./types";
 import type { GuardRequest, GuardContext } from "../functions/create-guard";
 
 const debug = createDebug("celerity:core:guard-pipeline");

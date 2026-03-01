@@ -1,10 +1,10 @@
 import "reflect-metadata";
 import { describe, it, expect, vi } from "vitest";
 import {
-  executeHandlerPipeline,
-  type ResolvedHandler,
+  executeHttpPipeline,
   type PipelineOptions,
-} from "../../src/handlers/pipeline";
+} from "../../src/handlers/http-pipeline";
+import type { ResolvedHttpHandler } from "../../src/handlers/types";
 import {
   HttpException,
   BadRequestException,
@@ -37,8 +37,9 @@ function makeRequest(overrides: Partial<HttpRequest> = {}): HttpRequest {
   };
 }
 
-function makeHandler(overrides: Partial<ResolvedHandler> = {}): ResolvedHandler {
+function makeHandler(overrides: Partial<ResolvedHttpHandler> = {}): ResolvedHttpHandler {
   return {
+    type: "http",
     path: "/test",
     method: "GET",
     protectedBy: [],
@@ -61,7 +62,7 @@ const defaultOptions: PipelineOptions = {
   },
 };
 
-describe("executeHandlerPipeline", () => {
+describe("executeHttpPipeline", () => {
   describe("response normalization", () => {
     it("wraps a plain object return value into a 200 JSON response", async () => {
       // Arrange
@@ -71,7 +72,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      const result = await executeHandlerPipeline(handler, request, defaultOptions);
+      const result = await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(result.status).toBe(200);
@@ -87,7 +88,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      const result = await executeHandlerPipeline(handler, request, defaultOptions);
+      const result = await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(result.status).toBe(200);
@@ -102,7 +103,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      const result = await executeHandlerPipeline(handler, request, defaultOptions);
+      const result = await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(result.status).toBe(204);
@@ -116,7 +117,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      const result = await executeHandlerPipeline(handler, request, defaultOptions);
+      const result = await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(result.status).toBe(204);
@@ -135,7 +136,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      const result = await executeHandlerPipeline(handler, request, defaultOptions);
+      const result = await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(result).toEqual(customResponse);
@@ -164,7 +165,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(callOrder).toEqual(["layer:before", "handler", "layer:after"]);
@@ -186,7 +187,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      const result = await executeHandlerPipeline(handler, request, defaultOptions);
+      const result = await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(result.status).toBe(429);
@@ -205,7 +206,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      const result = await executeHandlerPipeline(handler, request, defaultOptions);
+      const result = await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(result.status).toBe(400);
@@ -225,7 +226,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      const result = await executeHandlerPipeline(handler, request, defaultOptions);
+      const result = await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(result.status).toBe(422);
@@ -243,7 +244,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      const result = await executeHandlerPipeline(handler, request, defaultOptions);
+      const result = await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       const body = JSON.parse(result.body!);
@@ -260,7 +261,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      const result = await executeHandlerPipeline(handler, request, defaultOptions);
+      const result = await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(result.status).toBe(500);
@@ -292,7 +293,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      await executeHandlerPipeline(handler, request, {
+      await executeHttpPipeline(handler, request, {
         ...defaultOptions,
         systemLayers: [systemLayer],
       });
@@ -315,7 +316,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -341,7 +342,7 @@ describe("executeHandlerPipeline", () => {
       });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(handlerFn).toHaveBeenCalledWith({ name: "test" });
@@ -358,7 +359,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest({ query: { page: "2", limit: "10" } });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(handlerFn).toHaveBeenCalledWith("2");
@@ -375,7 +376,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest({ pathParams: { id: "abc-123" } });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(handlerFn).toHaveBeenCalledWith("abc-123");
@@ -400,7 +401,7 @@ describe("executeHandlerPipeline", () => {
       });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(handlerFn).toHaveBeenCalledWith("42", { data: "payload" }, "true");
@@ -417,7 +418,7 @@ describe("executeHandlerPipeline", () => {
       });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(handlerFn).toHaveBeenCalledWith(request);
@@ -444,7 +445,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest({ textBody: JSON.stringify({ name: "raw" }) });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(handlerFn).toHaveBeenCalledWith({ name: "validated" });
@@ -469,7 +470,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest({ query: { page: "5", limit: "10" } });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(handlerFn).toHaveBeenCalledWith(5);
@@ -494,7 +495,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest({ query: { page: "1", limit: "20" } });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(handlerFn).toHaveBeenCalledWith({ page: 1, limit: 20 });
@@ -519,7 +520,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest({ pathParams: { id: "42" } });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(handlerFn).toHaveBeenCalledWith(42);
@@ -544,7 +545,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest({ headers: { "x-custom": "VALUE" } });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(handlerFn).toHaveBeenCalledWith("lowered");
@@ -573,7 +574,7 @@ describe("executeHandlerPipeline", () => {
       });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(handlerFn).toHaveBeenCalledOnce();
@@ -610,7 +611,7 @@ describe("executeHandlerPipeline", () => {
       });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       const req = handlerFn.mock.calls[0][0];
@@ -638,7 +639,7 @@ describe("executeHandlerPipeline", () => {
       });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       const req = handlerFn.mock.calls[0][0];
@@ -659,7 +660,7 @@ describe("executeHandlerPipeline", () => {
       });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       const req = handlerFn.mock.calls[0][0];
@@ -685,7 +686,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest({ query: { page: "1", extra: "ignored" } });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       const req = handlerFn.mock.calls[0][0];
@@ -711,7 +712,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest({ pathParams: { id: "42" } });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       const req = handlerFn.mock.calls[0][0];
@@ -739,7 +740,7 @@ describe("executeHandlerPipeline", () => {
       });
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       const req = handlerFn.mock.calls[0][0];
@@ -758,7 +759,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       const ctx = handlerFn.mock.calls[0][1];
@@ -787,7 +788,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      await executeHandlerPipeline(handler, request, { container });
+      await executeHttpPipeline(handler, request, { container });
 
       // Assert
       expect(container.resolve).toHaveBeenCalledWith(DB_TOKEN);
@@ -825,7 +826,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      await executeHandlerPipeline(handler, request, { container });
+      await executeHttpPipeline(handler, request, { container });
 
       // Assert
       const args = handlerFn.mock.calls[0];
@@ -853,7 +854,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      const result = await executeHandlerPipeline(handler, request, { container });
+      const result = await executeHttpPipeline(handler, request, { container });
 
       // Assert
       expect(result.status).toBe(500);
@@ -879,7 +880,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      await executeHandlerPipeline(handler, request, { container });
+      await executeHttpPipeline(handler, request, { container });
 
       // Assert
       expect(container.resolve).not.toHaveBeenCalled();
@@ -909,7 +910,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(capturedAction).toBe("posts:read");
@@ -929,7 +930,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(hasAction).toBe(false);
@@ -957,7 +958,7 @@ describe("executeHandlerPipeline", () => {
       const request = makeRequest();
 
       // Act
-      await executeHandlerPipeline(handler, request, defaultOptions);
+      await executeHttpPipeline(handler, request, defaultOptions);
 
       // Assert
       expect(downstreamValue).toBe("layer-value");

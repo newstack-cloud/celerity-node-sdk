@@ -1,70 +1,77 @@
-import "reflect-metadata";
 import createDebug from "debug";
 import type {
-  HttpMethod,
-  CelerityLayer,
-  FunctionHandlerDefinition,
-  GuardDefinition,
-  Type,
-  Schema,
-  InjectionToken,
-} from "@celerity-sdk/types";
-import { joinHandlerPath } from "@celerity-sdk/common";
-import {
-  CONTROLLER_METADATA,
-  HTTP_METHOD_METADATA,
-  ROUTE_PATH_METADATA,
-  PARAM_METADATA,
-  GUARD_PROTECTEDBY_METADATA,
-  GUARD_CUSTOM_METADATA,
-  LAYER_METADATA,
-  PUBLIC_METADATA,
-  CUSTOM_METADATA,
-} from "../metadata/constants";
-import type { ControllerMetadata } from "../decorators/controller";
-import type { ParamMetadata } from "../decorators/params";
-import type { ResolvedHandler } from "./pipeline";
-import { validate, type ValidationSchemas } from "../layers/validate";
-import type { Container } from "../di/container";
-import { buildModuleGraph, registerModuleGraph } from "../bootstrap/module-graph";
-import type { ModuleGraph } from "../bootstrap/module-graph";
+  HandlerType,
+  ResolvedHandler,
+  ResolvedHttpHandler,
+  ResolvedWebSocketHandler,
+  ResolvedConsumerHandler,
+  ResolvedScheduleHandler,
+  ResolvedCustomHandler,
+  ResolvedGuard,
+} from "./types";
+import { routingKeyOf } from "./routing";
 
 const debug = createDebug("celerity:core:registry");
 
-export type ResolvedGuard = {
-  name: string;
-  handlerFn: (...args: unknown[]) => unknown;
-  handlerInstance?: object;
-  paramMetadata: ParamMetadata[];
-  customMetadata: Record<string, unknown>;
-  injectTokens?: InjectionToken[];
-  isFunctionGuard?: boolean;
-};
+export class HandlerRegistry {
+  private byType = new Map<HandlerType, ResolvedHandler[]>();
+  private exactLookup = new Map<string, ResolvedHandler>();
+  private byId = new Map<string, ResolvedHandler>();
+  private guards = new Map<string, ResolvedGuard>();
 
-export class HttpHandlerRegistry {
-  private handlers: ResolvedHandler[] = [];
-  private guards: Map<string, ResolvedGuard> = new Map();
+  register(handler: ResolvedHandler): void {
+    const list = this.byType.get(handler.type) ?? [];
+    list.push(handler);
+    this.byType.set(handler.type, list);
 
-  getHandler(path: string, method: string): ResolvedHandler | undefined {
-    const found = this.handlers.find(
-      (h) =>
-        h.path !== undefined &&
-        h.method !== undefined &&
-        matchRoute(h.path, path) &&
-        h.method === method,
-    );
-    debug("getHandler %s %s → %s", method, path, found ? "matched" : "not found");
+    // Non-HTTP types use O(1) exact-match lookup.
+    // HTTP uses path-pattern matching (e.g., /items/{id} matches /items/42).
+    if (handler.type !== "http") {
+      this.exactLookup.set(`${handler.type}::${routingKeyOf(handler)}`, handler);
+    }
+
+    if (handler.id) {
+      this.byId.set(handler.id, handler);
+    }
+  }
+
+  getHandler(type: "http", routingKey: string): ResolvedHttpHandler | undefined;
+  getHandler(type: "websocket", routingKey: string): ResolvedWebSocketHandler | undefined;
+  getHandler(type: "consumer", routingKey: string): ResolvedConsumerHandler | undefined;
+  getHandler(type: "schedule", routingKey: string): ResolvedScheduleHandler | undefined;
+  getHandler(type: "custom", routingKey: string): ResolvedCustomHandler | undefined;
+  getHandler(type: HandlerType, routingKey: string): ResolvedHandler | undefined {
+    if (type === "http") return this.findHttpHandler(routingKey);
+    const found = this.exactLookup.get(`${type}::${routingKey}`);
+    debug("getHandler %s %s → %s", type, routingKey, found ? "matched" : "not found");
     return found;
   }
 
-  getHandlerById(id: string): ResolvedHandler | undefined {
-    const found = this.handlers.find((h) => h.id !== undefined && h.id === id);
-    debug("getHandlerById %s → %s", id, found ? "matched" : "not found");
-    return found;
+  getHandlerById<T extends HandlerType>(
+    type: T,
+    id: string,
+  ): Extract<ResolvedHandler, { type: T }> | undefined {
+    const handler = this.byId.get(id);
+    if (handler && handler.type === type) {
+      return handler as Extract<ResolvedHandler, { type: T }>;
+    }
+    debug("getHandlerById %s %s → not found", type, id);
+    return undefined;
+  }
+
+  getHandlersByType<T extends HandlerType>(type: T): Extract<ResolvedHandler, { type: T }>[] {
+    return (this.byType.get(type) ?? []) as Extract<ResolvedHandler, { type: T }>[];
   }
 
   getAllHandlers(): ResolvedHandler[] {
-    return [...this.handlers];
+    const result: ResolvedHandler[] = [];
+    for (const list of this.byType.values()) result.push(...list);
+    return result;
+  }
+
+  registerGuard(guard: ResolvedGuard): void {
+    debug("registerGuard: %s", guard.name);
+    this.guards.set(guard.name, guard);
   }
 
   getGuard(name: string): ResolvedGuard | undefined {
@@ -77,192 +84,25 @@ export class HttpHandlerRegistry {
     return [...this.guards.values()];
   }
 
-  async populateFromGraph(graph: ModuleGraph, container: Container): Promise<void> {
-    for (const [, node] of graph) {
-      for (const controllerClass of node.controllers) {
-        await this.registerClassHandler(controllerClass, container);
-      }
-      for (const fnHandler of node.functionHandlers) {
-        this.registerFunctionHandler(fnHandler);
-      }
-      for (const guard of node.guards) {
-        if (typeof guard === "function") {
-          await this.registerClassGuard(guard, container);
-        } else {
-          this.registerFunctionGuard(guard);
-        }
-      }
-    }
-  }
-
-  async scanModule(moduleClass: Type, container: Container): Promise<void> {
-    const graph = buildModuleGraph(moduleClass);
-    registerModuleGraph(graph, container);
-    await this.populateFromGraph(graph, container);
-  }
-
-  private async registerClassHandler(controllerClass: Type, container: Container): Promise<void> {
-    const controllerMeta: ControllerMetadata | undefined = Reflect.getOwnMetadata(
-      CONTROLLER_METADATA,
-      controllerClass,
+  /**
+   * HTTP routing uses path-pattern matching: `"GET /items/{id}"` matches `"GET /items/42"`.
+   * The routing key format is `"METHOD path"` (e.g., `"GET /items/{id}"`).
+   */
+  private findHttpHandler(routingKey: string): ResolvedHttpHandler | undefined {
+    const spaceIdx = routingKey.indexOf(" ");
+    if (spaceIdx < 0) return undefined;
+    const method = routingKey.slice(0, spaceIdx);
+    const path = routingKey.slice(spaceIdx + 1);
+    const httpHandlers = (this.byType.get("http") ?? []) as ResolvedHttpHandler[];
+    const found = httpHandlers.find(
+      (h) =>
+        h.path !== undefined &&
+        h.method !== undefined &&
+        h.method === method &&
+        matchRoute(h.path, path),
     );
-    if (!controllerMeta) return;
-
-    const instance = await container.resolve<object>(controllerClass);
-    const prototype = Object.getPrototypeOf(instance) as object;
-    const methods = Object.getOwnPropertyNames(prototype).filter((name) => name !== "constructor");
-
-    const classProtectedBy: string[] =
-      Reflect.getOwnMetadata(GUARD_PROTECTEDBY_METADATA, controllerClass) ?? [];
-    const classLayers: (CelerityLayer | Type<CelerityLayer>)[] =
-      Reflect.getOwnMetadata(LAYER_METADATA, controllerClass) ?? [];
-    const classCustomMetadata: Record<string, unknown> =
-      Reflect.getOwnMetadata(CUSTOM_METADATA, controllerClass) ?? {};
-
-    for (const methodName of methods) {
-      const method: HttpMethod | undefined = Reflect.getOwnMetadata(
-        HTTP_METHOD_METADATA,
-        prototype,
-        methodName,
-      );
-      if (!method) continue;
-
-      const routePath: string =
-        Reflect.getOwnMetadata(ROUTE_PATH_METADATA, prototype, methodName) ?? "/";
-      const fullPath = joinHandlerPath(controllerMeta.prefix ?? "", routePath);
-
-      const methodProtectedBy: string[] =
-        Reflect.getOwnMetadata(GUARD_PROTECTEDBY_METADATA, prototype, methodName) ?? [];
-      const methodLayers: (CelerityLayer | Type<CelerityLayer>)[] =
-        Reflect.getOwnMetadata(LAYER_METADATA, prototype, methodName) ?? [];
-      const paramMetadata: ParamMetadata[] =
-        Reflect.getOwnMetadata(PARAM_METADATA, prototype, methodName) ?? [];
-      const isPublic: boolean =
-        Reflect.getOwnMetadata(PUBLIC_METADATA, prototype, methodName) === true;
-      const methodCustomMetadata: Record<string, unknown> =
-        Reflect.getOwnMetadata(CUSTOM_METADATA, prototype, methodName) ?? {};
-
-      const descriptor = Object.getOwnPropertyDescriptor(prototype, methodName);
-      if (!descriptor?.value || typeof descriptor.value !== "function") continue;
-
-      const layers = [...classLayers, ...methodLayers];
-      const validationSchemas = buildValidationSchemasFromParams(paramMetadata);
-      if (validationSchemas) {
-        layers.unshift(validate(validationSchemas));
-      }
-
-      debug(
-        "registerClassHandler: %s %s (%s.%s)",
-        method,
-        fullPath,
-        controllerClass.name,
-        methodName,
-      );
-      this.handlers.push({
-        path: fullPath,
-        method,
-        protectedBy: [...classProtectedBy, ...methodProtectedBy],
-        layers,
-        isPublic,
-        paramMetadata,
-        customMetadata: { ...classCustomMetadata, ...methodCustomMetadata },
-        handlerFn: descriptor.value as (...args: unknown[]) => unknown,
-        handlerInstance: instance,
-      });
-    }
-  }
-
-  private async registerClassGuard(guardClass: Type, container: Container): Promise<void> {
-    const guardName: string | undefined = Reflect.getOwnMetadata(GUARD_CUSTOM_METADATA, guardClass);
-    if (!guardName) return;
-
-    const instance = await container.resolve<object>(guardClass);
-    const prototype = Object.getPrototypeOf(instance) as object;
-    const descriptor = Object.getOwnPropertyDescriptor(prototype, "check");
-    if (!descriptor?.value || typeof descriptor.value !== "function") {
-      debug("registerClassGuard: %s has no check() method, skipping", guardClass.name);
-      return;
-    }
-
-    const paramMetadata: ParamMetadata[] =
-      Reflect.getOwnMetadata(PARAM_METADATA, prototype, "check") ?? [];
-    const customMetadata: Record<string, unknown> =
-      Reflect.getOwnMetadata(CUSTOM_METADATA, guardClass) ?? {};
-
-    debug("registerClassGuard: %s (name=%s)", guardClass.name, guardName);
-    this.guards.set(guardName, {
-      name: guardName,
-      handlerFn: descriptor.value as (...args: unknown[]) => unknown,
-      handlerInstance: instance,
-      paramMetadata,
-      customMetadata,
-    });
-  }
-
-  private registerFunctionGuard(definition: GuardDefinition): void {
-    const name = definition.name;
-    if (!name) {
-      debug("registerFunctionGuard: no name, skipping");
-      return;
-    }
-
-    const meta = (definition.metadata ?? {}) as {
-      inject?: InjectionToken[];
-      customMetadata?: Record<string, unknown>;
-    };
-
-    debug("registerFunctionGuard: %s", name);
-    this.guards.set(name, {
-      name,
-      handlerFn: definition.handler,
-      customMetadata: meta.customMetadata ?? {},
-      paramMetadata: [],
-      isFunctionGuard: true,
-      injectTokens: meta.inject ?? [],
-    });
-  }
-
-  private registerFunctionHandler(definition: FunctionHandlerDefinition): void {
-    if (definition.type !== "http") return;
-
-    const meta = definition.metadata as {
-      path?: string;
-      method?: HttpMethod;
-      schema?: { body?: Schema; query?: Schema; params?: Schema; headers?: Schema };
-      layers?: (CelerityLayer | Type<CelerityLayer>)[];
-      inject?: InjectionToken[];
-      customMetadata?: Record<string, unknown>;
-    };
-
-    const layers = [...(meta.layers ?? [])];
-    if (meta.schema) {
-      const schemas: Record<string, Schema> = {};
-      if (meta.schema.body) schemas.body = meta.schema.body;
-      if (meta.schema.query) schemas.query = meta.schema.query;
-      if (meta.schema.params) schemas.params = meta.schema.params;
-      if (meta.schema.headers) schemas.headers = meta.schema.headers;
-      if (Object.keys(schemas).length > 0) {
-        layers.unshift(validate(schemas));
-      }
-    }
-
-    debug(
-      "registerFunctionHandler: %s",
-      definition.id ?? (meta.method && meta.path ? `${meta.method} ${meta.path}` : "(no route)"),
-    );
-    this.handlers.push({
-      id: definition.id,
-      path: meta.path,
-      method: meta.method,
-      protectedBy: [],
-      layers,
-      isPublic: false,
-      paramMetadata: [],
-      customMetadata: meta.customMetadata ?? {},
-      handlerFn: definition.handler,
-      isFunctionHandler: true,
-      injectTokens: meta.inject ?? [],
-    });
+    debug("getHandler http %s → %s", routingKey, found ? "matched" : "not found");
+    return found;
   }
 }
 
@@ -273,65 +113,4 @@ function matchRoute(pattern: string, actual: string): boolean {
   if (patternParts.length !== actualParts.length) return false;
 
   return patternParts.every((part, i) => part.startsWith("{") || part === actualParts[i]);
-}
-
-const PARAM_TYPE_TO_SCHEMA_KEY: Record<string, keyof ValidationSchemas> = {
-  body: "body",
-  query: "query",
-  param: "params",
-  headers: "headers",
-};
-
-function buildValidationSchemasFromParams(
-  paramMetadata: ParamMetadata[],
-): ValidationSchemas | null {
-  const wholeObjectSchemas = new Map<keyof ValidationSchemas, Schema>();
-  const perKeySchemas = new Map<keyof ValidationSchemas, Map<string, Schema>>();
-
-  for (const meta of paramMetadata) {
-    if (!meta.schema) continue;
-    const schemaKey = PARAM_TYPE_TO_SCHEMA_KEY[meta.type];
-    if (!schemaKey) continue;
-
-    if (meta.key) {
-      let keyMap = perKeySchemas.get(schemaKey);
-      if (!keyMap) {
-        keyMap = new Map();
-        perKeySchemas.set(schemaKey, keyMap);
-      }
-      keyMap.set(meta.key, meta.schema);
-    } else {
-      wholeObjectSchemas.set(schemaKey, meta.schema);
-    }
-  }
-
-  const schemas: ValidationSchemas = {};
-  let hasSchemas = false;
-
-  for (const key of ["body", "query", "params", "headers"] as (keyof ValidationSchemas)[]) {
-    if (wholeObjectSchemas.has(key)) {
-      schemas[key] = wholeObjectSchemas.get(key)!;
-      hasSchemas = true;
-    } else if (perKeySchemas.has(key)) {
-      schemas[key] = composeKeySchemas(perKeySchemas.get(key)!);
-      hasSchemas = true;
-    }
-  }
-
-  return hasSchemas ? schemas : null;
-}
-
-function composeKeySchemas(keySchemas: Map<string, Schema>): Schema {
-  return {
-    parse(data: unknown): Record<string, unknown> {
-      const record = data as Record<string, unknown>;
-      const result: Record<string, unknown> = { ...record };
-      for (const [key, schema] of keySchemas) {
-        if (key in result) {
-          result[key] = schema.parse(result[key]);
-        }
-      }
-      return result;
-    },
-  };
 }

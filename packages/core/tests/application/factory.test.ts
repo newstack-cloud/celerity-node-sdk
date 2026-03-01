@@ -8,7 +8,7 @@ import { Get, Post } from "../../src/decorators/http";
 import { Injectable } from "../../src/decorators/injectable";
 import { Body, Param } from "../../src/decorators/params";
 import { Container } from "../../src/di/container";
-import { HttpHandlerRegistry } from "../../src/handlers/registry";
+import { HandlerRegistry } from "../../src/handlers/registry";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -83,7 +83,7 @@ describe("CelerityFactory.createTestingApp", () => {
     const allHandlers = registry.getAllHandlers();
 
     // Assert
-    expect(registry).toBeInstanceOf(HttpHandlerRegistry);
+    expect(registry).toBeInstanceOf(HandlerRegistry);
     expect(allHandlers.length).toBeGreaterThanOrEqual(3);
   });
 
@@ -93,7 +93,7 @@ describe("CelerityFactory.createTestingApp", () => {
 
     // Act
     const registry = app.getRegistry();
-    const listHandler = registry.getHandler("/items", "GET");
+    const listHandler = registry.getHandler("http", "GET /items");
 
     // Assert
     expect(listHandler).toBeDefined();
@@ -107,7 +107,7 @@ describe("CelerityFactory.createTestingApp", () => {
 
     // Act
     const registry = app.getRegistry();
-    const createHandler = registry.getHandler("/items", "POST");
+    const createHandler = registry.getHandler("http", "POST /items");
 
     // Assert
     expect(createHandler).toBeDefined();
@@ -121,7 +121,7 @@ describe("CelerityFactory.createTestingApp", () => {
 
     // Act
     const registry = app.getRegistry();
-    const getByIdHandler = registry.getHandler("/items/42", "GET");
+    const getByIdHandler = registry.getHandler("http", "GET /items/42");
 
     // Assert
     expect(getByIdHandler).toBeDefined();
@@ -135,7 +135,7 @@ describe("CelerityFactory.createTestingApp", () => {
 
     // Act
     const registry = app.getRegistry();
-    const handler = registry.getHandler("/not-found", "GET");
+    const handler = registry.getHandler("http", "GET /not-found");
 
     // Assert
     expect(handler).toBeUndefined();
@@ -192,7 +192,7 @@ describe("CelerityFactory.createTestingApp", () => {
     const app = await CelerityFactory.createTestingApp(AppModule);
     const container = app.getContainer();
     const sharedService = await container.resolve<SharedService>(SharedService);
-    const healthHandler = app.getRegistry().getHandler("/health", "GET");
+    const healthHandler = app.getRegistry().getHandler("http", "GET /health");
 
     // Assert
     expect(sharedService).toBeInstanceOf(SharedService);

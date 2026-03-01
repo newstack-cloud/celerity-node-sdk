@@ -3,8 +3,12 @@ import createDebug from "debug";
 import type { Request as RuntimeRequest, Response as RuntimeResponse } from "@celerity-sdk/runtime";
 import type { CelerityLayer, Type } from "@celerity-sdk/types";
 import type { Container } from "../di/container";
-import type { HttpHandlerRegistry } from "../handlers/registry";
-import { executeHandlerPipeline } from "../handlers/pipeline";
+import type { HandlerRegistry } from "../handlers/registry";
+import { executeHttpPipeline } from "../handlers/http-pipeline";
+import { executeWebSocketPipeline } from "../handlers/websocket-pipeline";
+import { executeConsumerPipeline } from "../handlers/consumer-pipeline";
+import { executeSchedulePipeline } from "../handlers/schedule-pipeline";
+import { executeCustomPipeline } from "../handlers/custom-pipeline";
 import {
   executeGuardPipeline,
   type GuardInput,
@@ -13,38 +17,77 @@ import {
 import { resolveHandlerByModuleRef } from "../handlers/module-resolver";
 import { discoverModule } from "./discovery";
 import { bootstrap } from "./bootstrap";
-import { mapRuntimeRequest, mapToRuntimeResponse } from "./runtime-mapper";
+import type {
+  JsWebSocketMessageInfo,
+  JsConsumerEventInput,
+  JsScheduleEventInput,
+  JsEventResult,
+} from "@celerity-sdk/runtime";
+import {
+  mapRuntimeRequest,
+  mapToRuntimeResponse,
+  mapWebSocketMessage,
+  mapConsumerEventInput,
+  mapScheduleEventInput,
+  mapToNapiEventResult,
+} from "./runtime-mapper";
 import { createDefaultSystemLayers } from "../layers/system";
 
 const debug = createDebug("celerity:core:runtime-entry");
 
 type RuntimeCallback = (err: Error | null, request: RuntimeRequest) => Promise<RuntimeResponse>;
+type WebSocketCallback = (err: Error | null, info: JsWebSocketMessageInfo) => Promise<void>;
+type ConsumerCallback = (err: Error | null, input: JsConsumerEventInput) => Promise<JsEventResult>;
+type ScheduleCallback = (err: Error | null, input: JsScheduleEventInput) => Promise<JsEventResult>;
+type CustomCallback = (err: Error | null, payload: unknown) => Promise<unknown>;
 type GuardCallback = (input: GuardInput) => Promise<GuardResult>;
 
 export type RuntimeBootstrapResult = {
-  registry: HttpHandlerRegistry;
+  registry: HandlerRegistry;
   container: Container;
-  /** Create a runtime-compatible handler callback for a specific route. */
-  createRouteCallback(path: string, method: string, handlerName?: string): RuntimeCallback | null;
-  /**
-   * Create a runtime-compatible handler callback by handler ID.
-   * First tries a direct registry lookup. If that fails, resolves the handler ID
-   * as a module reference by dynamically importing the module and matching the
-   * exported function against the registry.
-   *
-   * Supported formats:
-   * - `"handlers.hello"` — named export `hello` from module `handlers`
-   * - `"handlers"` — default export from module `handlers`
-   * - `"app.module"` — dotted module name: tries named export split first,
-   *   falls back to default export from module `app.module`
-   */
+
+  // HTTP
+  createRouteCallback(method: string, path: string, handlerName?: string): RuntimeCallback | null;
   createRouteCallbackById(
     handlerId: string,
     codeLocation?: string,
     handlerName?: string,
   ): Promise<RuntimeCallback | null>;
-  /** Create a runtime-compatible guard callback by guard name. */
+
+  // Guards
   createGuardCallback(guardName: string): GuardCallback | null;
+
+  // WebSocket
+  createWebSocketCallback(route: string, handlerName?: string): WebSocketCallback | null;
+  createWebSocketCallbackById(
+    handlerId: string,
+    codeLocation?: string,
+    handlerName?: string,
+  ): Promise<WebSocketCallback | null>;
+
+  // Consumer
+  createConsumerCallback(handlerTag: string, handlerName?: string): ConsumerCallback | null;
+  createConsumerCallbackById(
+    handlerId: string,
+    codeLocation?: string,
+    handlerName?: string,
+  ): Promise<ConsumerCallback | null>;
+
+  // Schedule
+  createScheduleCallback(handlerTag: string, handlerName?: string): ScheduleCallback | null;
+  createScheduleCallbackById(
+    handlerId: string,
+    codeLocation?: string,
+    handlerName?: string,
+  ): Promise<ScheduleCallback | null>;
+
+  // Custom
+  createCustomCallback(handlerName: string): CustomCallback | null;
+  createCustomCallbackById(
+    handlerId: string,
+    codeLocation?: string,
+    handlerName?: string,
+  ): Promise<CustomCallback | null>;
 };
 
 /**
@@ -64,15 +107,15 @@ export async function bootstrapForRuntime(
   const rootModule = await discoverModule(modulePath);
   const { container, registry } = await bootstrap(rootModule);
 
-  function buildCallback(
-    handler: ReturnType<HttpHandlerRegistry["getHandler"]>,
+  function buildHttpCallback(
+    handler: ReturnType<HandlerRegistry["getHandlersByType"]>[number] | undefined,
     handlerName?: string,
   ): RuntimeCallback | null {
     if (!handler) return null;
 
     return async (_err: Error | null, request: RuntimeRequest): Promise<RuntimeResponse> => {
       const httpRequest = mapRuntimeRequest(request);
-      const httpResponse = await executeHandlerPipeline(handler, httpRequest, {
+      const httpResponse = await executeHttpPipeline(handler, httpRequest, {
         container,
         systemLayers: layers,
         handlerName,
@@ -81,26 +124,91 @@ export async function bootstrapForRuntime(
     };
   }
 
+  function buildWebSocketCallback(
+    handler: ReturnType<HandlerRegistry["getHandlersByType"]>[number] | undefined,
+    handlerName?: string,
+  ): WebSocketCallback | null {
+    if (!handler) return null;
+
+    return async (_err: Error | null, info: JsWebSocketMessageInfo): Promise<void> => {
+      const message = mapWebSocketMessage(info);
+      await executeWebSocketPipeline(handler, message, {
+        container,
+        systemLayers: layers,
+        handlerName,
+      });
+    };
+  }
+
+  function buildConsumerCallback(
+    handler: ReturnType<HandlerRegistry["getHandlersByType"]>[number] | undefined,
+    handlerName?: string,
+  ): ConsumerCallback | null {
+    if (!handler) return null;
+
+    return async (_err: Error | null, input: JsConsumerEventInput): Promise<JsEventResult> => {
+      const event = mapConsumerEventInput(input);
+      const result = await executeConsumerPipeline(handler, event, {
+        container,
+        systemLayers: layers,
+        handlerName,
+      });
+      return mapToNapiEventResult(result);
+    };
+  }
+
+  function buildScheduleCallback(
+    handler: ReturnType<HandlerRegistry["getHandlersByType"]>[number] | undefined,
+    handlerName?: string,
+  ): ScheduleCallback | null {
+    if (!handler) return null;
+
+    return async (_err: Error | null, input: JsScheduleEventInput): Promise<JsEventResult> => {
+      const event = mapScheduleEventInput(input);
+      const result = await executeSchedulePipeline(handler, event, {
+        container,
+        systemLayers: layers,
+        handlerName,
+      });
+      return mapToNapiEventResult(result);
+    };
+  }
+
+  function buildCustomCallback(
+    handler: ReturnType<HandlerRegistry["getHandlersByType"]>[number] | undefined,
+    handlerName?: string,
+  ): CustomCallback | null {
+    if (!handler) return null;
+
+    return async (_err: Error | null, payload: unknown): Promise<unknown> => {
+      return executeCustomPipeline(handler, payload, {
+        container,
+        systemLayers: layers,
+        handlerName,
+      });
+    };
+  }
+
   return {
     registry,
     container,
-    createRouteCallback(path: string, method: string, handlerName?: string) {
-      return buildCallback(registry.getHandler(path, method), handlerName);
+    createRouteCallback(method: string, path: string, handlerName?: string) {
+      return buildHttpCallback(registry.getHandler("http", `${method} ${path}`), handlerName);
     },
     async createRouteCallbackById(handlerId: string, codeLocation?: string, handlerName?: string) {
-      const fromRegistry = registry.getHandlerById(handlerId);
-      if (fromRegistry) return buildCallback(fromRegistry, handlerName);
+      const fromRegistry = registry.getHandlerById("http", handlerId);
+      if (fromRegistry) return buildHttpCallback(fromRegistry, handlerName);
 
       const baseDir = codeLocation ? resolve(codeLocation) : moduleDir;
-      const resolved = await resolveHandlerByModuleRef(handlerId, registry, baseDir);
-      return resolved ? buildCallback(resolved, handlerName) : null;
+      const resolved = await resolveHandlerByModuleRef(handlerId, "http", registry, baseDir);
+      return resolved ? buildHttpCallback(resolved, handlerName) : null;
     },
     createGuardCallback(guardName: string): GuardCallback | null {
       const guard = registry.getGuard(guardName);
       if (!guard) return null;
       return async (input: GuardInput) => {
         debug("guard %s — input method=%s path=%s", guardName, input.method, input.path);
-        const handler = registry.getHandler(input.path, input.method);
+        const handler = registry.getHandler("http", `${input.method} ${input.path}`);
         debug(
           "guard %s — handler %s, customMetadata=%o",
           guardName,
@@ -112,6 +220,62 @@ export async function bootstrapForRuntime(
           handlerMetadata: handler?.customMetadata,
         });
       };
+    },
+    createWebSocketCallback(route: string, handlerName?: string) {
+      return buildWebSocketCallback(registry.getHandler("websocket", route), handlerName);
+    },
+    async createWebSocketCallbackById(
+      handlerId: string,
+      codeLocation?: string,
+      handlerName?: string,
+    ) {
+      const fromRegistry = registry.getHandlerById("websocket", handlerId);
+      if (fromRegistry) return buildWebSocketCallback(fromRegistry, handlerName);
+
+      const baseDir = codeLocation ? resolve(codeLocation) : moduleDir;
+      const resolved = await resolveHandlerByModuleRef(handlerId, "websocket", registry, baseDir);
+      return resolved ? buildWebSocketCallback(resolved, handlerName) : null;
+    },
+    createConsumerCallback(handlerTag: string, handlerName?: string) {
+      return buildConsumerCallback(registry.getHandler("consumer", handlerTag), handlerName);
+    },
+    async createConsumerCallbackById(
+      handlerId: string,
+      codeLocation?: string,
+      handlerName?: string,
+    ) {
+      const fromRegistry = registry.getHandlerById("consumer", handlerId);
+      if (fromRegistry) return buildConsumerCallback(fromRegistry, handlerName);
+
+      const baseDir = codeLocation ? resolve(codeLocation) : moduleDir;
+      const resolved = await resolveHandlerByModuleRef(handlerId, "consumer", registry, baseDir);
+      return resolved ? buildConsumerCallback(resolved, handlerName) : null;
+    },
+    createScheduleCallback(handlerTag: string, handlerName?: string) {
+      return buildScheduleCallback(registry.getHandler("schedule", handlerTag), handlerName);
+    },
+    async createScheduleCallbackById(
+      handlerId: string,
+      codeLocation?: string,
+      handlerName?: string,
+    ) {
+      const fromRegistry = registry.getHandlerById("schedule", handlerId);
+      if (fromRegistry) return buildScheduleCallback(fromRegistry, handlerName);
+
+      const baseDir = codeLocation ? resolve(codeLocation) : moduleDir;
+      const resolved = await resolveHandlerByModuleRef(handlerId, "schedule", registry, baseDir);
+      return resolved ? buildScheduleCallback(resolved, handlerName) : null;
+    },
+    createCustomCallback(handlerName: string) {
+      return buildCustomCallback(registry.getHandler("custom", handlerName), handlerName);
+    },
+    async createCustomCallbackById(handlerId: string, codeLocation?: string, handlerName?: string) {
+      const fromRegistry = registry.getHandlerById("custom", handlerId);
+      if (fromRegistry) return buildCustomCallback(fromRegistry, handlerName);
+
+      const baseDir = codeLocation ? resolve(codeLocation) : moduleDir;
+      const resolved = await resolveHandlerByModuleRef(handlerId, "custom", registry, baseDir);
+      return resolved ? buildCustomCallback(resolved, handlerName) : null;
     },
   };
 }

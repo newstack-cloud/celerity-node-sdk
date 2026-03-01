@@ -2,12 +2,14 @@ import { resolve } from "node:path";
 import type {
   CelerityLayer,
   FunctionHandlerDefinition,
+  HandlerType,
+  HttpMethod,
   InjectionToken,
   Type,
 } from "@celerity-sdk/types";
 import createDebug from "debug";
-import type { HttpHandlerRegistry } from "./registry";
-import type { ResolvedHandler } from "./pipeline";
+import type { HandlerRegistry } from "./registry";
+import type { ResolvedHandler } from "./types";
 
 const debug = createDebug("celerity:core:module-resolver");
 
@@ -30,18 +32,26 @@ const debug = createDebug("celerity:core:module-resolver");
  */
 export async function resolveHandlerByModuleRef(
   handlerId: string,
-  registry: HttpHandlerRegistry,
+  handlerType: HandlerType,
+  registry: HandlerRegistry,
   baseDir: string,
 ): Promise<ResolvedHandler | null> {
   const lastDot = handlerId.lastIndexOf(".");
   if (lastDot > 0) {
     const moduleName = handlerId.slice(0, lastDot);
     const exportName = handlerId.slice(lastDot + 1);
-    const result = await tryResolveExport(baseDir, moduleName, exportName, handlerId, registry);
+    const result = await tryResolveExport(
+      baseDir,
+      moduleName,
+      exportName,
+      handlerId,
+      handlerType,
+      registry,
+    );
     if (result) return result;
   }
 
-  return tryResolveExport(baseDir, handlerId, "default", handlerId, registry);
+  return tryResolveExport(baseDir, handlerId, "default", handlerId, handlerType, registry);
 }
 
 async function tryResolveExport(
@@ -49,7 +59,8 @@ async function tryResolveExport(
   moduleName: string,
   exportName: string,
   handlerId: string,
-  registry: HttpHandlerRegistry,
+  handlerType: HandlerType,
+  registry: HandlerRegistry,
 ): Promise<ResolvedHandler | null> {
   const handlerModulePath = resolve(baseDir, moduleName);
 
@@ -71,17 +82,24 @@ async function tryResolveExport(
     typeof exported === "object" &&
     exported !== null &&
     (exported as Record<string, unknown>).__celerity_handler;
+
+  // Type mismatch guard: if the export declares a handler type that
+  // doesn't match the requested type, skip it.
+  // Plain function exports (no __celerity_handler) skip this check
+  // since they are truly blueprint-first with no declared type.
+  if (isFnDef && (exported as FunctionHandlerDefinition).type !== handlerType) {
+    return null;
+  }
+
   const handlerFn = isFnDef ? (exported as FunctionHandlerDefinition).handler : exported;
   if (typeof handlerFn !== "function") return null;
 
-  // Handler functions created with createHttpHandler are registered in the HandlerRegistry
-  // without an ID. The module import uses the shared Node.js module cache,
-  // so we can find the same function reference in the registry and match it
-  // with the handler ID derived from the module path + export name.
-  // This is primarily used when routing information is defined in a blueprint
-  // and the handler function in code has no route information, as is common
-  // in serverless application development.
-  const match = registry.getAllHandlers().find((h) => h.handlerFn === handlerFn);
+  // Handler functions created with create*Handler are registered in the
+  // HandlerRegistry without an ID. The module import uses the shared
+  // Node.js module cache, so we can find the same function reference
+  // in the registry and match it with the handler ID.
+  const handlers = registry.getHandlersByType(handlerType);
+  const match = handlers.find((h) => h.handlerFn === handlerFn);
   if (match) {
     match.id = handlerId;
     debug("matched '%s' to registry handler", handlerId);
@@ -89,42 +107,56 @@ async function tryResolveExport(
   }
 
   debug("'%s' not in registry, wrapping directly", handlerId);
-  return buildResolvedFromExport(handlerId, handlerFn, isFnDef ? exported : null);
+  return buildResolvedFromExport(handlerId, handlerType, handlerFn, isFnDef ? exported : null);
 }
+
+type FnDefMetadata = {
+  layers?: (CelerityLayer | Type<CelerityLayer>)[];
+  inject?: InjectionToken[];
+  customMetadata?: Record<string, unknown>;
+  path?: string;
+  method?: HttpMethod;
+  route?: string;
+  scheduleId?: string;
+  name?: string;
+};
 
 function buildResolvedFromExport(
   handlerId: string,
+  handlerType: HandlerType,
   handlerFn: unknown,
   fnDef: unknown,
 ): ResolvedHandler {
-  if (fnDef) {
-    const meta = (fnDef as FunctionHandlerDefinition).metadata as {
-      layers?: (CelerityLayer | Type<CelerityLayer>)[];
-      inject?: InjectionToken[];
-      customMetadata?: Record<string, unknown>;
-    };
-    return {
-      id: handlerId,
-      protectedBy: [],
-      layers: [...(meta.layers ?? [])],
-      isPublic: false,
-      paramMetadata: [],
-      customMetadata: meta.customMetadata ?? {},
-      handlerFn: handlerFn as (...args: unknown[]) => unknown,
-      isFunctionHandler: true,
-      injectTokens: meta.inject ?? [],
-    };
-  }
+  const meta = fnDef ? ((fnDef as FunctionHandlerDefinition).metadata as FnDefMetadata) : null;
 
-  return {
+  const base = {
     id: handlerId,
-    protectedBy: [],
-    layers: [],
-    isPublic: false,
-    paramMetadata: [],
-    customMetadata: {},
+    layers: [...(meta?.layers ?? [])],
+    paramMetadata: [] as [],
+    customMetadata: meta?.customMetadata ?? {},
     handlerFn: handlerFn as (...args: unknown[]) => unknown,
     isFunctionHandler: true,
-    injectTokens: [],
+    injectTokens: meta?.inject ?? [],
   };
+
+  const guardFields = { protectedBy: [] as string[], isPublic: false };
+
+  switch (handlerType) {
+    case "http":
+      return {
+        ...base,
+        ...guardFields,
+        type: "http",
+        ...(meta?.path !== undefined ? { path: meta.path } : {}),
+        ...(meta?.method !== undefined ? { method: meta.method } : {}),
+      };
+    case "websocket":
+      return { ...base, ...guardFields, type: "websocket", route: meta?.route ?? handlerId };
+    case "consumer":
+      return { ...base, type: "consumer", handlerTag: meta?.route ?? handlerId };
+    case "schedule":
+      return { ...base, type: "schedule", handlerTag: meta?.scheduleId ?? handlerId };
+    case "custom":
+      return { ...base, type: "custom", name: meta?.name ?? handlerId };
+  }
 }

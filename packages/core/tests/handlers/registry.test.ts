@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { HttpHandlerRegistry } from "../../src/handlers/registry";
+import { HandlerRegistry } from "../../src/handlers/registry";
+import { scanModule } from "../../src/handlers/scanners/http";
 import { Container } from "../../src/di/container";
 import { Controller } from "../../src/decorators/controller";
 import { Get, Post, Delete } from "../../src/decorators/http";
@@ -90,12 +91,12 @@ class AppModule {}
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("HttpHandlerRegistry", () => {
-  let registry: HttpHandlerRegistry;
+describe("HandlerRegistry", () => {
+  let registry: HandlerRegistry;
   let container: Container;
 
   beforeEach(() => {
-    registry = new HttpHandlerRegistry();
+    registry = new HandlerRegistry();
     container = new Container();
   });
 
@@ -106,10 +107,10 @@ describe("HttpHandlerRegistry", () => {
       class SimpleModule {}
 
       // Act
-      await registry.scanModule(SimpleModule, container);
+      await scanModule(SimpleModule, container, registry);
 
       // Assert
-      const handlers = registry.getAllHandlers();
+      const handlers = registry.getHandlersByType("http");
       expect(handlers).toHaveLength(3);
 
       const paths = handlers.map((h) => `${h.method} ${h.path}`);
@@ -120,10 +121,10 @@ describe("HttpHandlerRegistry", () => {
 
     it("registers handlers from imported sub-modules", async () => {
       // Act
-      await registry.scanModule(AppModule, container);
+      await scanModule(AppModule, container, registry);
 
       // Assert
-      const handlers = registry.getAllHandlers();
+      const handlers = registry.getHandlersByType("http");
       // UserModule (3 routes) + ItemHandler (2 routes)
       expect(handlers).toHaveLength(5);
 
@@ -139,10 +140,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const findOne = registry.getHandler("/users/42", "GET");
+      const findOne = registry.getHandler("http", "GET /users/42");
       expect(findOne).toBeDefined();
       // The :id route should have param metadata
       expect(findOne!.paramMetadata.length).toBeGreaterThanOrEqual(1);
@@ -156,10 +157,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const secret = registry.getHandler("/protected/secret", "GET");
+      const secret = registry.getHandler("http", "GET /protected/secret");
       expect(secret).toBeDefined();
       expect(secret!.protectedBy).toEqual(["jwt"]);
       expect(secret!.layers).toHaveLength(1);
@@ -171,14 +172,14 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const open = registry.getHandler("/protected/open", "GET");
+      const open = registry.getHandler("http", "GET /protected/open");
       expect(open).toBeDefined();
       expect(open!.isPublic).toBe(true);
 
-      const secret = registry.getHandler("/protected/secret", "GET");
+      const secret = registry.getHandler("http", "GET /protected/secret");
       expect(secret).toBeDefined();
       expect(secret!.isPublic).toBe(false);
     });
@@ -197,7 +198,7 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
       expect(registry.getAllHandlers()).toHaveLength(0);
@@ -208,7 +209,7 @@ describe("HttpHandlerRegistry", () => {
       class NotAModule {}
 
       // Act
-      await registry.scanModule(NotAModule, container);
+      await scanModule(NotAModule, container, registry);
 
       // Assert
       expect(registry.getAllHandlers()).toHaveLength(0);
@@ -233,10 +234,10 @@ describe("HttpHandlerRegistry", () => {
       class FnModule {}
 
       // Act
-      await registry.scanModule(FnModule, container);
+      await scanModule(FnModule, container, registry);
 
       // Assert
-      const handlers = registry.getAllHandlers();
+      const handlers = registry.getHandlersByType("http");
       expect(handlers).toHaveLength(1);
       expect(handlers[0].path).toBe("/fn/hello");
       expect(handlers[0].method).toBe("GET");
@@ -256,10 +257,10 @@ describe("HttpHandlerRegistry", () => {
       class FnModule {}
 
       // Act
-      await registry.scanModule(FnModule, container);
+      await scanModule(FnModule, container, registry);
 
       // Assert
-      const h = registry.getAllHandlers()[0];
+      const h = registry.getHandlersByType("http")[0];
       expect(h.path).toBeUndefined();
       expect(h.method).toBeUndefined();
     });
@@ -277,7 +278,7 @@ describe("HttpHandlerRegistry", () => {
       class FnModule {}
 
       // Act
-      await registry.scanModule(FnModule, container);
+      await scanModule(FnModule, container, registry);
 
       // Assert
       expect(registry.getAllHandlers()).toHaveLength(0);
@@ -304,10 +305,10 @@ describe("HttpHandlerRegistry", () => {
       class FnModule {}
 
       // Act
-      await registry.scanModule(FnModule, container);
+      await scanModule(FnModule, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/validated", "POST");
+      const handler = registry.getHandler("http", "POST /validated");
       expect(handler).toBeDefined();
       expect(handler!.layers).toHaveLength(1);
     });
@@ -334,10 +335,10 @@ describe("HttpHandlerRegistry", () => {
       class FnModule {}
 
       // Act
-      await registry.scanModule(FnModule, container);
+      await scanModule(FnModule, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/validated", "POST");
+      const handler = registry.getHandler("http", "POST /validated");
       expect(handler!.layers).toHaveLength(2);
       expect(handler!.layers[1]).toBe(userLayer);
     });
@@ -355,10 +356,10 @@ describe("HttpHandlerRegistry", () => {
       class FnModule {}
 
       // Act
-      await registry.scanModule(FnModule, container);
+      await scanModule(FnModule, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/plain", "GET");
+      const handler = registry.getHandler("http", "GET /plain");
       expect(handler!.layers).toHaveLength(0);
     });
 
@@ -383,10 +384,10 @@ describe("HttpHandlerRegistry", () => {
       class FnModule {}
 
       // Act
-      await registry.scanModule(FnModule, container);
+      await scanModule(FnModule, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/multi/1", "POST");
+      const handler = registry.getHandler("http", "POST /multi/1");
       expect(handler!.layers).toHaveLength(1);
     });
 
@@ -403,10 +404,10 @@ describe("HttpHandlerRegistry", () => {
       class FnModule {}
 
       // Act
-      await registry.scanModule(FnModule, container);
+      await scanModule(FnModule, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/empty", "GET");
+      const handler = registry.getHandler("http", "GET /empty");
       expect(handler!.layers).toHaveLength(0);
     });
   });
@@ -415,12 +416,12 @@ describe("HttpHandlerRegistry", () => {
     beforeEach(async () => {
       @Module({ controllers: [UserHandler, ItemHandler] })
       class M {}
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
     });
 
     it("matches an exact static route", () => {
       // Act
-      const handler = registry.getHandler("/users", "GET");
+      const handler = registry.getHandler("http", "GET /users");
 
       // Assert
       expect(handler).toBeDefined();
@@ -430,7 +431,7 @@ describe("HttpHandlerRegistry", () => {
 
     it("matches a parameterized route", () => {
       // Act
-      const handler = registry.getHandler("/users/42", "GET");
+      const handler = registry.getHandler("http", "GET /users/42");
 
       // Assert
       expect(handler).toBeDefined();
@@ -439,7 +440,7 @@ describe("HttpHandlerRegistry", () => {
 
     it("returns undefined for an unmatched path", () => {
       // Act
-      const handler = registry.getHandler("/nonexistent", "GET");
+      const handler = registry.getHandler("http", "GET /nonexistent");
 
       // Assert
       expect(handler).toBeUndefined();
@@ -447,7 +448,7 @@ describe("HttpHandlerRegistry", () => {
 
     it("returns undefined when path matches but method does not", () => {
       // Act
-      const handler = registry.getHandler("/users", "DELETE");
+      const handler = registry.getHandler("http", "DELETE /users");
 
       // Assert
       expect(handler).toBeUndefined();
@@ -455,8 +456,8 @@ describe("HttpHandlerRegistry", () => {
 
     it("distinguishes between methods on the same path", () => {
       // Act
-      const getHandler = registry.getHandler("/users", "GET");
-      const postHandler = registry.getHandler("/users", "POST");
+      const getHandler = registry.getHandler("http", "GET /users");
+      const postHandler = registry.getHandler("http", "POST /users");
 
       // Assert
       expect(getHandler).toBeDefined();
@@ -468,7 +469,7 @@ describe("HttpHandlerRegistry", () => {
 
     it("matches delete route with path param", () => {
       // Act
-      const handler = registry.getHandler("/items/99", "DELETE");
+      const handler = registry.getHandler("http", "DELETE /items/99");
 
       // Assert
       expect(handler).toBeDefined();
@@ -478,7 +479,7 @@ describe("HttpHandlerRegistry", () => {
 
     it("does not match when segment count differs", () => {
       // Act
-      const handler = registry.getHandler("/users/42/extra", "GET");
+      const handler = registry.getHandler("http", "GET /users/42/extra");
 
       // Assert
       expect(handler).toBeUndefined();
@@ -497,10 +498,10 @@ describe("HttpHandlerRegistry", () => {
 
       @Module({ functionHandlers: [fnHandler] })
       class M {}
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Act
-      const handler = registry.getHandler("/orders/abc-123", "GET");
+      const handler = registry.getHandler("http", "GET /orders/abc-123");
 
       // Assert
       expect(handler).toBeDefined();
@@ -518,10 +519,10 @@ describe("HttpHandlerRegistry", () => {
 
       @Module({ functionHandlers: [fnHandler] })
       class M {}
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Act
-      const handler = registry.getHandler("/orders/abc/extra", "GET");
+      const handler = registry.getHandler("http", "GET /orders/abc/extra");
 
       // Assert
       expect(handler).toBeUndefined();
@@ -543,10 +544,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/api/health", "GET");
+      const handler = registry.getHandler("http", "GET /api/health");
       expect(handler).toBeDefined();
     });
 
@@ -564,10 +565,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/ping", "GET");
+      const handler = registry.getHandler("http", "GET /ping");
       expect(handler).toBeDefined();
     });
 
@@ -585,10 +586,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/v1/status", "GET");
+      const handler = registry.getHandler("http", "GET /v1/status");
       expect(handler).toBeDefined();
     });
   });
@@ -609,10 +610,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/meta", "GET");
+      const handler = registry.getHandler("http", "GET /meta");
       expect(handler).toBeDefined();
       expect(handler!.customMetadata).toEqual({ action: "items:read" });
     });
@@ -633,10 +634,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/meta", "GET");
+      const handler = registry.getHandler("http", "GET /meta");
       expect(handler!.customMetadata).toEqual({ resource: "posts", action: "posts:read" });
     });
 
@@ -656,10 +657,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/meta", "GET");
+      const handler = registry.getHandler("http", "GET /meta");
       expect(handler!.customMetadata.action).toBe("specific");
     });
 
@@ -669,10 +670,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/users", "GET");
+      const handler = registry.getHandler("http", "GET /users");
       expect(handler!.customMetadata).toEqual({});
     });
 
@@ -694,10 +695,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/fn/action", "GET");
+      const handler = registry.getHandler("http", "GET /fn/action");
       expect(handler!.customMetadata).toEqual({ action: "fn:read", rateLimit: 50 });
     });
 
@@ -714,10 +715,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/fn/plain", "GET");
+      const handler = registry.getHandler("http", "GET /fn/plain");
       expect(handler!.customMetadata).toEqual({});
     });
   });
@@ -742,10 +743,10 @@ describe("HttpHandlerRegistry", () => {
       class FnModule {}
 
       // Act
-      await registry.scanModule(FnModule, container);
+      await scanModule(FnModule, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/injected", "GET");
+      const handler = registry.getHandler("http", "GET /injected");
       expect(handler).toBeDefined();
       expect(handler!.injectTokens).toEqual([DB_TOKEN]);
     });
@@ -763,10 +764,10 @@ describe("HttpHandlerRegistry", () => {
       class FnModule {}
 
       // Act
-      await registry.scanModule(FnModule, container);
+      await scanModule(FnModule, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/no-inject", "GET");
+      const handler = registry.getHandler("http", "GET /no-inject");
       expect(handler!.injectTokens).toEqual([]);
     });
 
@@ -791,10 +792,10 @@ describe("HttpHandlerRegistry", () => {
       class FnModule {}
 
       // Act
-      await registry.scanModule(FnModule, container);
+      await scanModule(FnModule, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/multi-inject", "GET");
+      const handler = registry.getHandler("http", "GET /multi-inject");
       expect(handler!.injectTokens).toEqual([TOKEN_A, TOKEN_B, TOKEN_C]);
     });
   });
@@ -816,10 +817,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/validated", "POST");
+      const handler = registry.getHandler("http", "POST /validated");
       expect(handler).toBeDefined();
       expect(handler!.layers).toHaveLength(1);
     });
@@ -840,10 +841,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/search", "GET");
+      const handler = registry.getHandler("http", "GET /search");
       expect(handler).toBeDefined();
       expect(handler!.layers).toHaveLength(1);
     });
@@ -864,10 +865,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/items", "GET");
+      const handler = registry.getHandler("http", "GET /items");
       expect(handler).toBeDefined();
       expect(handler!.layers).toHaveLength(1);
     });
@@ -888,10 +889,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/resources/1", "GET");
+      const handler = registry.getHandler("http", "GET /resources/1");
       expect(handler).toBeDefined();
       expect(handler!.layers).toHaveLength(1);
     });
@@ -912,10 +913,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/secure", "GET");
+      const handler = registry.getHandler("http", "GET /secure");
       expect(handler).toBeDefined();
       expect(handler!.layers).toHaveLength(1);
     });
@@ -940,10 +941,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/multi", "POST");
+      const handler = registry.getHandler("http", "POST /multi");
       expect(handler).toBeDefined();
       expect(handler!.layers).toHaveLength(1);
     });
@@ -954,10 +955,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/users", "GET");
+      const handler = registry.getHandler("http", "GET /users");
       expect(handler).toBeDefined();
       expect(handler!.layers).toHaveLength(0);
     });
@@ -988,10 +989,10 @@ describe("HttpHandlerRegistry", () => {
       class M {}
 
       // Act
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Assert
-      const handler = registry.getHandler("/layered", "POST");
+      const handler = registry.getHandler("http", "POST /layered");
       expect(handler).toBeDefined();
       // validation layer prepended + CustomLayer from @UseLayer
       expect(handler!.layers).toHaveLength(2);
@@ -1011,10 +1012,10 @@ describe("HttpHandlerRegistry", () => {
 
       @Module({ functionHandlers: [fnHandler] })
       class FnModule {}
-      await registry.scanModule(FnModule, container);
+      await scanModule(FnModule, container, registry);
 
       // Act
-      const handler = registry.getHandlerById("app.module.getOrder");
+      const handler = registry.getHandlerById("http", "app.module.getOrder");
 
       // Assert
       expect(handler).toBeDefined();
@@ -1034,10 +1035,10 @@ describe("HttpHandlerRegistry", () => {
 
       @Module({ functionHandlers: [fnHandler] })
       class FnModule {}
-      await registry.scanModule(FnModule, container);
+      await scanModule(FnModule, container, registry);
 
       // Act
-      const handler = registry.getHandlerById("app.module.listOrders");
+      const handler = registry.getHandlerById("http", "app.module.listOrders");
 
       // Assert
       expect(handler).toBeUndefined();
@@ -1054,10 +1055,10 @@ describe("HttpHandlerRegistry", () => {
 
       @Module({ functionHandlers: [fnHandler] })
       class FnModule {}
-      await registry.scanModule(FnModule, container);
+      await scanModule(FnModule, container, registry);
 
       // Act
-      const handler = registry.getHandlerById("app.module.getOrders");
+      const handler = registry.getHandlerById("http", "app.module.getOrders");
 
       // Assert
       expect(handler).toBeUndefined();
@@ -1075,11 +1076,11 @@ describe("HttpHandlerRegistry", () => {
 
       @Module({ functionHandlers: [fnHandler] })
       class FnModule {}
-      await registry.scanModule(FnModule, container);
+      await scanModule(FnModule, container, registry);
 
       // Act
-      const byId = registry.getHandlerById("app.module.getOrder");
-      const byRoute = registry.getHandler("/orders/123", "GET");
+      const byId = registry.getHandlerById("http", "app.module.getOrder");
+      const byRoute = registry.getHandler("http", "GET /orders/123");
 
       // Assert
       expect(byId).toBeDefined();
@@ -1091,10 +1092,10 @@ describe("HttpHandlerRegistry", () => {
       // Arrange — class handlers never have an id field
       @Module({ controllers: [UserHandler] })
       class M {}
-      await registry.scanModule(M, container);
+      await scanModule(M, container, registry);
 
       // Act
-      const handler = registry.getHandlerById("UserHandler.findAll");
+      const handler = registry.getHandlerById("http", "UserHandler.findAll");
 
       // Assert
       expect(handler).toBeUndefined();

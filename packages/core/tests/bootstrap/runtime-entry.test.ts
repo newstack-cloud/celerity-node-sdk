@@ -3,7 +3,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { resolve } from "node:path";
 import { bootstrapForRuntime } from "../../src/bootstrap/runtime-entry";
 import { Container } from "../../src/di/container";
-import { HttpHandlerRegistry } from "../../src/handlers/registry";
+import { HandlerRegistry } from "../../src/handlers/registry";
 
 const fixturesDir = resolve(import.meta.dirname, "fixtures");
 
@@ -17,14 +17,14 @@ describe("bootstrapForRuntime", () => {
     const result = await bootstrapForRuntime(modulePath);
 
     expect(result.container).toBeInstanceOf(Container);
-    expect(result.registry).toBeInstanceOf(HttpHandlerRegistry);
+    expect(result.registry).toBeInstanceOf(HandlerRegistry);
   });
 
   it("creates a route callback for a matching handler", async () => {
     const modulePath = resolve(fixturesDir, "test-module.ts");
     const result = await bootstrapForRuntime(modulePath);
 
-    const callback = result.createRouteCallback("/health", "GET");
+    const callback = result.createRouteCallback("GET", "/health");
     expect(callback).toBeTypeOf("function");
   });
 
@@ -32,7 +32,7 @@ describe("bootstrapForRuntime", () => {
     const modulePath = resolve(fixturesDir, "test-module.ts");
     const result = await bootstrapForRuntime(modulePath);
 
-    const callback = result.createRouteCallback("/nonexistent", "GET");
+    const callback = result.createRouteCallback("GET", "/nonexistent");
     expect(callback).toBeNull();
   });
 
@@ -40,7 +40,7 @@ describe("bootstrapForRuntime", () => {
     const modulePath = resolve(fixturesDir, "test-module.ts");
     const result = await bootstrapForRuntime(modulePath);
 
-    const callback = result.createRouteCallback("/health", "GET");
+    const callback = result.createRouteCallback("GET", "/health");
     expect(callback).not.toBeNull();
 
     const mockRequest = {
@@ -76,7 +76,7 @@ describe("bootstrapForRuntime", () => {
     process.env.CELERITY_MODULE_PATH = resolve(fixturesDir, "test-module.ts");
     const result = await bootstrapForRuntime();
 
-    expect(result.registry.getHandler("/health", "GET")).toBeDefined();
+    expect(result.registry.getHandler("http", "GET /health")).toBeDefined();
   });
 
   it("creates a route callback by handler ID", async () => {

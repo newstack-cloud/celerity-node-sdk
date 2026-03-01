@@ -1,26 +1,48 @@
 import type { CelerityLayer, Type } from "@celerity-sdk/types";
 import type { Container } from "../di/container";
-import type { HttpHandlerRegistry } from "../handlers/registry";
+import type { HandlerRegistry } from "../handlers/registry";
 import type { ServerlessAdapter, ServerlessHandler } from "../adapters/interfaces";
+import type { HandlerType } from "../handlers/types";
+import type { PipelineOptions } from "../handlers/http-pipeline";
 import { disposeLayers } from "../layers/dispose";
+
+const HANDLER_CREATORS: Record<
+  HandlerType,
+  (
+    adapter: ServerlessAdapter,
+    registry: HandlerRegistry,
+    options: PipelineOptions,
+  ) => ServerlessHandler
+> = {
+  http: (adapter, registry, options) => adapter.createHttpHandler(registry, options),
+  websocket: (adapter, registry, options) => adapter.createWebSocketHandler(registry, options),
+  consumer: (adapter, registry, options) => adapter.createConsumerHandler(registry, options),
+  schedule: (adapter, registry, options) => adapter.createScheduleHandler(registry, options),
+  custom: (adapter, registry, options) => adapter.createCustomHandler(registry, options),
+};
 
 export class ServerlessApplication {
   private handler: ServerlessHandler | null = null;
 
   constructor(
-    private registry: HttpHandlerRegistry,
+    private registry: HandlerRegistry,
     private container: Container,
     private adapter: ServerlessAdapter,
     private systemLayers: (CelerityLayer | Type<CelerityLayer>)[] = [],
     private appLayers: (CelerityLayer | Type<CelerityLayer>)[] = [],
   ) {}
 
-  async start(): Promise<ServerlessHandler> {
-    this.handler = this.adapter.createHttpHandler(this.registry, {
+  createHandler(type: HandlerType): ServerlessHandler {
+    const options: PipelineOptions = {
       container: this.container,
       systemLayers: this.systemLayers,
       appLayers: this.appLayers,
-    });
+    };
+    return HANDLER_CREATORS[type](this.adapter, this.registry, options);
+  }
+
+  async start(type: HandlerType = "http"): Promise<ServerlessHandler> {
+    this.handler = this.createHandler(type);
     return this.handler;
   }
 
@@ -40,7 +62,7 @@ export class ServerlessApplication {
     return this.container;
   }
 
-  getRegistry(): HttpHandlerRegistry {
+  getRegistry(): HandlerRegistry {
     return this.registry;
   }
 }

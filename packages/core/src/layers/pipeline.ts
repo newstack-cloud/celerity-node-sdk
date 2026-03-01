@@ -1,5 +1,5 @@
 import createDebug from "debug";
-import type { BaseHandlerContext, CelerityLayer, Type } from "@celerity-sdk/types";
+import type { BaseHandlerContext, CelerityLayer, HandlerType, Type } from "@celerity-sdk/types";
 
 const debug = createDebug("celerity:core:layers");
 
@@ -7,9 +7,12 @@ export function runLayerPipeline<TContext extends BaseHandlerContext>(
   layers: (CelerityLayer<TContext> | Type<CelerityLayer<TContext>>)[],
   context: TContext,
   handler: () => Promise<unknown>,
+  handlerType?: HandlerType,
 ): Promise<unknown> {
-  const resolved = layers.map((layer) => (typeof layer === "function" ? new layer() : layer));
-  debug("runLayerPipeline: %d layers", resolved.length);
+  const resolved = layers
+    .map((layer) => (typeof layer === "function" ? new layer() : layer))
+    .filter((layer) => !handlerType || !layer.supports || layer.supports(handlerType));
+  debug("runLayerPipeline: %d layers (handlerType=%s)", resolved.length, handlerType ?? "all");
 
   let index = -1;
 

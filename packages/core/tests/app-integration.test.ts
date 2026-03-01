@@ -4,7 +4,13 @@
 import "reflect-metadata";
 import { describe, it, expect } from "vitest";
 import { CelerityFactory } from "../src/application/factory";
-import { TestingApplication, mockRequest } from "../src/testing/test-app";
+import {
+  TestingApplication,
+  mockRequest,
+  mockWebSocketMessage,
+  mockConsumerEvent,
+  mockScheduleEvent,
+} from "../src/testing/test-app";
 import { Module } from "../src/decorators/module";
 import { Controller } from "../src/decorators/controller";
 import { Get, Post } from "../src/decorators/http";
@@ -12,8 +18,19 @@ import { Body, Param, Query, Headers, Req, RequestId } from "../src/decorators/p
 import { ProtectedBy, Public } from "../src/decorators/guards";
 import { Injectable } from "../src/decorators/injectable";
 import { httpGet } from "../src/functions/create-handler";
+import { createConsumerHandler } from "../src/functions/create-consumer-handler";
+import { createScheduleHandler } from "../src/functions/create-schedule-handler";
+import { createCustomHandler } from "../src/functions/create-custom-handler";
+import { Consumer, MessageHandler } from "../src/decorators/consumer";
+import { Messages } from "../src/decorators/consumer-params";
+import { ScheduleHandler } from "../src/decorators/schedule";
+import { ScheduleInput } from "../src/decorators/schedule-params";
+import { Invoke } from "../src/decorators/invoke";
+import { Payload } from "../src/decorators/invoke-params";
+import { WebSocketController, OnMessage } from "../src/decorators/websocket";
+import { MessageBody } from "../src/decorators/websocket-params";
 import { NotFoundException } from "../src/errors/http-exception";
-import type { HttpRequest } from "@celerity-sdk/types";
+import type { HttpRequest, EventResult } from "@celerity-sdk/types";
 
 // -- Fixtures -----------------------------------------------------------------
 
@@ -81,7 +98,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       });
 
       // Act
-      const response = await app.inject(request);
+      const response = await app.injectHttp(request);
 
       // Assert
       expect(response.status).toBe(200);
@@ -97,7 +114,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       const registry = app.getRegistry();
 
       // Act
-      const handler = registry.getHandler("/users/42", "GET");
+      const handler = registry.getHandler("http", "GET /users/42");
 
       // Assert
       expect(handler).toBeDefined();
@@ -116,7 +133,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       });
 
       // Act
-      const response = await app.inject(request);
+      const response = await app.injectHttp(request);
 
       // Assert
       expect(response.status).toBe(200);
@@ -135,7 +152,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       const request = mockRequest("GET", "/users");
 
       // Act
-      const response = await app.inject(request);
+      const response = await app.injectHttp(request);
 
       // Assert
       expect(response.status).toBe(200);
@@ -144,7 +161,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       expect(body).toEqual({ users: ["alice", "bob"] });
 
       // Also verify isPublic metadata
-      const handler = app.getRegistry().getHandler("/users", "GET");
+      const handler = app.getRegistry().getHandler("http", "GET /users");
       expect(handler!.isPublic).toBe(true);
     });
   });
@@ -158,7 +175,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       const request = mockRequest("GET", "/health");
 
       // Act
-      const response = await app.inject(request);
+      const response = await app.injectHttp(request);
 
       // Assert
       expect(response.status).toBe(200);
@@ -178,8 +195,8 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       const request = mockRequest("GET", "/unknown");
 
       // Act & Assert
-      await expect(app.inject(request)).rejects.toThrow(NotFoundException);
-      await expect(app.inject(request)).rejects.toThrow(
+      await expect(app.injectHttp(request)).rejects.toThrow(NotFoundException);
+      await expect(app.injectHttp(request)).rejects.toThrow(
         "No handler found for GET /unknown",
       );
     });
@@ -190,7 +207,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       const request = mockRequest("DELETE", "/users");
 
       // Act & Assert
-      await expect(app.inject(request)).rejects.toThrow(NotFoundException);
+      await expect(app.injectHttp(request)).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -214,7 +231,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       const request = mockRequest("GET", "/void");
 
       // Act
-      const response = await app.inject(request);
+      const response = await app.injectHttp(request);
 
       // Assert
       expect(response.status).toBe(204);
@@ -241,7 +258,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       const request = mockRequest("GET", "/custom");
 
       // Act
-      const response = await app.inject(request);
+      const response = await app.injectHttp(request);
 
       // Assert
       expect(response.status).toBe(201);
@@ -271,7 +288,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       const app = await CelerityFactory.createTestingApp(GuardedModule);
 
       // Act
-      const handler = app.getRegistry().getHandler("/guarded", "GET");
+      const handler = app.getRegistry().getHandler("http", "GET /guarded");
 
       // Assert
       expect(handler).toBeDefined();
@@ -296,7 +313,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       const request = mockRequest("GET", "/guarded");
 
       // Act — should succeed because guard execution happens externally
-      const response = await app.inject(request);
+      const response = await app.injectHttp(request);
 
       // Assert
       expect(response.status).toBe(200);
@@ -328,16 +345,16 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
 
       // Act & Assert — public route returns data
       const publicReq = mockRequest("GET", "/mixed/open");
-      const publicRes = await app.inject(publicReq);
+      const publicRes = await app.injectHttp(publicReq);
       expect(publicRes.status).toBe(200);
       const publicBody = JSON.parse(publicRes.body!);
       expect(publicBody.data).toBe("public");
 
       // Check metadata
-      const openHandler = app.getRegistry().getHandler("/mixed/open", "GET");
+      const openHandler = app.getRegistry().getHandler("http", "GET /mixed/open");
       expect(openHandler!.isPublic).toBe(true);
 
-      const secretHandler = app.getRegistry().getHandler("/mixed/secret", "GET");
+      const secretHandler = app.getRegistry().getHandler("http", "GET /mixed/secret");
       expect(secretHandler!.isPublic).toBe(false);
       expect(secretHandler!.protectedBy).toEqual(["jwt"]);
     });
@@ -365,7 +382,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       });
 
       // Act
-      const response = await app.inject(request);
+      const response = await app.injectHttp(request);
 
       // Assert
       expect(response.status).toBe(200);
@@ -394,7 +411,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       });
 
       // Act
-      const response = await app.inject(request);
+      const response = await app.injectHttp(request);
 
       // Assert
       expect(response.status).toBe(200);
@@ -419,7 +436,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       const request = mockRequest("GET", "/raw");
 
       // Act
-      const response = await app.inject(request);
+      const response = await app.injectHttp(request);
 
       // Assert
       expect(response.status).toBe(200);
@@ -447,7 +464,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       });
 
       // Act
-      const response = await app.inject(request);
+      const response = await app.injectHttp(request);
 
       // Assert
       expect(response.status).toBe(200);
@@ -480,7 +497,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       });
 
       // Act
-      const response = await app.inject(request);
+      const response = await app.injectHttp(request);
 
       // Assert
       expect(response.status).toBe(200);
@@ -502,7 +519,7 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       });
 
       // Act
-      const response = await app.inject(request);
+      const response = await app.injectHttp(request);
 
       // Assert
       expect(response.status).toBe(200);
@@ -585,6 +602,214 @@ describe("Integration: full handler pipeline via TestingApplication.inject", () 
       expect(request.auth).toEqual({ sub: "user-1", role: "admin" });
       expect(request.requestId).toBe("custom-req-id");
       expect(request.clientIp).toBe("10.0.0.1");
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Consumer handler integration
+// ---------------------------------------------------------------------------
+
+describe("Integration: consumer handler via TestingApplication.injectConsumer", () => {
+  // -- Class-based consumer -------------------------------------------------
+
+  describe("class-based @Consumer + @MessageHandler", () => {
+    @Consumer()
+    class OrderConsumer {
+      @MessageHandler()
+      async processOrders(@Messages() _messages: unknown[]): Promise<EventResult> {
+        return { success: true };
+      }
+    }
+
+    @Module({ controllers: [OrderConsumer] })
+    class ConsumerModule {}
+
+    it("should invoke consumer handler and return EventResult", async () => {
+      const app = await CelerityFactory.createTestingApp(ConsumerModule);
+      const event = mockConsumerEvent("processOrders", [
+        { body: '{"orderId":"abc"}' },
+        { body: '{"orderId":"def"}' },
+      ]);
+
+      const result = await app.injectConsumer("processOrders", event);
+
+      expect(result.success).toBe(true);
+    });
+
+    it("should throw NotFoundException for unknown handler tag", async () => {
+      const app = await CelerityFactory.createTestingApp(ConsumerModule);
+      const event = mockConsumerEvent("unknown", [{ body: "{}" }]);
+
+      await expect(app.injectConsumer("unknown", event)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // -- Function-based consumer ----------------------------------------------
+
+  describe("function-based createConsumerHandler", () => {
+    const processMessages = createConsumerHandler(
+      {},
+      async (_event, _ctx) => ({ success: true }),
+    );
+
+    @Module({ functionHandlers: [processMessages] })
+    class FnConsumerModule {}
+
+    it("should invoke function consumer handler", async () => {
+      const app = await CelerityFactory.createTestingApp(FnConsumerModule);
+      const event = mockConsumerEvent("default", [{ body: '{"key":"value"}' }]);
+
+      const result = await app.injectConsumer("default", event);
+
+      expect(result.success).toBe(true);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Schedule handler integration
+// ---------------------------------------------------------------------------
+
+describe("Integration: schedule handler via TestingApplication.injectSchedule", () => {
+  // -- Class-based schedule -------------------------------------------------
+
+  describe("class-based @ScheduleHandler", () => {
+    @Controller("/admin")
+    class AdminHandler {
+      @ScheduleHandler("daily-cleanup")
+      async cleanup(@ScheduleInput() _input: unknown): Promise<EventResult> {
+        return { success: true };
+      }
+    }
+
+    @Module({ controllers: [AdminHandler] })
+    class ScheduleModule {}
+
+    it("should invoke schedule handler and return EventResult", async () => {
+      const app = await CelerityFactory.createTestingApp(ScheduleModule);
+      const event = mockScheduleEvent("daily-cleanup");
+
+      const result = await app.injectSchedule("daily-cleanup", event);
+
+      expect(result.success).toBe(true);
+    });
+
+    it("should throw NotFoundException for unknown schedule tag", async () => {
+      const app = await CelerityFactory.createTestingApp(ScheduleModule);
+      const event = mockScheduleEvent("unknown");
+
+      await expect(app.injectSchedule("unknown", event)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // -- Function-based schedule ----------------------------------------------
+
+  describe("function-based createScheduleHandler", () => {
+    const hourlySync = createScheduleHandler("rate(1 hour)", {}, async (_event, _ctx) => ({
+      success: true,
+    }));
+
+    @Module({ functionHandlers: [hourlySync] })
+    class FnScheduleModule {}
+
+    it("should invoke function schedule handler", async () => {
+      const app = await CelerityFactory.createTestingApp(FnScheduleModule);
+      const event = mockScheduleEvent("default");
+
+      const result = await app.injectSchedule("default", event);
+
+      expect(result.success).toBe(true);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Custom (invoke) handler integration
+// ---------------------------------------------------------------------------
+
+describe("Integration: custom handler via TestingApplication.injectCustom", () => {
+  // -- Class-based @Invoke --------------------------------------------------
+
+  describe("class-based @Invoke", () => {
+    @Controller("/payments")
+    class PaymentHandler {
+      @Invoke("processPayment")
+      async processPayment(@Payload() payload: unknown): Promise<unknown> {
+        const p = payload as { amount: number };
+        return { processed: true, amount: p.amount };
+      }
+    }
+
+    @Module({ controllers: [PaymentHandler] })
+    class InvokeModule {}
+
+    it("should invoke custom handler and return raw result", async () => {
+      const app = await CelerityFactory.createTestingApp(InvokeModule);
+
+      const result = await app.injectCustom("processPayment", { amount: 100 });
+
+      expect(result).toEqual({ processed: true, amount: 100 });
+    });
+
+    it("should throw NotFoundException for unknown handler name", async () => {
+      const app = await CelerityFactory.createTestingApp(InvokeModule);
+
+      await expect(app.injectCustom("unknown")).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // -- Function-based custom ------------------------------------------------
+
+  describe("function-based createCustomHandler", () => {
+    const echo = createCustomHandler({}, async (payload, _ctx) => ({
+      echo: payload,
+    }));
+
+    @Module({ functionHandlers: [echo] })
+    class FnCustomModule {}
+
+    it("should invoke function custom handler", async () => {
+      const app = await CelerityFactory.createTestingApp(FnCustomModule);
+
+      const result = await app.injectCustom("default", { message: "hello" });
+
+      expect(result).toEqual({ echo: { message: "hello" } });
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WebSocket handler integration
+// ---------------------------------------------------------------------------
+
+describe("Integration: WebSocket handler via TestingApplication.injectWebSocket", () => {
+  describe("class-based @WebSocketController + @OnMessage", () => {
+    @WebSocketController()
+    class ChatHandler {
+      @OnMessage("chat")
+      async onChat(@MessageBody() _body: unknown): Promise<void> {
+        // Handler processes the message — no return needed
+      }
+    }
+
+    @Module({ controllers: [ChatHandler] })
+    class WebSocketModule {}
+
+    it("should invoke WebSocket handler without throwing", async () => {
+      const app = await CelerityFactory.createTestingApp(WebSocketModule);
+      const message = mockWebSocketMessage({
+        jsonBody: { text: "hello" },
+      });
+
+      await expect(app.injectWebSocket("chat", message)).resolves.toBeUndefined();
+    });
+
+    it("should throw NotFoundException for unknown route", async () => {
+      const app = await CelerityFactory.createTestingApp(WebSocketModule);
+      const message = mockWebSocketMessage();
+
+      await expect(app.injectWebSocket("unknown", message)).rejects.toThrow(NotFoundException);
     });
   });
 });

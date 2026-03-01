@@ -3,43 +3,29 @@ import type {
   HttpRequest,
   HttpResponse,
   HttpHandlerContext,
+  BaseHandlerContext,
   CelerityLayer,
   Type,
   ServiceContainer,
-  InjectionToken,
 } from "@celerity-sdk/types";
 import { runLayerPipeline } from "../layers/pipeline";
 import { HttpException } from "../errors/http-exception";
-import { extractParam, type ParamMetadata, type ParamType } from "../decorators/params";
+import { extractParam, type ParamType } from "../decorators/params";
 import { buildHttpRequest, buildHttpContext } from "../functions/context";
 import { HandlerMetadataStore } from "../metadata/handler-metadata";
+import type { ResolvedHandlerBase } from "./types";
 
 const debug = createDebug("celerity:core:pipeline");
 
-export type ResolvedHandler = {
-  id?: string;
-  path?: string;
-  method?: string;
-  protectedBy: string[];
-  layers: (CelerityLayer | Type<CelerityLayer>)[];
-  isPublic: boolean;
-  paramMetadata: ParamMetadata[];
-  customMetadata: Record<string, unknown>;
-  handlerFn: (...args: unknown[]) => unknown;
-  handlerInstance?: object;
-  isFunctionHandler?: boolean;
-  injectTokens?: InjectionToken[];
-};
-
 export type PipelineOptions = {
   container: ServiceContainer;
-  systemLayers?: (CelerityLayer | Type<CelerityLayer>)[];
-  appLayers?: (CelerityLayer | Type<CelerityLayer>)[];
+  systemLayers?: (CelerityLayer<BaseHandlerContext> | Type<CelerityLayer<BaseHandlerContext>>)[];
+  appLayers?: (CelerityLayer<BaseHandlerContext> | Type<CelerityLayer<BaseHandlerContext>>)[];
   handlerName?: string;
 };
 
-export async function executeHandlerPipeline(
-  handler: ResolvedHandler,
+export async function executeHttpPipeline(
+  handler: ResolvedHandlerBase,
   request: HttpRequest,
   options: PipelineOptions,
 ): Promise<HttpResponse> {
@@ -61,14 +47,19 @@ export async function executeHandlerPipeline(
   debug("%s %s — %d layers", request.method, request.path, allLayers.length);
 
   try {
-    const response = (await runLayerPipeline(allLayers, context, async () => {
-      const handlerType = handler.isFunctionHandler ? "function" : "class";
-      debug("invoking %s handler", handlerType);
-      const result = handler.isFunctionHandler
-        ? await invokeFunctionHandler(handler, context)
-        : await invokeClassHandler(handler, context);
-      return normalizeResponse(result);
-    })) as HttpResponse;
+    const response = (await runLayerPipeline(
+      allLayers,
+      context,
+      async () => {
+        const style = handler.isFunctionHandler ? "function" : "class";
+        debug("invoking %s handler", style);
+        const result = handler.isFunctionHandler
+          ? await invokeFunctionHandler(handler, context)
+          : await invokeClassHandler(handler, context);
+        return normalizeResponse(result);
+      },
+      "http",
+    )) as HttpResponse;
 
     debug("response %d", response.status);
     return response;
@@ -103,7 +94,7 @@ export async function executeHandlerPipeline(
 }
 
 async function invokeClassHandler(
-  handler: ResolvedHandler,
+  handler: ResolvedHandlerBase,
   context: HttpHandlerContext,
 ): Promise<unknown> {
   const args: unknown[] = [];
@@ -148,7 +139,7 @@ function extractValidatedParam(
 }
 
 async function invokeFunctionHandler(
-  handler: ResolvedHandler,
+  handler: ResolvedHandlerBase,
   context: HttpHandlerContext,
 ): Promise<unknown> {
   const req = buildHttpRequest(context.request, context.metadata);

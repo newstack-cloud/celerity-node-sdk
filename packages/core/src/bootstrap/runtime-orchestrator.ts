@@ -1,54 +1,40 @@
 import type {
   CoreRuntimeApplication as CoreRuntimeApplicationType,
-  CoreRuntimeAppConfig,
   CoreRuntimeConfig,
+  GuardInput as RuntimeGuardInput,
+  GuardResult as RuntimeGuardResult,
 } from "@celerity-sdk/runtime";
+import { WebSocketSender } from "@celerity-sdk/types";
 import type { GuardResult } from "../handlers/guard-pipeline";
+import type { RuntimeBootstrapResult } from "./runtime-entry";
+import { RuntimeWebSocketSender } from "../handlers/websocket-sender";
 import { bootstrapForRuntime } from "./runtime-entry";
 
 export type StartRuntimeOptions = {
   block?: boolean;
 };
 
-// Extended runtime types for guard handler support.
-// These will be part of the auto-generated NAPI types after the next
-// runtime build; until then they are declared here.
-type NapiGuardInput = {
-  token: string;
-  request: {
-    method: string;
-    path: string;
-    headers: Record<string, string[]>;
-    query: Record<string, string[]>;
-    cookies: Record<string, string>;
-    body?: string;
-    requestId: string;
-    clientIp: string;
-  };
-  auth: Record<string, unknown>;
-  handlerName?: string;
+type RuntimeModule = {
+  CoreRuntimeApplication: new (config: CoreRuntimeConfig) => CoreRuntimeApplicationType;
+  runtimeConfigFromEnv: () => CoreRuntimeConfig;
 };
 
-type NapiGuardResult = {
-  status: string;
-  auth?: Record<string, unknown>;
-  message?: string;
-};
+async function loadRuntime(): Promise<{
+  app: CoreRuntimeApplicationType;
+  appConfig: ReturnType<CoreRuntimeApplicationType["setup"]>;
+}> {
+  // Dynamic import — @celerity-sdk/runtime is an optional peer dependency.
+  const pkg = "@celerity-sdk/runtime";
+  const runtimeModule = (await import(pkg)) as RuntimeModule;
 
-type RuntimeAppWithGuards = CoreRuntimeApplicationType & {
-  registerGuardHandler(
-    name: string,
-    handler: (err: Error | null, input: NapiGuardInput) => Promise<NapiGuardResult>,
-  ): Promise<void>;
-};
+  const config = runtimeModule.runtimeConfigFromEnv();
+  const app = new runtimeModule.CoreRuntimeApplication(config);
+  const appConfig = app.setup();
 
-type AppConfigWithGuards = CoreRuntimeAppConfig & {
-  api?: CoreRuntimeAppConfig["api"] & {
-    guards?: { handlers: Array<{ name: string }> };
-  };
-};
+  return { app, appConfig };
+}
 
-function mapGuardResult(result: GuardResult): NapiGuardResult {
+function mapGuardResult(result: GuardResult): RuntimeGuardResult {
   if (result.allowed) {
     return { status: "allowed", auth: result.auth };
   }
@@ -56,41 +42,32 @@ function mapGuardResult(result: GuardResult): NapiGuardResult {
   return { status, message: result.message };
 }
 
-/**
- * Full runtime lifecycle orchestrator.
- * Dynamically imports @celerity-sdk/runtime, loads config from CELERITY_* environment
- * variables, bootstraps the user's module, registers handler callbacks, and starts the server.
- */
-export async function startRuntime(options?: StartRuntimeOptions): Promise<void> {
-  // Dynamic import — @celerity-sdk/runtime is an optional peer dependency.
-  const pkg = "@celerity-sdk/runtime";
-  const runtimeModule = (await import(pkg)) as {
-    CoreRuntimeApplication: new (config: CoreRuntimeConfig) => RuntimeAppWithGuards;
-    runtimeConfigFromEnv: () => CoreRuntimeConfig;
-  };
-
-  const config = runtimeModule.runtimeConfigFromEnv();
-  const app = new runtimeModule.CoreRuntimeApplication(config);
-
-  const appConfig = app.setup() as AppConfigWithGuards;
-
-  const result = await bootstrapForRuntime();
-
-  for (const def of appConfig.api?.http?.handlers ?? []) {
+async function registerHttpHandlers(
+  app: CoreRuntimeApplicationType,
+  handlers: ReturnType<CoreRuntimeApplicationType["setup"]>["api"],
+  result: RuntimeBootstrapResult,
+): Promise<void> {
+  for (const def of handlers?.http?.handlers ?? []) {
     const callback =
-      result.createRouteCallback(def.path, def.method, def.name) ??
+      result.createRouteCallback(def.method, def.path, def.name) ??
       (await result.createRouteCallbackById(def.handler, def.location, def.name));
     if (callback) {
       app.registerHttpHandler(def.path, def.method, def.timeout, callback);
     }
   }
+}
 
-  for (const guardDef of appConfig.api?.guards?.handlers ?? []) {
+async function registerGuardHandlers(
+  app: CoreRuntimeApplicationType,
+  guards: NonNullable<ReturnType<CoreRuntimeApplicationType["setup"]>["api"]>["guards"],
+  result: RuntimeBootstrapResult,
+): Promise<void> {
+  for (const guardDef of guards?.handlers ?? []) {
     const coreCallback = result.createGuardCallback(guardDef.name);
     if (coreCallback) {
       await app.registerGuardHandler(
         guardDef.name,
-        async (_err: Error | null, input: NapiGuardInput) => {
+        async (_err: Error | null, input: RuntimeGuardInput) => {
           const coreResult = await coreCallback({
             token: input.token,
             method: input.request.method,
@@ -108,6 +85,94 @@ export async function startRuntime(options?: StartRuntimeOptions): Promise<void>
         },
       );
     }
+  }
+}
+
+async function registerWebSocketHandlers(
+  app: CoreRuntimeApplicationType,
+  websocket: NonNullable<ReturnType<CoreRuntimeApplicationType["setup"]>["api"]>["websocket"],
+  result: RuntimeBootstrapResult,
+): Promise<void> {
+  for (const def of websocket?.handlers ?? []) {
+    const callback =
+      result.createWebSocketCallback(def.route, def.name) ??
+      (await result.createWebSocketCallbackById(def.handler, def.location, def.name));
+    if (callback) {
+      app.registerWebsocketHandler(def.route, callback);
+    }
+  }
+}
+
+async function registerConsumerHandlers(
+  app: CoreRuntimeApplicationType,
+  consumers: ReturnType<CoreRuntimeApplicationType["setup"]>["consumers"],
+  result: RuntimeBootstrapResult,
+): Promise<void> {
+  for (const consumer of consumers?.consumers ?? []) {
+    for (const def of consumer.handlers) {
+      const tag = `source::${consumer.sourceId}::${def.name}`;
+      const callback =
+        result.createConsumerCallback(tag, def.name) ??
+        (await result.createConsumerCallbackById(def.handler, def.location, def.name));
+      if (callback) {
+        app.registerConsumerHandler(tag, def.timeout, callback);
+      }
+    }
+  }
+}
+
+async function registerScheduleHandlers(
+  app: CoreRuntimeApplicationType,
+  schedules: ReturnType<CoreRuntimeApplicationType["setup"]>["schedules"],
+  result: RuntimeBootstrapResult,
+): Promise<void> {
+  for (const schedule of schedules?.schedules ?? []) {
+    for (const def of schedule.handlers) {
+      const tag = `source::${schedule.scheduleId}::${def.name}`;
+      const callback =
+        result.createScheduleCallback(tag, def.name) ??
+        (await result.createScheduleCallbackById(def.handler, def.location, def.name));
+      if (callback) {
+        app.registerScheduleHandler(tag, def.timeout, callback);
+      }
+    }
+  }
+}
+
+async function registerCustomHandlers(
+  app: CoreRuntimeApplicationType,
+  customHandlers: ReturnType<CoreRuntimeApplicationType["setup"]>["customHandlers"],
+  result: RuntimeBootstrapResult,
+): Promise<void> {
+  for (const def of customHandlers?.handlers ?? []) {
+    const callback =
+      result.createCustomCallback(def.name) ??
+      (await result.createCustomCallbackById(def.handler, def.location, def.name));
+    if (callback) {
+      app.registerCustomHandler(def.name, def.timeout, callback);
+    }
+  }
+}
+
+/**
+ * Full runtime lifecycle orchestrator.
+ * Dynamically imports @celerity-sdk/runtime, loads config from CELERITY_* environment
+ * variables, bootstraps the user's module, registers handler callbacks, and starts the server.
+ */
+export async function startRuntime(options?: StartRuntimeOptions): Promise<void> {
+  const { app, appConfig } = await loadRuntime();
+  const result = await bootstrapForRuntime();
+
+  await registerHttpHandlers(app, appConfig.api, result);
+  await registerGuardHandlers(app, appConfig.api?.guards, result);
+  await registerWebSocketHandlers(app, appConfig.api?.websocket, result);
+  await registerConsumerHandlers(app, appConfig.consumers, result);
+  await registerScheduleHandlers(app, appConfig.schedules, result);
+  await registerCustomHandlers(app, appConfig.customHandlers, result);
+
+  if (appConfig.api?.websocket) {
+    const sender = new RuntimeWebSocketSender(app.websocketRegistry());
+    result.container.register(WebSocketSender, { useValue: sender });
   }
 
   await app.run(options?.block ?? true);
