@@ -29,7 +29,7 @@ pnpm add @azure/cosmos
 
 ## Status
 
-This package is a stub:the interface and provider implementations are planned but not yet implemented.
+This package implements the `DatastoreClient` interface and provides a `DynamoDBProvider` for AWS DynamoDB. Support for Google Cloud Firestore and Azure Cosmos DB will be added in future releases.
 
 ## Part of the Celerity Framework
 
