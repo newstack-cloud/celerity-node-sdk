@@ -4,9 +4,9 @@ NoSQL data store abstraction for the Celerity Node SDK.
 
 Provides a unified `DatastoreClient` interface for working with NoSQL databases across cloud providers:
 
-- **AWS**:Amazon DynamoDB
-- **GCP**:Google Cloud Datastore
-- **Azure**:Azure Cosmos DB
+- **AWS**: Amazon DynamoDB
+- **Google Cloud**: Google Cloud Firestore
+- **Azure**: Azure Cosmos DB
 
 ## Installation
 
@@ -21,7 +21,7 @@ Install the cloud SDK for your target platform as a peer dependency:
 pnpm add @aws-sdk/client-dynamodb @aws-sdk/lib-dynamodb
 
 # GCP
-pnpm add @google-cloud/datastore
+pnpm add @google-cloud/firestore
 
 # Azure
 pnpm add @azure/cosmos
