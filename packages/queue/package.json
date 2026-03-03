@@ -39,12 +39,21 @@
   },
   "dependencies": {
     "@celerity-sdk/types": "workspace:^",
-    "@celerity-sdk/config": "workspace:^"
+    "@celerity-sdk/common": "workspace:^",
+    "@celerity-sdk/config": "workspace:^",
+    "debug": "^4.4.0"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-sqs": "^3.750.0",
+    "ioredis": "^5.4.0",
+    "reflect-metadata": "^0.2.0"
   },
   "peerDependencies": {
     "@aws-sdk/client-sqs": "^3.0.0",
     "@google-cloud/pubsub": "^4.0.0",
-    "@azure/service-bus": "^7.0.0"
+    "@azure/service-bus": "^7.0.0",
+    "ioredis": "^5.0.0",
+    "reflect-metadata": "^0.2.0"
   },
   "peerDependenciesMeta": {
     "@aws-sdk/client-sqs": {
@@ -54,6 +63,12 @@
       "optional": true
     },
     "@azure/service-bus": {
+      "optional": true
+    },
+    "ioredis": {
+      "optional": true
+    },
+    "reflect-metadata": {
       "optional": true
     }
   },
