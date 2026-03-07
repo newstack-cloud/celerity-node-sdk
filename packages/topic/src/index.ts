@@ -1,3 +1,27 @@
-// TODO: Implement pub/sub topic abstraction.
-// Key modules: interfaces (TopicClient), factory (createTopicClient), providers (sns, google-pubsub, azure-service-bus)
-export {};
+// Core types
+export {
+  TopicClient,
+  type Topic,
+  type PublishOptions,
+  type PublishResult,
+  type BatchPublishEntry,
+  type BatchPublishResult,
+  type BatchPublishSuccess,
+  type BatchPublishFailure,
+} from "./types";
+
+export { SNSTopicClient } from "./providers/sns/sns-topic-client";
+export type { SNSTopicConfig } from "./providers/sns/types";
+export { RedisTopicClient } from "./providers/redis/redis-topic-client";
+export type { RedisTopicConfig } from "./providers/redis/types";
+
+export { createTopicClient } from "./factory";
+export type { CreateTopicClientOptions } from "./factory";
+
+export { Topic as TopicDecorator, topicToken, DEFAULT_TOPIC_TOKEN } from "./decorators";
+
+export { getTopic } from "./helpers";
+
+export { TopicLayer } from "./layer";
+
+export { TopicError } from "./errors";

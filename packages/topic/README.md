@@ -1,12 +1,13 @@
 # @celerity-sdk/topic
 
-Pub/Sub topic abstraction for the Celerity Node SDK.
+Cloud-agnostic pub/sub topic abstraction for the Celerity Node SDK.
 
-Provides a unified `TopicClient` interface for publishing messages to topics across cloud providers:
+Provides a unified `TopicClient` interface for publishing messages to topics across cloud providers. The Celerity runtime handles all consumption — this package is **publish-only** (`publish`, `publishBatch`).
 
-- **AWS**:Amazon SNS
-- **GCP**:Google Cloud Pub/Sub
-- **Azure**:Azure Service Bus Topics
+- **AWS**: Amazon SNS
+- **GCP**: Google Cloud Pub/Sub *(planned)*
+- **Azure**: Azure Service Bus Topics *(planned)*
+- **Local**: Redis pub/sub channels via Celerity CLI
 
 ## Installation
 
@@ -20,16 +21,13 @@ Install the cloud SDK for your target platform as a peer dependency:
 # AWS
 pnpm add @aws-sdk/client-sns
 
-# GCP
-pnpm add @google-cloud/pubsub
-
-# Azure
-pnpm add @azure/service-bus
+# Local development (managed by Celerity CLI, but needed for direct usage)
+pnpm add ioredis
 ```
 
 ## Status
 
-This package is a stub:the interface and provider implementations are planned but not yet implemented.
+This package implements the `TopicClient` interface with providers for AWS SNS and Redis (local development). Support for Google Cloud Pub/Sub and Azure Service Bus Topics will be added in future releases.
 
 ## Part of the Celerity Framework
 

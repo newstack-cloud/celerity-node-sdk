@@ -1,0 +1,13 @@
+import type { RedisTopicConfig } from "./types";
+
+const DEFAULT_REDIS_URL = "redis://localhost:6379";
+
+/**
+ * Captures Redis configuration from environment variables.
+ * This is the only place that reads `process.env` for Redis config.
+ */
+export function captureRedisConfig(): RedisTopicConfig {
+  return {
+    url: process.env.CELERITY_LOCAL_REDIS_URL ?? DEFAULT_REDIS_URL,
+  };
+}
