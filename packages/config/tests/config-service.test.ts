@@ -86,6 +86,84 @@ describe("ConfigNamespace", () => {
     });
   });
 
+  describe("prefix filtering", () => {
+    it("should filter and strip prefix from keys", async () => {
+      const prefixedBackend = createMockBackend({
+        "resources/BUCKET_NAME": "my-bucket",
+        "resources/DB_HOST": "db.example.com",
+        "appConfig/API_KEY": "sk-123",
+      });
+
+      const ns = new ConfigNamespace(prefixedBackend, "shared-store", null, "resources");
+
+      expect(await ns.get("BUCKET_NAME")).toBe("my-bucket");
+      expect(await ns.get("DB_HOST")).toBe("db.example.com");
+      // Keys from other prefixes are excluded
+      expect(await ns.get("API_KEY")).toBeUndefined();
+    });
+
+    it("should return all filtered keys via getAll()", async () => {
+      const prefixedBackend = createMockBackend({
+        "appConfig/api_key": "sk-123",
+        "appConfig/debug": "true",
+        "resources/BUCKET": "b",
+      });
+
+      const ns = new ConfigNamespace(prefixedBackend, "shared-store", null, "appConfig");
+      const all = await ns.getAll();
+
+      expect(all).toEqual({ api_key: "sk-123", debug: "true" });
+    });
+
+    it("should not filter when no prefix is set", async () => {
+      const mixedBackend = createMockBackend({
+        "resources/BUCKET_NAME": "my-bucket",
+        PLAIN_KEY: "value",
+      });
+
+      const ns = new ConfigNamespace(mixedBackend, "store", null);
+      const all = await ns.getAll();
+
+      expect(all).toEqual({
+        "resources/BUCKET_NAME": "my-bucket",
+        PLAIN_KEY: "value",
+      });
+    });
+
+    it("should apply prefix filtering on background refresh", async () => {
+      vi.useRealTimers();
+
+      const refreshBackend: ConfigBackend = {
+        fetch: vi
+          .fn()
+          .mockResolvedValueOnce(
+            new Map([
+              ["ns/KEY", "old"],
+              ["other/X", "ignored"],
+            ]),
+          )
+          .mockResolvedValue(
+            new Map([
+              ["ns/KEY", "new"],
+              ["other/X", "still-ignored"],
+            ]),
+          ),
+      };
+
+      const ns = new ConfigNamespace(refreshBackend, "store", 0, "ns");
+
+      expect(await ns.get("KEY")).toBe("old");
+      expect(await ns.get("X")).toBeUndefined();
+
+      // Trigger stale refresh
+      await ns.get("KEY");
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(await ns.get("KEY")).toBe("new");
+      expect(await ns.get("X")).toBeUndefined();
+    });
+  });
+
   describe("lazy refresh", () => {
     it("should not re-fetch when refreshIntervalMs is null", async () => {
       const ns = new ConfigNamespace(backend, "test-store", null);

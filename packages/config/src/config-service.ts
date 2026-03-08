@@ -16,6 +16,7 @@ export class ConfigNamespace {
     private readonly backend: ConfigBackend,
     private readonly storeId: string,
     private readonly refreshIntervalMs?: number | null,
+    private readonly prefix?: string,
   ) {}
 
   async get(key: string): Promise<string | undefined> {
@@ -51,7 +52,7 @@ export class ConfigNamespace {
 
     if (this.values === null) {
       debug("namespace %s: first fetch", this.storeId);
-      this.values = await this.backend.fetch(this.storeId);
+      this.values = this.applyPrefix(await this.backend.fetch(this.storeId));
       this.lastFetchedAt = now;
       debug("namespace %s: %d keys loaded", this.storeId, this.values.size);
     } else if (isStale) {
@@ -62,17 +63,31 @@ export class ConfigNamespace {
       );
       void this.backend
         .fetch(this.storeId)
-        .then((fresh) => {
-          this.values = fresh;
+        .then((raw) => {
+          const filtered = this.applyPrefix(raw);
+          this.values = filtered;
           this.lastFetchedAt = Date.now();
-          debug("namespace %s: refreshed, %d keys", this.storeId, fresh.size);
+          debug("namespace %s: refreshed, %d keys", this.storeId, filtered.size);
         })
         .catch(() => {
           debug("namespace %s: refresh failed, serving stale values", this.storeId);
         });
     }
 
-    return this.values;
+    return this.values!;
+  }
+
+  private applyPrefix(raw: Map<string, string>): Map<string, string> {
+    if (!this.prefix) return raw;
+
+    const prefixSlash = `${this.prefix}/`;
+    const filtered = new Map<string, string>();
+    for (const [key, value] of raw) {
+      if (key.startsWith(prefixSlash)) {
+        filtered.set(key.slice(prefixSlash.length), value);
+      }
+    }
+    return filtered;
   }
 }
 

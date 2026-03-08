@@ -83,7 +83,12 @@ function buildConfigService(settings: ConfigLayerSettings): ConfigService {
   for (const ns of namespaces) {
     const storeKind = (ns.storeKind ?? "secrets-manager") as AwsStoreKind;
     const backend = resolveBackend(settings.platform, storeKind);
-    const namespace = new ConfigNamespace(backend, ns.storeId, settings.refreshIntervalMs);
+    const namespace = new ConfigNamespace(
+      backend,
+      ns.storeId,
+      settings.refreshIntervalMs,
+      ns.storePrefix,
+    );
     service.registerNamespace(ns.name, namespace);
   }
 
@@ -94,6 +99,7 @@ type DiscoveredNamespace = {
   name: string;
   storeId: string;
   storeKind: string | undefined;
+  storePrefix: string | undefined;
 };
 
 /**
@@ -109,6 +115,7 @@ function discoverNamespaces(settings: ConfigLayerSettings): DiscoveredNamespace[
         name: "default",
         storeId: defaultStoreId,
         storeKind: settings.storeKind,
+        storePrefix: undefined,
       },
     ];
   }
@@ -123,10 +130,12 @@ function discoverNamespaces(settings: ConfigLayerSettings): DiscoveredNamespace[
     const nsName = key.slice(prefix.length, key.length - suffix.length);
     if (!nsName || nsName === "STORE") continue;
 
+    const storePrefix = process.env[`${prefix}${nsName}_STORE_PREFIX`];
     namespaces.push({
-      name: nsName.toLowerCase(),
+      name: storePrefix ?? nsName.toLowerCase(),
       storeId: value,
       storeKind: process.env[`${prefix}${nsName}_STORE_KIND`],
+      storePrefix,
     });
   }
 
