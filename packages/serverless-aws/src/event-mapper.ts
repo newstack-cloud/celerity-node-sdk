@@ -1,4 +1,6 @@
 import createDebug from "debug";
+import { unmarshall } from "@aws-sdk/util-dynamodb";
+import { mapBucketEventType, mapDatastoreEventType } from "@celerity-sdk/common";
 import type {
   HttpMethod,
   HandlerType,
@@ -244,22 +246,133 @@ export function mapApiGatewayWebSocketEvent(
 }
 
 // ---------------------------------------------------------------------------
-// SQS event mapper
+// Event-sourced SQS message detection and body transformation
 // ---------------------------------------------------------------------------
 
+type S3Record = {
+  eventSource: string;
+  eventName: string;
+  s3: {
+    bucket: { name: string };
+    object: { key: string; size?: number; eTag?: string };
+  };
+};
+
+type S3Notification = {
+  Records: S3Record[];
+};
+
+type DynamoDBStreamRecord = {
+  eventSource: string;
+  eventName: string;
+  eventSourceARN?: string;
+  dynamodb?: {
+    Keys?: Record<string, Record<string, unknown>>;
+    NewImage?: Record<string, Record<string, unknown>>;
+    OldImage?: Record<string, Record<string, unknown>>;
+  };
+};
+
+function tryParseJson(body: string): unknown | undefined {
+  try {
+    return JSON.parse(body);
+  } catch {
+    return undefined;
+  }
+}
+
+function isS3Notification(parsed: unknown): parsed is S3Notification {
+  if (!parsed || typeof parsed !== "object") return false;
+  const obj = parsed as Record<string, unknown>;
+  if (!Array.isArray(obj.Records) || obj.Records.length === 0) return false;
+  const first = obj.Records[0] as Record<string, unknown>;
+  return first.eventSource === "aws:s3";
+}
+
+function isDynamoDBStreamRecord(parsed: unknown): parsed is DynamoDBStreamRecord {
+  if (!parsed || typeof parsed !== "object") return false;
+  return (parsed as Record<string, unknown>).eventSource === "aws:dynamodb";
+}
+
+function extractTableName(eventSourceARN?: string): string | undefined {
+  if (!eventSourceARN) return undefined;
+  // arn:aws:dynamodb:region:account:table/TABLE_NAME/stream/timestamp
+  const match = eventSourceARN.match(/table\/([^/]+)/);
+  return match?.[1];
+}
+
+function transformS3Body(record: S3Record): string {
+  return JSON.stringify({
+    key: record.s3.object.key,
+    ...(record.s3.object.size !== undefined && { size: record.s3.object.size }),
+    ...(record.s3.object.eTag !== undefined && { eTag: record.s3.object.eTag }),
+  });
+}
+
+function unmarshallRecord(
+  attrs: Record<string, Record<string, unknown>> | undefined,
+): Record<string, unknown> | undefined {
+  if (!attrs) return undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return unmarshall(attrs as any);
+}
+
+function transformDynamoDBBody(record: DynamoDBStreamRecord): string {
+  const db = record.dynamodb;
+  return JSON.stringify({
+    keys: unmarshallRecord(db?.Keys) ?? {},
+    ...(db?.NewImage !== undefined && { newItem: unmarshallRecord(db.NewImage) }),
+    ...(db?.OldImage !== undefined && { oldItem: unmarshallRecord(db.OldImage) }),
+  });
+}
+
 function mapSqsRecord(record: SQSRecord): ConsumerMessage {
+  const sqsVendor = {
+    receiptHandle: record.receiptHandle,
+    attributes: record.attributes,
+    md5OfBody: record.md5OfBody,
+    eventSource: record.eventSource,
+    awsRegion: record.awsRegion,
+  };
+
+  const parsed = tryParseJson(record.body);
+
+  // S3 notification → bucket event
+  if (isS3Notification(parsed)) {
+    const s3Record = parsed.Records[0];
+    return {
+      messageId: record.messageId,
+      body: transformS3Body(s3Record),
+      source: record.eventSourceARN,
+      sourceType: "bucket",
+      sourceName: s3Record.s3.bucket.name,
+      eventType: mapBucketEventType(s3Record.eventName),
+      messageAttributes: record.messageAttributes,
+      vendor: { ...sqsVendor, originalBody: parsed },
+    };
+  }
+
+  // DynamoDB stream record → datastore event
+  if (isDynamoDBStreamRecord(parsed)) {
+    return {
+      messageId: record.messageId,
+      body: transformDynamoDBBody(parsed),
+      source: record.eventSourceARN,
+      sourceType: "datastore",
+      sourceName: extractTableName(parsed.eventSourceARN),
+      eventType: mapDatastoreEventType(parsed.eventName),
+      messageAttributes: record.messageAttributes,
+      vendor: { ...sqsVendor, originalBody: parsed },
+    };
+  }
+
+  // Plain SQS message (queue/topic consumer)
   return {
     messageId: record.messageId,
     body: record.body,
     source: record.eventSourceARN,
     messageAttributes: record.messageAttributes,
-    vendor: {
-      receiptHandle: record.receiptHandle,
-      attributes: record.attributes,
-      md5OfBody: record.md5OfBody,
-      eventSource: record.eventSource,
-      awsRegion: record.awsRegion,
-    },
+    vendor: sqsVendor,
   };
 }
 

@@ -48,8 +48,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@celerity-sdk/common": "workspace:^",
     "@celerity-sdk/core": "workspace:^",
     "@celerity-sdk/types": "workspace:^",
+    "@aws-sdk/util-dynamodb": "^3.750.0",
     "debug": "^4.4.0"
   },
   "peerDependencies": {

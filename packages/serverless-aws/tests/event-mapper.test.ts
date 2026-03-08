@@ -1080,6 +1080,295 @@ describe("mapSqsEvent", () => {
 });
 
 // ===========================================================================
+// mapSqsEvent — S3 notification detection and body transformation
+// ===========================================================================
+
+function createS3NotificationBody(overrides: {
+  eventName?: string;
+  bucketName?: string;
+  objectKey?: string;
+  objectSize?: number;
+  objectETag?: string;
+} = {}): string {
+  return JSON.stringify({
+    Records: [
+      {
+        eventVersion: "2.1",
+        eventSource: "aws:s3",
+        eventName: overrides.eventName ?? "ObjectCreated:Put",
+        s3: {
+          bucket: { name: overrides.bucketName ?? "my-bucket" },
+          object: {
+            key: overrides.objectKey ?? "uploads/file.txt",
+            size: overrides.objectSize ?? 1024,
+            eTag: overrides.objectETag ?? "abc123def456",
+          },
+        },
+      },
+    ],
+  });
+}
+
+function createSqsEventWithBody(body: string): SQSEvent {
+  return {
+    Records: [
+      {
+        messageId: "msg-s3-0",
+        receiptHandle: "handle-s3-0",
+        body,
+        attributes: {
+          ApproximateReceiveCount: "1",
+          SentTimestamp: "1768470600000",
+          SenderId: "sender-1",
+          ApproximateFirstReceiveTimestamp: "1768470600000",
+        },
+        messageAttributes: {},
+        md5OfBody: "abc123",
+        eventSource: "aws:sqs",
+        eventSourceARN: "arn:aws:sqs:us-east-1:123456789012:bucket-events-queue",
+        awsRegion: "us-east-1",
+      },
+    ],
+  };
+}
+
+describe("mapSqsEvent — S3 notification detection", () => {
+  it("detects S3 ObjectCreated:Put and transforms body to bucket event shape", () => {
+    const event = createSqsEventWithBody(createS3NotificationBody());
+
+    const result = mapSqsEvent(event, "bucket-handler");
+    const msg = result.messages[0];
+
+    expect(msg.sourceType).toBe("bucket");
+    expect(msg.sourceName).toBe("my-bucket");
+    expect(msg.eventType).toBe("created");
+    expect(JSON.parse(msg.body)).toEqual({
+      key: "uploads/file.txt",
+      size: 1024,
+      eTag: "abc123def456",
+    });
+  });
+
+  it("maps ObjectRemoved:Delete to deleted event type", () => {
+    const event = createSqsEventWithBody(
+      createS3NotificationBody({ eventName: "ObjectRemoved:Delete" }),
+    );
+
+    const msg = mapSqsEvent(event, "bucket-handler").messages[0];
+
+    expect(msg.eventType).toBe("deleted");
+    expect(msg.sourceType).toBe("bucket");
+  });
+
+  it("maps ObjectTagging:Put to metadataUpdated event type", () => {
+    const event = createSqsEventWithBody(
+      createS3NotificationBody({ eventName: "ObjectTagging:Put" }),
+    );
+
+    const msg = mapSqsEvent(event, "bucket-handler").messages[0];
+
+    expect(msg.eventType).toBe("metadataUpdated");
+  });
+
+  it("maps ObjectRestore:Completed to created event type", () => {
+    const event = createSqsEventWithBody(
+      createS3NotificationBody({ eventName: "ObjectRestore:Completed" }),
+    );
+
+    const msg = mapSqsEvent(event, "bucket-handler").messages[0];
+
+    expect(msg.eventType).toBe("created");
+  });
+
+  it("preserves original S3 notification in vendor.originalBody", () => {
+    const s3Body = createS3NotificationBody();
+    const event = createSqsEventWithBody(s3Body);
+
+    const msg = mapSqsEvent(event, "bucket-handler").messages[0];
+    const vendor = msg.vendor as Record<string, unknown>;
+
+    expect(vendor.originalBody).toEqual(JSON.parse(s3Body));
+    expect(vendor.receiptHandle).toBe("handle-s3-0");
+  });
+
+  it("returns undefined eventType for unknown S3 event names", () => {
+    const event = createSqsEventWithBody(
+      createS3NotificationBody({ eventName: "TestEvent" }),
+    );
+
+    const msg = mapSqsEvent(event, "bucket-handler").messages[0];
+
+    expect(msg.sourceType).toBe("bucket");
+    expect(msg.eventType).toBeUndefined();
+  });
+});
+
+// ===========================================================================
+// mapSqsEvent — DynamoDB stream record detection and body transformation
+// ===========================================================================
+
+function createDynamoDBStreamBody(overrides: {
+  eventName?: string;
+  keys?: Record<string, Record<string, unknown>>;
+  newImage?: Record<string, Record<string, unknown>>;
+  oldImage?: Record<string, Record<string, unknown>>;
+  eventSourceARN?: string;
+} = {}): string {
+  return JSON.stringify({
+    eventID: "ddb-evt-1",
+    eventName: overrides.eventName ?? "INSERT",
+    eventSource: "aws:dynamodb",
+    eventSourceARN:
+      overrides.eventSourceARN ??
+      "arn:aws:dynamodb:us-east-1:123456789012:table/orders/stream/2026-01-01",
+    dynamodb: {
+      Keys: overrides.keys ?? { userId: { S: "user-123" } },
+      ...(overrides.newImage !== undefined
+        ? { NewImage: overrides.newImage }
+        : overrides.eventName === "REMOVE"
+          ? {}
+          : { NewImage: { userId: { S: "user-123" }, name: { S: "Alice" }, age: { N: "30" } } }),
+      ...(overrides.oldImage !== undefined
+        ? { OldImage: overrides.oldImage }
+        : overrides.eventName === "INSERT"
+          ? {}
+          : overrides.eventName === "MODIFY"
+            ? { OldImage: { userId: { S: "user-123" }, name: { S: "Bob" }, age: { N: "29" } } }
+            : {}),
+    },
+  });
+}
+
+describe("mapSqsEvent — DynamoDB stream record detection", () => {
+  it("detects DynamoDB INSERT and transforms body to datastore event shape", () => {
+    const event = createSqsEventWithBody(createDynamoDBStreamBody({ eventName: "INSERT" }));
+
+    const msg = mapSqsEvent(event, "datastore-handler").messages[0];
+
+    expect(msg.sourceType).toBe("datastore");
+    expect(msg.sourceName).toBe("orders");
+    expect(msg.eventType).toBe("inserted");
+
+    const body = JSON.parse(msg.body);
+    expect(body.keys).toEqual({ userId: "user-123" });
+    expect(body.newItem).toEqual({ userId: "user-123", name: "Alice", age: 30 });
+    expect(body.oldItem).toBeUndefined();
+  });
+
+  it("detects DynamoDB MODIFY with old and new images", () => {
+    const event = createSqsEventWithBody(createDynamoDBStreamBody({ eventName: "MODIFY" }));
+
+    const msg = mapSqsEvent(event, "datastore-handler").messages[0];
+
+    expect(msg.eventType).toBe("modified");
+
+    const body = JSON.parse(msg.body);
+    expect(body.keys).toEqual({ userId: "user-123" });
+    expect(body.newItem).toEqual({ userId: "user-123", name: "Alice", age: 30 });
+    expect(body.oldItem).toEqual({ userId: "user-123", name: "Bob", age: 29 });
+  });
+
+  it("detects DynamoDB REMOVE", () => {
+    const event = createSqsEventWithBody(
+      createDynamoDBStreamBody({
+        eventName: "REMOVE",
+        oldImage: { userId: { S: "user-123" }, name: { S: "Alice" } },
+      }),
+    );
+
+    const msg = mapSqsEvent(event, "datastore-handler").messages[0];
+
+    expect(msg.eventType).toBe("removed");
+
+    const body = JSON.parse(msg.body);
+    expect(body.keys).toEqual({ userId: "user-123" });
+    expect(body.newItem).toBeUndefined();
+    expect(body.oldItem).toEqual({ userId: "user-123", name: "Alice" });
+  });
+
+  it("extracts table name from eventSourceARN", () => {
+    const event = createSqsEventWithBody(
+      createDynamoDBStreamBody({
+        eventSourceARN:
+          "arn:aws:dynamodb:us-east-1:123456789012:table/user-profiles/stream/2026-03-01",
+      }),
+    );
+
+    const msg = mapSqsEvent(event, "datastore-handler").messages[0];
+
+    expect(msg.sourceName).toBe("user-profiles");
+  });
+
+  it("preserves original DynamoDB record in vendor.originalBody", () => {
+    const ddbBody = createDynamoDBStreamBody();
+    const event = createSqsEventWithBody(ddbBody);
+
+    const msg = mapSqsEvent(event, "datastore-handler").messages[0];
+    const vendor = msg.vendor as Record<string, unknown>;
+
+    expect(vendor.originalBody).toEqual(JSON.parse(ddbBody));
+    expect(vendor.receiptHandle).toBe("handle-s3-0");
+  });
+
+  it("unmarshals composite DynamoDB keys", () => {
+    const event = createSqsEventWithBody(
+      createDynamoDBStreamBody({
+        keys: { pk: { S: "USER#123" }, sk: { S: "PROFILE#main" } },
+        newImage: { pk: { S: "USER#123" }, sk: { S: "PROFILE#main" }, score: { N: "42" } },
+      }),
+    );
+
+    const body = JSON.parse(mapSqsEvent(event, "handler").messages[0].body);
+
+    expect(body.keys).toEqual({ pk: "USER#123", sk: "PROFILE#main" });
+    expect(body.newItem).toEqual({ pk: "USER#123", sk: "PROFILE#main", score: 42 });
+  });
+});
+
+// ===========================================================================
+// mapSqsEvent — plain SQS messages (no transformation)
+// ===========================================================================
+
+describe("mapSqsEvent — plain SQS messages", () => {
+  it("does not transform plain SQS messages", () => {
+    const event = createSqsEvent(1);
+
+    const msg = mapSqsEvent(event, "queue-consumer").messages[0];
+
+    expect(msg.sourceType).toBeUndefined();
+    expect(msg.sourceName).toBeUndefined();
+    expect(msg.eventType).toBeUndefined();
+    expect(msg.body).toBe(JSON.stringify({ item: 0 }));
+  });
+
+  it("does not transform non-JSON SQS body", () => {
+    const event = createSqsEventWithBody("plain text message");
+
+    const msg = mapSqsEvent(event, "queue-consumer").messages[0];
+
+    expect(msg.sourceType).toBeUndefined();
+    expect(msg.eventType).toBeUndefined();
+    expect(msg.body).toBe("plain text message");
+  });
+
+  it("does not transform SNS-wrapped messages", () => {
+    const snsEnvelope = JSON.stringify({
+      Type: "Notification",
+      MessageId: "sns-msg-1",
+      TopicArn: "arn:aws:sns:us-east-1:123456789012:my-topic",
+      Message: "hello",
+    });
+    const event = createSqsEventWithBody(snsEnvelope);
+
+    const msg = mapSqsEvent(event, "topic-consumer").messages[0];
+
+    expect(msg.sourceType).toBeUndefined();
+    expect(msg.eventType).toBeUndefined();
+    expect(msg.body).toBe(snsEnvelope);
+  });
+});
+
+// ===========================================================================
 // mapEventBridgeEvent
 // ===========================================================================
 
