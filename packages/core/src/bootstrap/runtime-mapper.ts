@@ -103,13 +103,21 @@ export function mapWebSocketMessage(info: JsWebSocketMessageInfo): WebSocketMess
 export function mapConsumerEventInput(input: JsConsumerEventInput): ConsumerEventInput {
   return {
     handlerTag: input.handlerTag,
-    messages: input.messages.map((msg) => ({
-      messageId: msg.messageId,
-      body: msg.body,
-      source: msg.source,
-      messageAttributes: msg.messageAttributes,
-      vendor: msg.vendor,
-    })),
+    messages: input.messages.map((msg) => {
+      // sourceType, sourceName, eventType are added in a newer runtime version;
+      // access via index signature to stay compatible with older NAPI bindings.
+      const m = msg as unknown as Record<string, unknown>;
+      return {
+        messageId: msg.messageId,
+        body: msg.body,
+        source: msg.source,
+        ...(m.sourceType !== undefined && { sourceType: m.sourceType as string }),
+        ...(m.sourceName !== undefined && { sourceName: m.sourceName as string }),
+        ...(m.eventType !== undefined && { eventType: m.eventType as string }),
+        messageAttributes: msg.messageAttributes,
+        vendor: msg.vendor,
+      };
+    }),
     vendor: input.vendor,
     traceContext: input.traceContext ?? null,
   };

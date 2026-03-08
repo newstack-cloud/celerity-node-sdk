@@ -383,6 +383,37 @@ describe("mapConsumerEventInput", () => {
     const result = mapConsumerEventInput(makeConsumerInput({ messages: [] }));
     expect(result.messages).toEqual([]);
   });
+
+  it("passes through sourceType, sourceName, eventType when present", () => {
+    const result = mapConsumerEventInput(
+      makeConsumerInput({
+        messages: [
+          {
+            messageId: "msg-1",
+            body: '{"key":"file.txt"}',
+            source: "celerity:bucket:uploads",
+            sourceType: "bucket",
+            sourceName: "uploads",
+            eventType: "created",
+            messageAttributes: {},
+            vendor: {},
+          } as never,
+        ],
+      }),
+    );
+
+    expect(result.messages[0].sourceType).toBe("bucket");
+    expect(result.messages[0].sourceName).toBe("uploads");
+    expect(result.messages[0].eventType).toBe("created");
+  });
+
+  it("omits sourceType, sourceName, eventType when absent", () => {
+    const result = mapConsumerEventInput(makeConsumerInput());
+
+    expect(result.messages[0]).not.toHaveProperty("sourceType");
+    expect(result.messages[0]).not.toHaveProperty("sourceName");
+    expect(result.messages[0]).not.toHaveProperty("eventType");
+  });
 });
 
 describe("mapScheduleEventInput", () => {

@@ -9,6 +9,7 @@ import type {
   WebSocketEventType,
   ConsumerEventInput,
   ConsumerMessage,
+  MessageAttributes,
   ScheduleEventInput,
   EventResult,
 } from "@celerity-sdk/types";
@@ -172,7 +173,10 @@ export type MockConsumerMessage = {
   messageId?: string;
   body: string;
   source?: string;
-  messageAttributes?: unknown;
+  sourceType?: string;
+  sourceName?: string;
+  eventType?: string;
+  messageAttributes?: MessageAttributes;
 };
 
 export type MockConsumerEventOptions = {
@@ -189,7 +193,10 @@ export function mockConsumerEvent(
     messageId: msg.messageId ?? `msg-${index}`,
     body: msg.body,
     source: msg.source ?? "test",
-    messageAttributes: msg.messageAttributes ?? {},
+    ...(msg.sourceType !== undefined && { sourceType: msg.sourceType }),
+    ...(msg.sourceName !== undefined && { sourceName: msg.sourceName }),
+    ...(msg.eventType !== undefined && { eventType: msg.eventType }),
+    messageAttributes: msg.messageAttributes ?? ({} as MessageAttributes),
     vendor: {},
   }));
 

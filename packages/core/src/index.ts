@@ -207,10 +207,15 @@ export type {
   ValidatedConsumerMessage,
   ScheduleEventInput,
   ScheduleHandlerContext,
+  BucketEvent,
+  DatastoreEvent,
 } from "@celerity-sdk/types";
 
 // WebSocketSender is both a type (interface) and a value (DI token symbol).
 export { WebSocketSender } from "@celerity-sdk/types";
+
+// Consumer event contract constants
+export { SourceType, BucketEventType, DatastoreEventType } from "@celerity-sdk/types";
 
 // Re-export types defined in core
 export type { ControllerMetadata } from "./decorators/controller";
