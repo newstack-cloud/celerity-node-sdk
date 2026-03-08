@@ -7,3 +7,4 @@ export {
   INJECT_METADATA,
   USE_RESOURCE_METADATA,
 } from "./tokens";
+export { mapBucketEventType, mapDatastoreEventType } from "./event-type-mapping";
