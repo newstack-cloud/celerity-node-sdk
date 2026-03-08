@@ -44,12 +44,18 @@ export type {
 export { WebSocketSender } from "./websocket";
 
 export type {
+  MessageAttributeValue,
+  MessageAttributes,
   ConsumerMessage,
   ConsumerEventInput,
   ConsumerHandlerContext,
   MessageProcessingFailure,
   EventResult,
   ValidatedConsumerMessage,
+  BucketEvent,
+  DatastoreEvent,
 } from "./consumer";
+
+export { SourceType, BucketEventType, DatastoreEventType } from "./consumer";
 
 export type { ScheduleEventInput, ScheduleHandlerContext } from "./schedule";
