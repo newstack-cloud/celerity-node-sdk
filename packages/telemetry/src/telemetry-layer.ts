@@ -1,10 +1,10 @@
 import createDebug from "debug";
-import { context as otelContext } from "@opentelemetry/api";
+import { context as otelContext, propagation, ROOT_CONTEXT } from "@opentelemetry/api";
 import type {
   CelerityLayer,
   BaseHandlerContext,
   HttpHandlerContext,
-  HttpRequest,
+  ConsumerHandlerContext,
   LogLevel,
   ServiceContainer,
 } from "@celerity-sdk/types";
@@ -13,7 +13,6 @@ import { readTelemetryEnv, type TelemetryConfig } from "./env";
 import { initTelemetry, shutdownTelemetry } from "./init";
 import { CelerityLoggerImpl, createLogger } from "./logger";
 import { ContextAwareLogger, requestStore } from "./request-context";
-import { extractTraceContext } from "./context";
 import { OTelTracer } from "./tracer";
 import { NoopTracer } from "./noop";
 import { LOGGER_TOKEN, TRACER_TOKEN } from "./tokens";
@@ -22,6 +21,10 @@ const debugLog = createDebug("celerity:telemetry");
 
 function isHttpContext(context: BaseHandlerContext): context is HttpHandlerContext {
   return "request" in context && typeof (context as HttpHandlerContext).request === "object";
+}
+
+function isConsumerContext(context: BaseHandlerContext): context is ConsumerHandlerContext {
+  return "event" in context && typeof (context as ConsumerHandlerContext).event === "object";
 }
 
 const LOG_LEVEL_CONFIG_KEYS = [
@@ -77,12 +80,12 @@ export class TelemetryLayer implements CelerityLayer<BaseHandlerContext> {
     await this.refreshLogLevelFromConfig(context.container);
 
     const handlerName = context.metadata.get("handlerName") as string | undefined;
-    let requestLogger;
-    let traceRequest: HttpRequest | undefined;
+    let handlerLogger;
+    let traceCarrier: Record<string, string> | undefined;
 
     if (isHttpContext(context)) {
       const userId = extractUserId(context.request.auth);
-      requestLogger = this.rootLogger.child("request", {
+      handlerLogger = this.rootLogger.child("request", {
         ...(handlerName ? { handlerName } : {}),
         requestId: context.request.requestId,
         method: context.request.method,
@@ -92,21 +95,32 @@ export class TelemetryLayer implements CelerityLayer<BaseHandlerContext> {
         userAgent: context.request.userAgent,
         ...(userId ? { userId } : {}),
       });
-      traceRequest = context.request;
+      traceCarrier = context.request.traceContext ?? undefined;
+    } else if (isConsumerContext(context)) {
+      const { messages } = context.event;
+      const first = messages[0];
+      const sourceMessageId = first?.messageAttributes?.sourceMessageId?.stringValue;
+      handlerLogger = this.rootLogger.child("consumer", {
+        ...(handlerName ? { handlerName } : {}),
+        source: first?.source,
+        messageCount: messages.length,
+        ...(sourceMessageId ? { sourceMessageId } : {}),
+      });
+      traceCarrier = context.event.traceContext ?? undefined;
     } else {
-      requestLogger = this.rootLogger.child("request", {
+      handlerLogger = this.rootLogger.child("handler", {
         ...(handlerName ? { handlerName } : {}),
       });
     }
 
-    context.logger = requestLogger;
+    context.logger = handlerLogger;
 
-    const runWithLogger = () => requestStore.run({ logger: requestLogger }, () => next());
+    const runWithLogger = () => requestStore.run({ logger: handlerLogger }, () => next());
 
     if (!this.config.tracingEnabled) return runWithLogger();
 
-    if (traceRequest) {
-      const parentContext = extractTraceContext(traceRequest);
+    if (traceCarrier) {
+      const parentContext = propagation.extract(ROOT_CONTEXT, traceCarrier);
       return otelContext.with(parentContext, runWithLogger);
     }
 

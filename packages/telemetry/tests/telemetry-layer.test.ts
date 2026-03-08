@@ -1,17 +1,37 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type {
   CelerityLogger,
+  ConsumerHandlerContext,
+  ConsumerEventInput,
   HttpHandlerContext,
   HttpRequest,
+  MessageAttributes,
   ServiceContainer,
 } from "@celerity-sdk/types";
 import { LOGGER_TOKEN, TRACER_TOKEN } from "../src/tokens";
 import { getRequestLogger } from "../src/request-context";
 
 // Mock OTel API
+const mockOtelContextWith = vi.fn((_ctx, fn) => fn());
+const mockPropagationExtract = vi.fn((_root, _carrier) => ({ _propagated: true }));
 vi.mock("@opentelemetry/api", () => ({
   context: {
-    with: vi.fn((_ctx, fn) => fn()),
+    with: (ctx: unknown, fn: () => void) => mockOtelContextWith(ctx, fn),
+  },
+  propagation: {
+    extract: (root: unknown, carrier: unknown) => mockPropagationExtract(root,  carrier),
+  },
+  ROOT_CONTEXT: {},
+  trace: {
+    getTracer: vi.fn(() => ({
+      startSpan: vi.fn(() => ({
+        setAttribute: vi.fn(),
+        setAttributes: vi.fn(),
+        recordException: vi.fn(),
+        setStatus: vi.fn(),
+        end: vi.fn(),
+      })),
+    })),
   },
 }));
 
@@ -19,11 +39,6 @@ vi.mock("@opentelemetry/api", () => ({
 vi.mock("../src/init", () => ({
   initTelemetry: vi.fn().mockResolvedValue(undefined),
   shutdownTelemetry: vi.fn().mockResolvedValue(undefined),
-}));
-
-// Mock context extraction
-vi.mock("../src/context", () => ({
-  extractTraceContext: vi.fn().mockReturnValue({}),
 }));
 
 // Track created logger and mock setLevel
@@ -114,6 +129,18 @@ function createHandlerContext(
     container,
     ...overrides,
   } as HttpHandlerContext & { container: ReturnType<typeof createMockContainer> };
+}
+
+function createConsumerContext(
+  event: ConsumerEventInput,
+  metadataOverrides: Record<string, unknown> = {},
+): ConsumerHandlerContext & { container: ReturnType<typeof createMockContainer> } {
+  const container = createMockContainer();
+  return {
+    event,
+    metadata: createMockMetadata(metadataOverrides),
+    container,
+  } as ConsumerHandlerContext & { container: ReturnType<typeof createMockContainer> };
 }
 
 describe("TelemetryLayer", () => {
@@ -426,6 +453,95 @@ describe("TelemetryLayer", () => {
       // Should not throw
       await expect(layer.handle(context, next)).resolves.toBeDefined();
       expect(mockSetLevel).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("consumer context", () => {
+    it("should create a child logger named 'consumer' with source and messageCount", async () => {
+      const layer = new TelemetryLayer();
+      const event: ConsumerEventInput = {
+        handlerTag: "order-consumer",
+        messages: [
+          { messageId: "stream-1", body: "{}", source: "orders-queue", messageAttributes: {} as MessageAttributes, vendor: {} },
+          { messageId: "stream-2", body: "{}", source: "orders-queue", messageAttributes: {} as MessageAttributes, vendor: {} },
+        ],
+        vendor: {},
+      };
+      const context = createConsumerContext(event);
+      const next = vi.fn().mockResolvedValue({ success: true });
+
+      await layer.handle(context, next);
+
+      expect(mockPinoChild).toHaveBeenCalledWith("consumer", {
+        source: "orders-queue",
+        messageCount: 2,
+      });
+    });
+
+    it("should include sourceMessageId in logger when present in first message attributes", async () => {
+      const layer = new TelemetryLayer();
+      const attrs: MessageAttributes = {
+        sourceMessageId: { dataType: "String", stringValue: "uuid-abc-123" },
+      };
+      const event: ConsumerEventInput = {
+        handlerTag: "order-consumer",
+        messages: [
+          { messageId: "stream-1", body: "{}", source: "orders-queue", messageAttributes: attrs, vendor: {} },
+        ],
+        vendor: {},
+      };
+      const context = createConsumerContext(event);
+      const next = vi.fn().mockResolvedValue({ success: true });
+
+      await layer.handle(context, next);
+
+      expect(mockPinoChild).toHaveBeenCalledWith("consumer", {
+        source: "orders-queue",
+        messageCount: 1,
+        sourceMessageId: "uuid-abc-123",
+      });
+    });
+
+    it("should include handlerName in consumer logger when available", async () => {
+      const layer = new TelemetryLayer();
+      const event: ConsumerEventInput = {
+        handlerTag: "order-consumer",
+        messages: [
+          { messageId: "stream-1", body: "{}", source: "orders-queue", messageAttributes: {} as MessageAttributes, vendor: {} },
+        ],
+        vendor: {},
+      };
+      const context = createConsumerContext(event, { handlerName: "OrderProcessor" });
+      const next = vi.fn().mockResolvedValue({ success: true });
+
+      await layer.handle(context, next);
+
+      expect(mockPinoChild).toHaveBeenCalledWith("consumer", {
+        handlerName: "OrderProcessor",
+        source: "orders-queue",
+        messageCount: 1,
+      });
+    });
+
+    it("should propagate consumer traceContext to OTel context", async () => {
+      process.env.CELERITY_TELEMETRY_ENABLED = "true";
+      const layer = new TelemetryLayer();
+      const traceContext = { traceparent: "00-abc-def-01" };
+      const event: ConsumerEventInput = {
+        handlerTag: "order-consumer",
+        messages: [
+          { messageId: "stream-1", body: "{}", source: "orders-queue", messageAttributes: {} as MessageAttributes, vendor: {} },
+        ],
+        vendor: {},
+        traceContext,
+      };
+      const context = createConsumerContext(event);
+      const next = vi.fn().mockResolvedValue({ success: true });
+
+      await layer.handle(context, next);
+
+      expect(mockPropagationExtract).toHaveBeenCalledWith({}, traceContext);
+      expect(mockOtelContextWith).toHaveBeenCalled();
     });
   });
 });
