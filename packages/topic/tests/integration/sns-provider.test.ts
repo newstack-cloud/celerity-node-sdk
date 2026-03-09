@@ -8,6 +8,7 @@ import {
   ReceiveMessageCommand,
   GetQueueUrlCommand,
   PurgeQueueCommand,
+  type Message,
 } from "@aws-sdk/client-sqs";
 import { SNSTopicClient } from "../../src/providers/sns/sns-topic-client";
 
@@ -65,16 +66,23 @@ afterAll(() => {
   rawSQS.destroy();
 });
 
-async function receiveMessages(queueUrl: string, count: number) {
-  const res = await rawSQS.send(
-    new ReceiveMessageCommand({
-      QueueUrl: queueUrl,
-      MaxNumberOfMessages: count,
-      WaitTimeSeconds: 5,
-      MessageAttributeNames: ["All"],
-    }),
-  );
-  return res.Messages ?? [];
+async function receiveMessages(queueUrl: string, count: number, timeoutMs = 8_000) {
+  const collected: Message[] = [];
+  const deadline = Date.now() + timeoutMs;
+
+  while (collected.length < count && Date.now() < deadline) {
+    const res = await rawSQS.send(
+      new ReceiveMessageCommand({
+        QueueUrl: queueUrl,
+        MaxNumberOfMessages: count,
+        WaitTimeSeconds: 2,
+        MessageAttributeNames: ["All"],
+      }),
+    );
+    if (res.Messages) collected.push(...res.Messages);
+  }
+
+  return collected;
 }
 
 async function purgeQueue(queueUrl: string) {
