@@ -1,7 +1,7 @@
 {
   "name": "@celerity-sdk/sql-database",
   "version": "0.3.1",
-  "description": "SQL database abstraction for the Celerity Node SDK",
+  "description": "SQL database credentials provider and Knex.js connection factory for the Celerity Node SDK",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -39,7 +39,39 @@
   },
   "dependencies": {
     "@celerity-sdk/types": "workspace:^",
-    "@celerity-sdk/config": "workspace:^"
+    "@celerity-sdk/common": "workspace:^",
+    "@celerity-sdk/config": "workspace:^",
+    "debug": "^4.4.0"
+  },
+  "devDependencies": {
+    "@aws-sdk/rds-signer": "^3.750.0",
+    "knex": "^3.1.0",
+    "pg": "^8.13.0",
+    "reflect-metadata": "^0.2.0"
+  },
+  "peerDependencies": {
+    "@aws-sdk/rds-signer": "^3.0.0",
+    "knex": "^3.0.0",
+    "mysql2": "^3.0.0",
+    "pg": "^8.0.0",
+    "reflect-metadata": "^0.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/rds-signer": {
+      "optional": true
+    },
+    "knex": {
+      "optional": true
+    },
+    "mysql2": {
+      "optional": true
+    },
+    "pg": {
+      "optional": true
+    },
+    "reflect-metadata": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public"

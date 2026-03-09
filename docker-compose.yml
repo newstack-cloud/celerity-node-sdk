@@ -12,14 +12,33 @@ services:
       retries: 5
 
   localstack:
-    image: localstack/localstack:4
+    image: localstack/localstack:4.4
     ports:
       - "4566:4566"
     environment:
       - SERVICES=ssm,secretsmanager,s3,sqs,sns,dynamodb
       - DEBUG=0
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://localhost:4566/_localstack/health | python3 -c 'import sys,json; s=json.load(sys.stdin).get(\"services\",{}); exit(0 if s and \"starting\" not in s.values() else 1)'",
+        ]
       interval: 3s
       timeout: 5s
-      retries: 10
+      retries: 15
+      start_period: 10s
+
+  postgres:
+    image: postgres:17-alpine
+    ports:
+      - "5499:5432"
+    environment:
+      POSTGRES_USER: celerity_test
+      POSTGRES_PASSWORD: celerity_test
+      POSTGRES_DB: celerity_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U celerity_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
