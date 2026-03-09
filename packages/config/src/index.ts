@@ -1,4 +1,5 @@
 export { CelerityConfig } from "./env";
+export type { Platform } from "./env";
 export { resolveConfig } from "./resolver";
 export type { ResolvedResourceConfig } from "./resolver";
 
