@@ -11,7 +11,7 @@ const mockTopicClient = {
 };
 
 vi.mock("../src/factory", () => ({
-  createTopicClient: vi.fn(() => Promise.resolve(mockTopicClient)),
+  createTopicClient: vi.fn(() => mockTopicClient),
 }));
 
 vi.mock("@celerity-sdk/config", () => ({

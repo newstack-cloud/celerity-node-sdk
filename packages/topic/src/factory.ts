@@ -3,6 +3,8 @@ import type { CelerityTracer } from "@celerity-sdk/types";
 import type { TopicClient } from "./types";
 import type { SNSTopicConfig } from "./providers/sns/types";
 import type { RedisTopicConfig } from "./providers/redis/types";
+import { SNSTopicClient } from "./providers/sns/sns-topic-client";
+import { RedisTopicClient } from "./providers/redis/redis-topic-client";
 
 export type CreateTopicClientOptions = {
   /** Override provider selection. If omitted, derived from platform config. */
@@ -15,23 +17,17 @@ export type CreateTopicClientOptions = {
   tracer?: CelerityTracer;
 };
 
-export async function createTopicClient(options?: CreateTopicClientOptions): Promise<TopicClient> {
+export function createTopicClient(options?: CreateTopicClientOptions): TopicClient {
   const resolved = resolveConfig("topic");
   const provider = options?.provider ?? resolved.provider;
 
   switch (provider) {
-    case "aws": {
-      const mod = "./providers/sns/sns-topic-client.js";
-      const { SNSTopicClient } = await import(mod);
+    case "aws":
       return new SNSTopicClient(options?.aws, options?.tracer);
-    }
     // Local environments always use Redis pub/sub regardless of deploy target.
     // The Celerity CLI manages the Redis instance and local-events sidecar.
-    case "local": {
-      const mod = "./providers/redis/redis-topic-client.js";
-      const { RedisTopicClient } = await import(mod);
+    case "local":
       return new RedisTopicClient(options?.local, options?.tracer);
-    }
     // case "gcp":
     //   v1: Google Cloud Pub/Sub
     // case "azure":
