@@ -3,6 +3,7 @@ import type { CelerityTracer } from "@celerity-sdk/types";
 import type { DatastoreClient } from "./types";
 import type { DynamoDBDatastoreConfig } from "./providers/dynamodb/types";
 import { captureDynamoDBConfig } from "./providers/dynamodb/config";
+import { DynamoDBDatastoreClient } from "./providers/dynamodb/dynamodb-datastore-client";
 
 export type CreateDatastoreClientOptions = {
   /** Override provider selection. If omitted, derived from platform config. */
@@ -15,15 +16,13 @@ export type CreateDatastoreClientOptions = {
   tracer?: CelerityTracer;
 };
 
-export async function createDatastoreClient(
-  options?: CreateDatastoreClientOptions,
-): Promise<DatastoreClient> {
+export function createDatastoreClient(options?: CreateDatastoreClientOptions): DatastoreClient {
   const resolved = resolveConfig("datastore");
   const provider = options?.provider ?? resolved.provider;
 
   switch (provider) {
     case "aws":
-      return createDynamoDBClient(options?.aws, options?.tracer);
+      return new DynamoDBDatastoreClient(options?.aws, options?.tracer);
     case "local":
       return createLocalClient(options);
     default:
@@ -31,16 +30,7 @@ export async function createDatastoreClient(
   }
 }
 
-async function createDynamoDBClient(
-  config?: DynamoDBDatastoreConfig,
-  tracer?: CelerityTracer,
-): Promise<DatastoreClient> {
-  const mod = "./providers/dynamodb/dynamodb-datastore-client.js";
-  const { DynamoDBDatastoreClient } = await import(mod);
-  return new DynamoDBDatastoreClient(config, tracer);
-}
-
-async function createLocalClient(options?: CreateDatastoreClientOptions): Promise<DatastoreClient> {
+function createLocalClient(options?: CreateDatastoreClientOptions): DatastoreClient {
   const deployTarget = options?.deployTarget?.toLowerCase();
 
   switch (deployTarget) {
@@ -52,7 +42,7 @@ async function createLocalClient(options?: CreateDatastoreClientOptions): Promis
         ...captureDynamoDBConfig(),
         ...options?.aws,
       };
-      return createDynamoDBClient(localConfig, options?.tracer);
+      return new DynamoDBDatastoreClient(localConfig, options?.tracer);
     }
     // case "gcloud":
     // case "gcloud-serverless":

@@ -11,7 +11,7 @@ const mockClient = {
 };
 
 vi.mock("../src/factory", () => ({
-  createDatastoreClient: vi.fn(() => Promise.resolve(mockClient)),
+  createDatastoreClient: vi.fn(() => mockClient),
 }));
 
 vi.mock("@celerity-sdk/config", () => ({
