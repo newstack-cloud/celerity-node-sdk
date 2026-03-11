@@ -24,6 +24,23 @@ The Go-based Celerity CLI invokes this tool during the build phase to merge code
 2. **Serialization** (`serializeManifest`) - converts scanned metadata into a structured manifest with handler entries, annotations, and a dependency graph.
 3. **Validation** (`validateScannedDependencies`) - checks that all provider dependencies are resolvable, reporting diagnostics for missing tokens.
 
+## Supported Handler Types
+
+The extraction tool produces manifest entries for both **class-based** (decorator-driven) and **function-based** (blueprint-driven) handlers across all handler types:
+
+| Handler Type | Class Decorator | Function Type | Description |
+|---|---|---|---|
+| HTTP | `@Get`, `@Post`, `@Put`, `@Patch`, `@Delete` | `"http"` | REST API route handlers |
+| WebSocket | `@OnConnect`, `@OnDisconnect`, `@OnMessage` | `"websocket"` | WebSocket event handlers |
+| Consumer | `@ConsumerHandler` | `"consumer"` | Queue/topic message consumers |
+| Schedule | `@ScheduleHandler` | `"schedule"` | Cron/rate scheduled handlers |
+| Custom | `@Invoke` | `"custom"` | Direct invocation handlers |
+| Guard | `@Guard` (class) or `defineGuard` (function) | — | Custom guard implementations |
+
+### Cross-Cutting Decorators
+
+`@ScheduleHandler` and `@Invoke` are cross-cutting — they can be applied to methods on any controller type (HTTP, WebSocket, or Consumer), producing additional manifest entries alongside the primary handler entry.
+
 ## Manifest Structure
 
 The output conforms to `handler-manifest.v1.schema.json`:
@@ -51,24 +68,108 @@ The output conforms to `handler-manifest.v1.schema.json`:
       }
     }
   ],
-  "functionHandlers": [],
+  "functionHandlers": [
+    {
+      "resourceName": "processOrder",
+      "exportName": "processOrder",
+      "handlerType": "consumer",
+      "sourceFile": "/project/src/app.module.ts",
+      "annotations": {
+        "celerity.handler.consumer": true,
+        "celerity.handler.consumer.route": "orders.*"
+      },
+      "spec": {
+        "handlerName": "processOrder",
+        "codeLocation": "./src",
+        "handler": "app.module.processOrder"
+      }
+    }
+  ],
+  "guardHandlers": [
+    {
+      "resourceName": "rateLimiter_check",
+      "guardName": "rateLimiter",
+      "guardType": "class",
+      "className": "RateLimiter",
+      "sourceFile": "/project/src/app.module.ts",
+      "annotations": {
+        "celerity.handler.guard.custom": "rateLimiter"
+      },
+      "spec": {
+        "handlerName": "RateLimiter-check",
+        "codeLocation": "./src",
+        "handler": "app.module.RateLimiter.check"
+      }
+    }
+  ],
   "dependencyGraph": {
-    "nodes": []
+    "nodes": [
+      {
+        "token": "OrderService",
+        "tokenType": "class",
+        "providerType": "class",
+        "dependencies": ["celerity:datastore:default"]
+      }
+    ]
   }
 }
 ```
 
 ## Annotation Types
 
+### HTTP
+
 | Annotation | Source |
 |---|---|
-| `celerity.handler.http` | `@Get`, `@Post`, etc. |
+| `celerity.handler.http` | `@Get`, `@Post`, `@Put`, `@Patch`, `@Delete` |
 | `celerity.handler.http.method` | HTTP method from decorator |
-| `celerity.handler.http.path` | Full path (prefix + route) |
+| `celerity.handler.http.path` | Full path (controller prefix + route) |
+
+### WebSocket
+
+| Annotation | Source |
+|---|---|
+| `celerity.handler.websocket` | `@OnConnect`, `@OnDisconnect`, `@OnMessage` |
+| `celerity.handler.websocket.route` | WebSocket route key |
+| `celerity.handler.websocket.eventType` | `connect`, `disconnect`, or `message` |
+
+### Consumer
+
+| Annotation | Source |
+|---|---|
+| `celerity.handler.consumer` | `@ConsumerHandler` |
+| `celerity.handler.consumer.sourceId` | Source ID from `@Consumer` controller |
+| `celerity.handler.consumer.route` | Message routing pattern |
+
+### Schedule
+
+| Annotation | Source |
+|---|---|
+| `celerity.handler.schedule` | `@ScheduleHandler` |
+| `celerity.handler.schedule.scheduleId` | Schedule identifier |
+| `celerity.handler.schedule.expression` | Cron or rate expression |
+
+### Custom (Invoke)
+
+| Annotation | Source |
+|---|---|
+| `celerity.handler.custom` | `@Invoke` |
+| `celerity.handler.custom.name` | Invocation name |
+
+### Guards
+
+| Annotation | Source |
+|---|---|
 | `celerity.handler.guard.protectedBy` | `@ProtectedBy(...)` |
-| `celerity.handler.guard.custom` | `@Guard(name)` |
+| `celerity.handler.guard.custom` | `@Guard(name)` or `defineGuard` |
 | `celerity.handler.public` | `@Public()` |
+
+### Shared
+
+| Annotation | Source |
+|---|---|
 | `celerity.handler.metadata.*` | `@SetMetadata(key, value)`, `@Action(name)` |
+| `celerity.handler.resource.ref` | `@Bucket`, `@Queue`, `@Topic`, etc. |
 
 ## Part of the Celerity Framework
 
