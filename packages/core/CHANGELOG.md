@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.3.1...core/v0.4.0) (2026-03-11)
+
+
+### Features
+
+* **core:** add full core implementation supporting all initial application types ([18986a4](https://github.com/newstack-cloud/celerity-node-sdk/commit/18986a4cdc1b3cbef04588e939d13538edb64e8a))
+* **core:** add support for event source fields in consumer messages ([6376b99](https://github.com/newstack-cloud/celerity-node-sdk/commit/6376b99dd7878bb7832eed8bcdb96e45b7da7a1f))
+* **core:** add support for guards and foundations for more handler types ([767d001](https://github.com/newstack-cloud/celerity-node-sdk/commit/767d0015f2fa901ff4760ee100e69af54e6eb2de))
+
+
+### Dependencies
+
+* **core:** update runtime dep to 0.3.1 ([1e542e7](https://github.com/newstack-cloud/celerity-node-sdk/commit/1e542e74f8426e21406d61e22600925209da755f))
+
 ## [0.3.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.3.0...core/v0.3.1) (2026-02-18)
 
 
