@@ -4,7 +4,8 @@ import { CONFIG_SERVICE_TOKEN } from "@celerity-sdk/common";
 import type { AwsStoreKind } from "./backends/types";
 import { CelerityConfig, DeployTarget, Platform } from "./env";
 import { resolveBackend } from "./backends/resolve";
-import { ConfigService, ConfigNamespace } from "./config-service";
+import type { ConfigService } from "./config-service";
+import { ConfigServiceImpl, ConfigNamespaceImpl } from "./config-service";
 
 const debug = createDebug("celerity:config");
 
@@ -72,7 +73,7 @@ function captureConfigLayerSettings(platform: Platform): ConfigLayerSettings {
 }
 
 function buildConfigService(settings: ConfigLayerSettings): ConfigService {
-  const service = new ConfigService();
+  const service = new ConfigServiceImpl();
   const namespaces = discoverNamespaces(settings);
 
   debug("ConfigLayer: %d namespaces discovered", namespaces.length);
@@ -83,7 +84,7 @@ function buildConfigService(settings: ConfigLayerSettings): ConfigService {
   for (const ns of namespaces) {
     const storeKind = (ns.storeKind ?? "secrets-manager") as AwsStoreKind;
     const backend = resolveBackend(settings.platform, storeKind);
-    const namespace = new ConfigNamespace(
+    const namespace = new ConfigNamespaceImpl(
       backend,
       ns.storeId,
       settings.refreshIntervalMs,

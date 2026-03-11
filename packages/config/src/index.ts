@@ -3,7 +3,8 @@ export type { Platform } from "./env";
 export { resolveConfig } from "./resolver";
 export type { ResolvedResourceConfig } from "./resolver";
 
-export { ConfigService, ConfigNamespace } from "./config-service";
+export type { ConfigService, ConfigNamespace } from "./config-service";
+export { ConfigServiceImpl, ConfigNamespaceImpl } from "./config-service";
 export { ConfigLayer } from "./config-layer";
 
 export type { ConfigBackend, AwsStoreKind } from "./backends/types";

@@ -6,9 +6,33 @@ const debug = createDebug("celerity:config");
 
 /**
  * A single config namespace backed by one celerity/config resource.
+ * Provides stringly-typed and schema-validated access to config values.
+ */
+export interface ConfigNamespace {
+  get(key: string): Promise<string | undefined>;
+  getOrThrow(key: string): Promise<string>;
+  getAll(): Promise<Readonly<Record<string, string>>>;
+  parse<T>(schema: Schema<T>): Promise<T>;
+}
+
+/**
+ * DI-injectable config service. Provides stringly-typed and schema-validated
+ * access to config values from platform-specific stores.
+ */
+export interface ConfigService {
+  registerNamespace(name: string, namespace: ConfigNamespace): void;
+  namespace(name: string): ConfigNamespace;
+  get(key: string): Promise<string | undefined>;
+  getOrThrow(key: string): Promise<string>;
+  getAll(): Promise<Readonly<Record<string, string>>>;
+  parse<T>(schema: Schema<T>): Promise<T>;
+}
+
+/**
+ * A single config namespace backed by one celerity/config resource.
  * Lazy — fetches on first access, then caches with optional staleness-based refresh.
  */
-export class ConfigNamespace {
+export class ConfigNamespaceImpl implements ConfigNamespace {
   private values: Map<string, string> | null = null;
   private lastFetchedAt = 0;
 
@@ -92,10 +116,10 @@ export class ConfigNamespace {
 }
 
 /**
- * DI-injectable config service. Provides stringly-typed and schema-validated
- * access to config values from platform-specific stores.
+ * DI-injectable config service implementation. Provides stringly-typed and
+ * schema-validated access to config values from platform-specific stores.
  */
-export class ConfigService {
+export class ConfigServiceImpl implements ConfigService {
   private readonly namespaces = new Map<string, ConfigNamespace>();
 
   registerNamespace(name: string, namespace: ConfigNamespace): void {

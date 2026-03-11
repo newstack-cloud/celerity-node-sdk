@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ConfigService, ConfigNamespace } from "../src/config-service";
+import type { ConfigService, ConfigNamespace } from "../src/config-service";
+import { ConfigServiceImpl, ConfigNamespaceImpl } from "../src/config-service";
 import type { ConfigBackend } from "../src/backends/types";
 
 function createMockBackend(values: Record<string, string> = {}): ConfigBackend {
@@ -14,7 +15,7 @@ describe("ConfigNamespace", () => {
 
   beforeEach(() => {
     backend = createMockBackend({ DB_HOST: "localhost", DB_PORT: "5432" });
-    namespace = new ConfigNamespace(backend, "test-store", null);
+    namespace = new ConfigNamespaceImpl(backend, "test-store", null);
   });
 
   describe("#get()", () => {
@@ -94,7 +95,7 @@ describe("ConfigNamespace", () => {
         "appConfig/API_KEY": "sk-123",
       });
 
-      const ns = new ConfigNamespace(prefixedBackend, "shared-store", null, "resources");
+      const ns = new ConfigNamespaceImpl(prefixedBackend, "shared-store", null, "resources");
 
       expect(await ns.get("BUCKET_NAME")).toBe("my-bucket");
       expect(await ns.get("DB_HOST")).toBe("db.example.com");
@@ -109,7 +110,7 @@ describe("ConfigNamespace", () => {
         "resources/BUCKET": "b",
       });
 
-      const ns = new ConfigNamespace(prefixedBackend, "shared-store", null, "appConfig");
+      const ns = new ConfigNamespaceImpl(prefixedBackend, "shared-store", null, "appConfig");
       const all = await ns.getAll();
 
       expect(all).toEqual({ api_key: "sk-123", debug: "true" });
@@ -121,7 +122,7 @@ describe("ConfigNamespace", () => {
         PLAIN_KEY: "value",
       });
 
-      const ns = new ConfigNamespace(mixedBackend, "store", null);
+      const ns = new ConfigNamespaceImpl(mixedBackend, "store", null);
       const all = await ns.getAll();
 
       expect(all).toEqual({
@@ -150,7 +151,7 @@ describe("ConfigNamespace", () => {
           ),
       };
 
-      const ns = new ConfigNamespace(refreshBackend, "store", 0, "ns");
+      const ns = new ConfigNamespaceImpl(refreshBackend, "store", 0, "ns");
 
       expect(await ns.get("KEY")).toBe("old");
       expect(await ns.get("X")).toBeUndefined();
@@ -166,7 +167,7 @@ describe("ConfigNamespace", () => {
 
   describe("lazy refresh", () => {
     it("should not re-fetch when refreshIntervalMs is null", async () => {
-      const ns = new ConfigNamespace(backend, "test-store", null);
+      const ns = new ConfigNamespaceImpl(backend, "test-store", null);
       await ns.get("DB_HOST");
       await ns.get("DB_HOST");
       expect(backend.fetch).toHaveBeenCalledOnce();
@@ -174,7 +175,7 @@ describe("ConfigNamespace", () => {
 
     it("should trigger background refresh when stale", async () => {
       // Use refreshIntervalMs=0 so it's immediately stale after first fetch
-      const ns = new ConfigNamespace(backend, "test-store", 0);
+      const ns = new ConfigNamespaceImpl(backend, "test-store", 0);
 
       await ns.get("DB_HOST");
       expect(backend.fetch).toHaveBeenCalledOnce();
@@ -196,7 +197,7 @@ describe("ConfigNamespace", () => {
           ),
       };
 
-      const ns = new ConfigNamespace(slowBackend, "store", 0);
+      const ns = new ConfigNamespaceImpl(slowBackend, "store", 0);
 
       // First fetch — blocking
       const first = await ns.get("KEY");
@@ -222,7 +223,7 @@ describe("ConfigNamespace", () => {
           .mockRejectedValue(new Error("Network error")),
       };
 
-      const ns = new ConfigNamespace(failingBackend, "store", 0);
+      const ns = new ConfigNamespaceImpl(failingBackend, "store", 0);
 
       const first = await ns.get("KEY");
       expect(first).toBe("original");
@@ -245,12 +246,12 @@ describe("ConfigService", () => {
 
   beforeEach(() => {
     backend = createMockBackend({ API_KEY: "secret123" });
-    service = new ConfigService();
+    service = new ConfigServiceImpl();
   });
 
   describe("single namespace", () => {
     beforeEach(() => {
-      service.registerNamespace("default", new ConfigNamespace(backend, "store-1", null));
+      service.registerNamespace("default", new ConfigNamespaceImpl(backend, "store-1", null));
     });
 
     it("should get a value via convenience method", async () => {
@@ -278,8 +279,8 @@ describe("ConfigService", () => {
   describe("multiple namespaces", () => {
     beforeEach(() => {
       const backend2 = createMockBackend({ STRIPE_KEY: "sk_test_123" });
-      service.registerNamespace("app", new ConfigNamespace(backend, "store-1", null));
-      service.registerNamespace("payments", new ConfigNamespace(backend2, "store-2", null));
+      service.registerNamespace("app", new ConfigNamespaceImpl(backend, "store-1", null));
+      service.registerNamespace("payments", new ConfigNamespaceImpl(backend2, "store-2", null));
     });
 
     it("should access specific namespace", async () => {
