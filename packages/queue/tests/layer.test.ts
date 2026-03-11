@@ -11,7 +11,7 @@ const mockQueueClient = {
 };
 
 vi.mock("../src/factory", () => ({
-  createQueueClient: vi.fn(() => Promise.resolve(mockQueueClient)),
+  createQueueClient: vi.fn(() => mockQueueClient),
 }));
 
 vi.mock("@celerity-sdk/config", () => ({
