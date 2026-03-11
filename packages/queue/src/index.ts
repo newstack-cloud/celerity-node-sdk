@@ -1,7 +1,6 @@
 // Core types
 export {
   QueueClient,
-  type Queue,
   type SendMessageOptions,
   type SendMessageResult,
   type BatchSendEntry,
@@ -21,7 +20,7 @@ export { createQueueClient } from "./factory";
 export type { CreateQueueClientOptions } from "./factory";
 
 // DI
-export { Queue as QueueDecorator, queueToken, DEFAULT_QUEUE_TOKEN } from "./decorators";
+export { Queue, queueToken, DEFAULT_QUEUE_TOKEN } from "./decorators";
 
 // Helpers
 export { getQueue } from "./helpers";
