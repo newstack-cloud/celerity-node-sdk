@@ -68,7 +68,7 @@ class OrderService {
 ### DI Tokens
 
 | Token | Type | Description |
-|---|---|
+|---|---|---|
 | `LOGGER_TOKEN` | `CelerityLogger` | Request-aware structured logger |
 | `TRACER_TOKEN` | `CelerityTracer` | Distributed tracer |
 
