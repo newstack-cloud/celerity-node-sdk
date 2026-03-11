@@ -1,5 +1,10 @@
 import "reflect-metadata";
 import { INJECT_METADATA, USE_RESOURCE_METADATA } from "@celerity-sdk/common";
+import type { Datastore as DatastoreType } from "./types";
+
+// Re-declare as interface so the type merges with the decorator function below.
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface Datastore extends DatastoreType {}
 
 export function datastoreToken(resourceName: string): symbol {
   return Symbol.for(`celerity:datastore:${resourceName}`);

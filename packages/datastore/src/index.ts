@@ -1,6 +1,5 @@
 export {
   DatastoreClient,
-  type Datastore,
   type ItemKey,
   type KeyCondition,
   type RangeCondition,
@@ -24,11 +23,7 @@ export type { DynamoDBDatastoreConfig } from "./providers/dynamodb/types";
 export { createDatastoreClient } from "./factory";
 export type { CreateDatastoreClientOptions } from "./factory";
 
-export {
-  Datastore as DatastoreDecorator,
-  datastoreToken,
-  DEFAULT_DATASTORE_TOKEN,
-} from "./decorators";
+export { Datastore, datastoreToken, DEFAULT_DATASTORE_TOKEN } from "./decorators";
 export { getDatastore } from "./helpers";
 export { DatastoreLayer } from "./layer";
 export { DatastoreError, ConditionalCheckFailedError } from "./errors";
