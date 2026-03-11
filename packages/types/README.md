@@ -20,6 +20,9 @@ pnpm add @celerity-sdk/types
 | **Modules** | `ModuleMetadata`, `FunctionHandlerDefinition` |
 | **Validation** | `Schema` |
 | **Telemetry** | `LogLevel`, `CelerityLogger`, `CelerityTracer`, `CeleritySpan` |
+| **WebSocket** | `WebSocketRequest`, `WebSocketResponse`, `WebSocketHandlerContext` |
+| **Consumer** | `ConsumerMessage`, `ConsumerHandlerContext`, `ConsumerResult` |
+| **Schedule** | `ScheduleEvent`, `ScheduleHandlerContext` |
 
 ## Conventions
 
