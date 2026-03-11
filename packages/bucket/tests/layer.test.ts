@@ -11,7 +11,7 @@ const mockStorage = {
 };
 
 vi.mock("../src/factory", () => ({
-  createObjectStorage: vi.fn(() => Promise.resolve(mockStorage)),
+  createObjectStorage: vi.fn(() => mockStorage),
 }));
 
 vi.mock("@celerity-sdk/config", () => ({
