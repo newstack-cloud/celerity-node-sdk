@@ -39,13 +39,43 @@
   },
   "dependencies": {
     "@celerity-sdk/types": "workspace:^",
-    "@celerity-sdk/config": "workspace:^"
+    "@celerity-sdk/common": "workspace:^",
+    "@celerity-sdk/config": "workspace:^",
+    "debug": "^4.4.0"
+  },
+  "devDependencies": {
+    "ioredis": "^5.4.0",
+    "reflect-metadata": "^0.2.0",
+    "@smithy/signature-v4": "^4.0.0",
+    "@smithy/protocol-http": "^4.0.0",
+    "@aws-crypto/sha256-js": "^5.0.0",
+    "@aws-sdk/credential-provider-node": "^3.750.0"
   },
   "peerDependencies": {
-    "ioredis": "^5.0.0"
+    "ioredis": "^5.0.0",
+    "reflect-metadata": "^0.2.0",
+    "@smithy/signature-v4": "^4.0.0",
+    "@smithy/protocol-http": "^4.0.0",
+    "@aws-crypto/sha256-js": "^5.0.0",
+    "@aws-sdk/credential-provider-node": "^3.0.0"
   },
   "peerDependenciesMeta": {
     "ioredis": {
+      "optional": true
+    },
+    "reflect-metadata": {
+      "optional": true
+    },
+    "@smithy/signature-v4": {
+      "optional": true
+    },
+    "@smithy/protocol-http": {
+      "optional": true
+    },
+    "@aws-crypto/sha256-js": {
+      "optional": true
+    },
+    "@aws-sdk/credential-provider-node": {
       "optional": true
     }
   },
