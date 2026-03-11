@@ -40,10 +40,10 @@ export { SqlDatabaseInstance } from "./sql-database";
 
 // Decorators & tokens
 export {
-  SqlDatabase as SqlDatabaseDecorator,
-  SqlWriter as SqlWriterDecorator,
-  SqlReader as SqlReaderDecorator,
-  SqlCredentials as SqlCredentialsDecorator,
+  SqlDatabase,
+  SqlWriter,
+  SqlReader,
+  SqlCredentials,
   sqlWriterToken,
   sqlReaderToken,
   sqlDatabaseCredentialsToken,
