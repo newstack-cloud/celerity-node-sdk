@@ -31,4 +31,4 @@ This package implements the `TopicClient` interface with providers for AWS SNS a
 
 ## Part of the Celerity Framework
 
-See [celerityframework.com](https://celerityframework.com) for full documentation.
+See [celerityframework.io](https://celerityframework.io) for full documentation.

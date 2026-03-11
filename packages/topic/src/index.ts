@@ -1,7 +1,6 @@
 // Core types
 export {
   TopicClient,
-  type Topic,
   type PublishOptions,
   type PublishResult,
   type BatchPublishEntry,
@@ -18,7 +17,7 @@ export type { RedisTopicConfig } from "./providers/redis/types";
 export { createTopicClient } from "./factory";
 export type { CreateTopicClientOptions } from "./factory";
 
-export { Topic as TopicDecorator, topicToken, DEFAULT_TOPIC_TOKEN } from "./decorators";
+export { Topic, topicToken, DEFAULT_TOPIC_TOKEN } from "./decorators";
 
 export { getTopic } from "./helpers";
 
