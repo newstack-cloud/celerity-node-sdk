@@ -9,7 +9,6 @@ export class LocalConfigBackend implements ConfigBackend {
   async fetch(storeId: string): Promise<Map<string, string>> {
     try {
       const client = await this.createClient();
-      await client.connect();
       const raw = await client.get(storeId);
       await client.quit();
 
@@ -32,12 +31,11 @@ export class LocalConfigBackend implements ConfigBackend {
 
     const host = process.env.CELERITY_CONFIG_VALKEY_HOST ?? "localhost";
     const port = Number(process.env.CELERITY_CONFIG_VALKEY_PORT ?? "6379");
-    return new Redis({ host, port, lazyConnect: true, connectTimeout: 5000 });
+    return new Redis({ host, port, lazyConnect: true, connectTimeout: 2000 });
   }
 }
 
 type IoRedisClient = {
-  connect(): Promise<void>;
   get(key: string): Promise<string | null>;
   quit(): Promise<void>;
 };
