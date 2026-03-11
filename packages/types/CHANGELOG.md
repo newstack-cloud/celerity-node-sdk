@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/types/v0.3.1...types/v0.4.0) (2026-03-11)
+
+
+### Features
+
+* **types:** add types for events and update type for consumer messages ([0c81c68](https://github.com/newstack-cloud/celerity-node-sdk/commit/0c81c6849c6b0e4724147eb22d2e1d4451ee1d52))
+* **types:** add types for layer filtering, handler types and websockets ([0e3550f](https://github.com/newstack-cloud/celerity-node-sdk/commit/0e3550f71fd426bc0f1cff24b19c2f9f81267cb4))
+* **types:** add types for new application types ([326db39](https://github.com/newstack-cloud/celerity-node-sdk/commit/326db39148e04693a2dc749c5b101b3802c13874))
+
 ## [0.3.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/types/v0.3.0...types/v0.3.1) (2026-02-18)
 
 

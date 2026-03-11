@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/cache/v0.3.1...cache/v0.4.0) (2026-03-11)
+
+
+### Features
+
+* **cache:** add initial redis-based cache implementation ([0654e5a](https://github.com/newstack-cloud/celerity-node-sdk/commit/0654e5a8721ef05399203fad3beaa87f0f62953a))
+
+
+### Bug Fixes
+
+* **cache:** update decorators to not require decorator suffix ([a6f31a5](https://github.com/newstack-cloud/celerity-node-sdk/commit/a6f31a58e3bb054c1e5d2d33d5740dfacf8fdf70))
+
 ## [0.3.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/cache/v0.3.0...cache/v0.3.1) (2026-02-18)
 
 

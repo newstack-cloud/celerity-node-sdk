@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/topic/v0.3.1...topic/v0.4.0) (2026-03-11)
+
+
+### Features
+
+* **topic:** add initial implementation of the topic resource package ([e5ef18f](https://github.com/newstack-cloud/celerity-node-sdk/commit/e5ef18fae397ff26e16d0490356d5f6efd37c17f))
+
+
+### Bug Fixes
+
+* **topic:** update decorators to not require decorator suffix ([7ba9f10](https://github.com/newstack-cloud/celerity-node-sdk/commit/7ba9f10caa25e52a619a74c24d82a321b15dca02))
+
 ## [0.3.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/topic/v0.3.0...topic/v0.3.1) (2026-02-18)
 
 
