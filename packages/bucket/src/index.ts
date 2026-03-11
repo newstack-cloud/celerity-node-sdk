@@ -1,6 +1,5 @@
 export {
   ObjectStorage,
-  type Bucket,
   type ObjectInfo,
   type ObjectListing,
   type GetOptions,
@@ -23,7 +22,7 @@ export type { S3ObjectStorageConfig } from "./providers/s3/types";
 export { createObjectStorage } from "./factory";
 export type { CreateObjectStorageOptions } from "./factory";
 
-export { Bucket as BucketDecorator, bucketToken, DEFAULT_BUCKET_TOKEN } from "./decorators";
+export { Bucket, bucketToken, DEFAULT_BUCKET_TOKEN } from "./decorators";
 export { getBucket } from "./helpers";
 export { ObjectStorageLayer } from "./layer";
 export { BucketError } from "./errors";
