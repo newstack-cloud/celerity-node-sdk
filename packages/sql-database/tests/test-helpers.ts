@@ -22,7 +22,7 @@ export function mockNamespace(
       ),
     ),
     parse: vi.fn().mockRejectedValue(new Error("not implemented")),
-  } as unknown as ConfigNamespace;
+  };
 }
 
 export function mockContainer(
