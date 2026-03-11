@@ -1,5 +1,12 @@
 import "reflect-metadata";
 import { INJECT_METADATA, USE_RESOURCE_METADATA } from "@celerity-sdk/common";
+import type { Cache as CacheType, CacheCredentials as CacheCredentialsType } from "./types";
+
+// Re-declare as interfaces so the types merge with the decorator functions below.
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface Cache extends CacheType {}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface CacheCredentials extends CacheCredentialsType {}
 
 export function cacheToken(resourceName: string): symbol {
   return Symbol.for(`celerity:cache:${resourceName}`);
@@ -51,7 +58,9 @@ function createResourceDecorator(
  * }
  * ```
  */
-export const Cache = createResourceDecorator(cacheToken, DEFAULT_CACHE_TOKEN);
+export function Cache(resourceName?: string): ParameterDecorator {
+  return createResourceDecorator(cacheToken, DEFAULT_CACHE_TOKEN)(resourceName);
+}
 
 /**
  * Parameter decorator that injects {@link CacheCredentials} for direct ioredis
@@ -66,7 +75,9 @@ export const Cache = createResourceDecorator(cacheToken, DEFAULT_CACHE_TOKEN);
  * }
  * ```
  */
-export const CacheCredentials = createResourceDecorator(
-  cacheCredentialsToken,
-  DEFAULT_CACHE_CREDENTIALS_TOKEN,
-);
+export function CacheCredentials(resourceName?: string): ParameterDecorator {
+  return createResourceDecorator(
+    cacheCredentialsToken,
+    DEFAULT_CACHE_CREDENTIALS_TOKEN,
+  )(resourceName);
+}

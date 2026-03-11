@@ -1,8 +1,6 @@
 export type {
   CacheClient,
-  Cache,
   CacheTransaction,
-  CacheCredentials,
   CacheAuthMode,
   DeployTarget,
   ConnectionConfig,
@@ -45,8 +43,8 @@ export { createCacheClient } from "./factory";
 export type { CreateCacheClientOptions } from "./factory";
 
 export {
-  Cache as CacheDecorator,
-  CacheCredentials as CacheCredentialsDecorator,
+  Cache,
+  CacheCredentials,
   cacheToken,
   cacheCredentialsToken,
   cacheClientToken,
