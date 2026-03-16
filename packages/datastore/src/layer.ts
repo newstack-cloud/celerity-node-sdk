@@ -42,7 +42,7 @@ export class DatastoreLayer implements CelerityLayer<BaseHandlerContext> {
         ? await context.container.resolve<CelerityTracer>(TRACER_TOKEN)
         : undefined;
 
-      const client = createDatastoreClient({
+      const client = await createDatastoreClient({
         tracer,
         deployTarget: this.config.deployTarget,
       });

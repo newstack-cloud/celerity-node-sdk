@@ -2,8 +2,6 @@ import { resolveConfig } from "@celerity-sdk/config";
 import type { CelerityTracer } from "@celerity-sdk/types";
 import type { DatastoreClient } from "./types";
 import type { DynamoDBDatastoreConfig } from "./providers/dynamodb/types";
-import { captureDynamoDBConfig } from "./providers/dynamodb/config";
-import { DynamoDBDatastoreClient } from "./providers/dynamodb/dynamodb-datastore-client";
 
 export type CreateDatastoreClientOptions = {
   /** Override provider selection. If omitted, derived from platform config. */
@@ -16,13 +14,18 @@ export type CreateDatastoreClientOptions = {
   tracer?: CelerityTracer;
 };
 
-export function createDatastoreClient(options?: CreateDatastoreClientOptions): DatastoreClient {
+export async function createDatastoreClient(
+  options?: CreateDatastoreClientOptions,
+): Promise<DatastoreClient> {
   const resolved = resolveConfig("datastore");
   const provider = options?.provider ?? resolved.provider;
 
   switch (provider) {
-    case "aws":
+    case "aws": {
+      const { DynamoDBDatastoreClient } =
+        await import("./providers/dynamodb/dynamodb-datastore-client.js");
       return new DynamoDBDatastoreClient(options?.aws, options?.tracer);
+    }
     case "local":
       return createLocalClient(options);
     default:
@@ -30,7 +33,7 @@ export function createDatastoreClient(options?: CreateDatastoreClientOptions): D
   }
 }
 
-function createLocalClient(options?: CreateDatastoreClientOptions): DatastoreClient {
+async function createLocalClient(options?: CreateDatastoreClientOptions): Promise<DatastoreClient> {
   const deployTarget = options?.deployTarget?.toLowerCase();
 
   switch (deployTarget) {
@@ -38,6 +41,9 @@ function createLocalClient(options?: CreateDatastoreClientOptions): DatastoreCli
     case "aws-serverless":
     case undefined: {
       // DynamoDB Local (v0 default when no deploy target is specified)
+      const { captureDynamoDBConfig } = await import("./providers/dynamodb/config.js");
+      const { DynamoDBDatastoreClient } =
+        await import("./providers/dynamodb/dynamodb-datastore-client.js");
       const localConfig: DynamoDBDatastoreConfig = {
         ...captureDynamoDBConfig(),
         ...options?.aws,

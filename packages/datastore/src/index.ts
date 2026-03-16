@@ -17,7 +17,6 @@ export {
   type BatchWriteResult,
 } from "./types";
 
-export { DynamoDBDatastoreClient } from "./providers/dynamodb/dynamodb-datastore-client";
 export type { DynamoDBDatastoreConfig } from "./providers/dynamodb/types";
 
 export { createDatastoreClient } from "./factory";
