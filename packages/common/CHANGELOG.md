@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/common/v0.4.0...common/v0.5.0) (2026-03-16)
+
+
+### Features
+
+* **common:** add shared helper to check for resource layer tokens ([414fe3f](https://github.com/newstack-cloud/celerity-node-sdk/commit/414fe3f472023e79f648a9424c9697d6f9046bf5))
+
 ## [0.4.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/common/v0.3.1...common/v0.4.0) (2026-03-11)
 
 

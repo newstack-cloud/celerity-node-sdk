@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/queue/v0.4.0...queue/v0.5.0) (2026-03-16)
+
+
+### Bug Fixes
+
+* **queue:** add fixes for dynamic provider module loading ([8201d08](https://github.com/newstack-cloud/celerity-node-sdk/commit/8201d0885773f4749839c1a1e107e7909304c2ae))
+
 ## [0.4.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/queue/v0.3.1...queue/v0.4.0) (2026-03-11)
 
 

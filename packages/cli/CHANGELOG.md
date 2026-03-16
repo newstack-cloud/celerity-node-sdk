@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/cli/v0.4.0...cli/v0.5.0) (2026-03-16)
+
+
+### Bug Fixes
+
+* **cli:** correct consumer source metadata extraction ([6f558e7](https://github.com/newstack-cloud/celerity-node-sdk/commit/6f558e7838448ccd09c88b86614d304f730a35b5))
+
 ## [0.4.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/cli/v0.3.1...cli/v0.4.0) (2026-03-11)
 
 
