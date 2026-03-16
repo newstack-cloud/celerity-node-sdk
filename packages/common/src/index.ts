@@ -6,5 +6,6 @@ export {
   CONFIG_SERVICE_TOKEN,
   INJECT_METADATA,
   USE_RESOURCE_METADATA,
+  isResourceLayerToken,
 } from "./tokens";
 export { mapBucketEventType, mapDatastoreEventType } from "./event-type-mapping";
