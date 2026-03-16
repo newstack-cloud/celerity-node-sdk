@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.4.0...core/v0.5.0) (2026-03-16)
+
+
+### Bug Fixes
+
+* **core:** add fixes to handler resolution and celerity resource deps ([89caeac](https://github.com/newstack-cloud/celerity-node-sdk/commit/89caeacb5267020a4dc2bdda6a149deeb63c7399))
+
+
+### Dependencies
+
+* **core:** update runtime package to 0.3.2 ([95c4680](https://github.com/newstack-cloud/celerity-node-sdk/commit/95c468045e10b2d98c08905584fad0c8b2cd715a))
+
 ## [0.4.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.3.1...core/v0.4.0) (2026-03-11)
 
 

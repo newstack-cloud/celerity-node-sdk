@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/telemetry/v0.4.0...telemetry/v0.5.0) (2026-03-16)
+
+
+### Bug Fixes
+
+* **telemetry:** add fix to correctly detect a message consumer context ([619951f](https://github.com/newstack-cloud/celerity-node-sdk/commit/619951f188d095dae3f0d678fcf61ef6de6cf10c))
+
 ## [0.4.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/telemetry/v0.3.1...telemetry/v0.4.0) (2026-03-11)
 
 

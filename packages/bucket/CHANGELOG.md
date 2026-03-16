@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/bucket/v0.4.0...bucket/v0.5.0) (2026-03-16)
+
+
+### Bug Fixes
+
+* **bucket:** add fixes for dynamic provider module loading ([e1da967](https://github.com/newstack-cloud/celerity-node-sdk/commit/e1da9673f032014eb9039c911ca83daea2decaf5))
+
 ## [0.4.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/bucket/v0.3.1...bucket/v0.4.0) (2026-03-11)
 
 

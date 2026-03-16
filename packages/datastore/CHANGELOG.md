@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/datastore/v0.4.0...datastore/v0.5.0) (2026-03-16)
+
+
+### Bug Fixes
+
+* **datastore:** add fixes for dynamic provider module loading ([018ee1f](https://github.com/newstack-cloud/celerity-node-sdk/commit/018ee1fe9c8f3e3e63e7535a6d463aab4d590163))
+
 ## [0.4.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/datastore/v0.3.1...datastore/v0.4.0) (2026-03-11)
 
 

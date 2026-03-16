@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/cache/v0.4.0...cache/v0.5.0) (2026-03-16)
+
+
+### Bug Fixes
+
+* **cache:** add corrections for dynamic ioredis module loading ([956a7b3](https://github.com/newstack-cloud/celerity-node-sdk/commit/956a7b3ddbf04f105dead0e336f942a85fef26a2))
+
 ## [0.4.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/cache/v0.3.1...cache/v0.4.0) (2026-03-11)
 
 

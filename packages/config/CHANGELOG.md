@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/config/v0.4.0...config/v0.5.0) (2026-03-16)
+
+
+### Features
+
+* **config:** add decorator for namespaced config extraction ([de6d1f1](https://github.com/newstack-cloud/celerity-node-sdk/commit/de6d1f160121cd3107321fbd30dbe09103d80f52))
+
 ## [0.4.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/config/v0.3.1...config/v0.4.0) (2026-03-11)
 
 
