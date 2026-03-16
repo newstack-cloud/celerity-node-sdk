@@ -7,6 +7,7 @@ import type {
   FunctionHandlerDefinition,
   GuardDefinition,
 } from "@celerity-sdk/types";
+import { isResourceLayerToken } from "@celerity-sdk/common";
 import {
   buildModuleGraph,
   getClassDependencyTokens,
@@ -146,7 +147,7 @@ export function validateScannedDependencies(scanned: ScannedModule): DependencyD
         }
       } else if (typeof dep === "function") {
         walk(dep, getClassDependencyTokens(dep as Type));
-      } else {
+      } else if (!isResourceLayerToken(dep)) {
         diagnostics.push({
           consumer: serializeToken(token),
           dependency: serializeToken(dep),

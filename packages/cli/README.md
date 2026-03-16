@@ -138,7 +138,7 @@ The output conforms to `handler-manifest.v1.schema.json`:
 | Annotation | Source |
 |---|---|
 | `celerity.handler.consumer` | `@ConsumerHandler` |
-| `celerity.handler.consumer.sourceId` | Source ID from `@Consumer` controller |
+| `celerity.handler.consumer.source` | Blueprint resource name from `@Consumer` controller |
 | `celerity.handler.consumer.route` | Message routing pattern |
 
 ### Schedule
@@ -146,7 +146,7 @@ The output conforms to `handler-manifest.v1.schema.json`:
 | Annotation | Source |
 |---|---|
 | `celerity.handler.schedule` | `@ScheduleHandler` |
-| `celerity.handler.schedule.scheduleId` | Schedule identifier |
+| `celerity.handler.schedule.source` | Blueprint resource name from `@ScheduleHandler` |
 | `celerity.handler.schedule.expression` | Cron or rate expression |
 
 ### Custom (Invoke)

@@ -628,7 +628,7 @@ describe("serializeManifest", () => {
       const entry = manifest.handlers[0];
       expect(entry.handlerType).toBe("consumer");
       expect(entry.annotations["celerity.handler.consumer"]).toBe(true);
-      expect(entry.annotations["celerity.handler.consumer.sourceId"]).toBe("orders");
+      expect(entry.annotations["celerity.handler.consumer.source"]).toBe("orders");
     });
 
     it("extracts route from @MessageHandler(route)", () => {
@@ -660,7 +660,7 @@ describe("serializeManifest", () => {
       expect(dlq!.annotations["celerity.handler.consumer.route"]).toBe("dlq");
     });
 
-    it("omits sourceId when not provided to @Consumer()", () => {
+    it("omits source when not provided to @Consumer()", () => {
       @Consumer()
       class NoSourceConsumer {
         @MessageHandler()
@@ -677,7 +677,7 @@ describe("serializeManifest", () => {
 
       const entry = manifest.handlers[0];
       expect(entry.annotations["celerity.handler.consumer"]).toBe(true);
-      expect(entry.annotations).not.toHaveProperty("celerity.handler.consumer.sourceId");
+      expect(entry.annotations).not.toHaveProperty("celerity.handler.consumer.source");
     });
 
     it("includes guards on consumer handlers", () => {
@@ -722,7 +722,7 @@ describe("serializeManifest", () => {
 
       const entry = scheduleEntries[0];
       expect(entry.annotations["celerity.handler.schedule"]).toBe(true);
-      expect(entry.annotations["celerity.handler.schedule.scheduleId"]).toBe("daily-cleanup");
+      expect(entry.annotations["celerity.handler.schedule.source"]).toBe("daily-cleanup");
     });
 
     it("serializes schedule expression", () => {
@@ -942,7 +942,7 @@ describe("serializeManifest", () => {
       expect(fn.annotations!["celerity.handler.consumer.route"]).toBe("process-orders");
     });
 
-    it("serializes schedule function handler with scheduleId", () => {
+    it("serializes schedule function handler with source", () => {
       const scheduleHandler = createScheduleHandler(
         "daily-cleanup",
         {},
@@ -959,7 +959,7 @@ describe("serializeManifest", () => {
       expect(fn.handlerType).toBe("schedule");
       expect(fn.annotations).toBeDefined();
       expect(fn.annotations!["celerity.handler.schedule"]).toBe(true);
-      expect(fn.annotations!["celerity.handler.schedule.scheduleId"]).toBe("daily-cleanup");
+      expect(fn.annotations!["celerity.handler.schedule.source"]).toBe("daily-cleanup");
     });
 
     it("serializes schedule function handler with expression", () => {
@@ -1025,7 +1025,7 @@ describe("serializeManifest", () => {
       // Schedule — still has marker annotation
       const schedule = manifest.functionHandlers.find((h) => h.handlerType === "schedule");
       expect(schedule!.annotations!["celerity.handler.schedule"]).toBe(true);
-      expect(schedule!.annotations).not.toHaveProperty("celerity.handler.schedule.scheduleId");
+      expect(schedule!.annotations).not.toHaveProperty("celerity.handler.schedule.source");
 
       // Custom — still has marker annotation
       const custom = manifest.functionHandlers.find((h) => h.handlerType === "custom");

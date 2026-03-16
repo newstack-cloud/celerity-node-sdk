@@ -106,7 +106,7 @@ type ControllerType = "http" | "websocket" | "consumer";
 type ControllerMeta = {
   controllerType: ControllerType;
   prefix: string;
-  sourceId?: string;
+  source?: string;
   protectedBy: string[];
   customGuardName: string | undefined;
   customMetadata: Record<string, unknown>;
@@ -146,7 +146,7 @@ function extractControllerMeta(controllerClass: Type): ControllerMeta | null {
     return {
       controllerType: "consumer",
       prefix: "",
-      sourceId: consumerMeta.sourceId,
+      source: consumerMeta.source,
       ...extractSharedClassMeta(controllerClass),
     };
   }
@@ -250,8 +250,8 @@ function buildConsumerAnnotations(
 ): Record<string, string | string[] | boolean> {
   const annotations: Record<string, string | string[] | boolean> = {};
   annotations["celerity.handler.consumer"] = true;
-  if (meta.sourceId) {
-    annotations["celerity.handler.consumer.sourceId"] = meta.sourceId;
+  if (meta.source) {
+    annotations["celerity.handler.consumer.source"] = meta.source;
   }
   if (consumerHandler.route) {
     annotations["celerity.handler.consumer.route"] = consumerHandler.route;
@@ -268,8 +268,8 @@ function buildScheduleAnnotations(
 ): Record<string, string | string[] | boolean> {
   const annotations: Record<string, string | string[] | boolean> = {};
   annotations["celerity.handler.schedule"] = true;
-  if (scheduleMeta.scheduleId) {
-    annotations["celerity.handler.schedule.scheduleId"] = scheduleMeta.scheduleId;
+  if (scheduleMeta.source) {
+    annotations["celerity.handler.schedule.source"] = scheduleMeta.source;
   }
   if (scheduleMeta.schedule) {
     annotations["celerity.handler.schedule.expression"] = scheduleMeta.schedule;
@@ -558,9 +558,9 @@ function buildFunctionTypeAnnotations(
     }
     case "schedule": {
       annotations["celerity.handler.schedule"] = true;
-      const scheduleId = meta.scheduleId as string | undefined;
-      if (scheduleId) {
-        annotations["celerity.handler.schedule.scheduleId"] = scheduleId;
+      const source = meta.source as string | undefined;
+      if (source) {
+        annotations["celerity.handler.schedule.source"] = source;
       }
       const schedule = meta.schedule as string | undefined;
       if (schedule) {
