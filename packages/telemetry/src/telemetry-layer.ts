@@ -24,7 +24,11 @@ function isHttpContext(context: BaseHandlerContext): context is HttpHandlerConte
 }
 
 function isConsumerContext(context: BaseHandlerContext): context is ConsumerHandlerContext {
-  return "event" in context && typeof (context as ConsumerHandlerContext).event === "object";
+  return (
+    "event" in context &&
+    typeof (context as ConsumerHandlerContext).event === "object" &&
+    "messages" in ((context as ConsumerHandlerContext).event ?? {})
+  );
 }
 
 const LOG_LEVEL_CONFIG_KEYS = [
