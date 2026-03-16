@@ -10,22 +10,90 @@ Provides a `ConfigService` that lazily fetches and caches configuration from plu
 pnpm add @celerity-sdk/config
 ```
 
-## Key Concepts
+## Quick Start — `@Config(resourceName)`
 
-### ConfigService
+The `@Config` decorator injects a `ConfigNamespace` for a named `celerity/config`
+blueprint resource directly into your constructor:
 
-DI-injectable service for accessing configuration values. Supports namespaced access and schema-validated retrieval.
+```yaml
+# app.blueprint.yaml
+resources:
+  appConfig:
+    type: "celerity/config"
+    spec:
+      name: appConfig
+      plaintext: [APP_NAME, LOG_LEVEL, MAX_PAGE_SIZE]
+```
 
 ```typescript
-import { ConfigService, ConfigNamespace } from "@celerity-sdk/config";
+import { Controller, Get, Public } from "@celerity-sdk/core";
+import { Config, type ConfigNamespace } from "@celerity-sdk/config";
 
-const config = new ConfigService(backend);
-const dbConfig = await config.get("database", dbSchema);
+@Controller("/health")
+export class HealthController {
+  constructor(@Config("appConfig") private appConfig: ConfigNamespace) {}
+
+  @Public()
+  @Get()
+  async check() {
+    const appName = await this.appConfig.get("APP_NAME");
+    return { status: "ok", appName: appName ?? "unknown" };
+  }
+}
+```
+
+### `ConfigNamespace` API
+
+| Method | Description |
+|--------|-------------|
+| `get(key)` | Returns the value for `key`, or `undefined` if not set |
+| `getOrThrow(key)` | Returns the value or throws if the key is missing |
+| `getAll()` | Returns all key-value pairs in the namespace |
+| `parse(schema)` | Fetches all values and validates with a Zod-compatible schema |
+
+### Schema validation
+
+Use `parse()` to validate and type config values:
+
+```typescript
+import { z } from "zod";
+
+const schema = z.object({
+  APP_NAME: z.string(),
+  LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]),
+  MAX_PAGE_SIZE: z.coerce.number().int().positive(),
+});
+
+const config = await this.appConfig.parse(schema);
+// config: { APP_NAME: string; LOG_LEVEL: "debug"|"info"|...; MAX_PAGE_SIZE: number }
+```
+
+## Key Concepts
+
+### ConfigService (advanced)
+
+For dynamic namespace access, inject the full `ConfigService` via
+`@Inject("ConfigService")`:
+
+```typescript
+import { Inject } from "@celerity-sdk/core";
+import type { ConfigService } from "@celerity-sdk/config";
+
+class MultiConfigService {
+  constructor(@Inject("ConfigService") private config: ConfigService) {}
+
+  async getFromNamespace(ns: string, key: string) {
+    return this.config.namespace(ns).get(key);
+  }
+}
 ```
 
 ### ConfigLayer
 
-A system layer that initialises the `ConfigService` once and registers it in the DI container. Self-configures from environment variables (e.g. `CELERITY_CONFIG_REFRESH_INTERVAL_MS`).
+A system layer that initialises the `ConfigService` once and registers it in
+the DI container. Also registers each discovered namespace under its own DI
+token so that `@Config("name")` resolves directly. Self-configures from
+environment variables (e.g. `CELERITY_CONFIG_REFRESH_INTERVAL_MS`).
 
 ### Backends
 

@@ -45,12 +45,14 @@
   "devDependencies": {
     "@aws-sdk/client-secrets-manager": "^3.750.0",
     "@aws-sdk/client-ssm": "^3.750.0",
-    "ioredis": "^5.0.0"
+    "ioredis": "^5.0.0",
+    "reflect-metadata": "^0.2.0"
   },
   "peerDependencies": {
     "@aws-sdk/client-secrets-manager": "^3.0.0",
     "@aws-sdk/client-ssm": "^3.0.0",
-    "ioredis": "^5.0.0"
+    "ioredis": "^5.0.0",
+    "reflect-metadata": "^0.2.0"
   },
   "peerDependenciesMeta": {
     "@aws-sdk/client-secrets-manager": {

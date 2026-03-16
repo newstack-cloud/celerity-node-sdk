@@ -6,6 +6,7 @@ export type { ResolvedResourceConfig } from "./resolver";
 export type { ConfigService, ConfigNamespace } from "./config-service";
 export { ConfigServiceImpl, ConfigNamespaceImpl } from "./config-service";
 export { ConfigLayer } from "./config-layer";
+export { Config, configNamespaceToken } from "./decorators";
 
 export type { ConfigBackend, AwsStoreKind } from "./backends/types";
 export { resolveBackend } from "./backends/resolve";

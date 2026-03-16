@@ -6,6 +6,7 @@ import { CelerityConfig, DeployTarget, Platform } from "./env";
 import { resolveBackend } from "./backends/resolve";
 import type { ConfigService } from "./config-service";
 import { ConfigServiceImpl, ConfigNamespaceImpl } from "./config-service";
+import { configNamespaceToken } from "./decorators";
 
 const debug = createDebug("celerity:config");
 
@@ -44,6 +45,17 @@ export class ConfigLayer implements CelerityLayer<BaseHandlerContext> {
       const service = buildConfigService(this.settings);
 
       context.container.register(CONFIG_SERVICE_TOKEN, { useValue: service });
+
+      // Register each namespace under its own DI token so that
+      // @Config("appConfig") resolves directly to the ConfigNamespace.
+      for (const ns of discoverNamespaces(this.settings)) {
+        const namespace = service.namespace(ns.name);
+        context.container.register(configNamespaceToken(ns.name), {
+          useValue: namespace,
+        });
+        debug("ConfigLayer: registered config namespace token for %s", ns.name);
+      }
+
       debug("ConfigLayer: registered ConfigService");
       this.initialized = true;
     }
@@ -132,8 +144,13 @@ function discoverNamespaces(settings: ConfigLayerSettings): DiscoveredNamespace[
     if (!nsName || nsName === "STORE") continue;
 
     const storePrefix = process.env[`${prefix}${nsName}_STORE_PREFIX`];
+    // NAMESPACE controls the DI registration name (e.g. "appConfig" for @Config("appConfig")).
+    // STORE_PREFIX controls key prefix filtering in the backing store (e.g. SSM path prefix).
+    // For backwards compatibility, STORE_PREFIX is used as the namespace name
+    // when NAMESPACE is not set.
+    const namespace = process.env[`${prefix}${nsName}_NAMESPACE`];
     namespaces.push({
-      name: storePrefix ?? nsName.toLowerCase(),
+      name: namespace ?? storePrefix ?? nsName.toLowerCase(),
       storeId: value,
       storeKind: process.env[`${prefix}${nsName}_STORE_KIND`],
       storePrefix,

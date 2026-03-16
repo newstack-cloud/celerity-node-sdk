@@ -107,6 +107,40 @@ describe("ConfigLayer", () => {
     expect(() => configService.namespace("appConfig")).not.toThrow();
   });
 
+  it("should use NAMESPACE env var as namespace name when set", async () => {
+    process.env.CELERITY_CONFIG_APPCONFIG_STORE_ID = "appConfig";
+    process.env.CELERITY_CONFIG_APPCONFIG_NAMESPACE = "appConfig";
+    process.env.CELERITY_PLATFORM = "local";
+
+    const layer = new ConfigLayer();
+    const context = createMockContext();
+    const next = vi.fn().mockResolvedValue({ status: 200 });
+
+    await layer.handle(context, next);
+
+    const registered = (context.container.register as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    const configService = registered.useValue;
+    expect(() => configService.namespace("appConfig")).not.toThrow();
+  });
+
+  it("should prefer NAMESPACE over STORE_PREFIX for namespace name", async () => {
+    process.env.CELERITY_CONFIG_APPCONFIG_STORE_ID = "projects/x/secrets/myapp";
+    process.env.CELERITY_CONFIG_APPCONFIG_STORE_PREFIX = "/prod/myservice/appConfig";
+    process.env.CELERITY_CONFIG_APPCONFIG_NAMESPACE = "appConfig";
+    process.env.CELERITY_PLATFORM = "local";
+
+    const layer = new ConfigLayer();
+    const context = createMockContext();
+    const next = vi.fn().mockResolvedValue({ status: 200 });
+
+    await layer.handle(context, next);
+
+    const registered = (context.container.register as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    const configService = registered.useValue;
+    // NAMESPACE takes precedence over STORE_PREFIX for the DI name
+    expect(() => configService.namespace("appConfig")).not.toThrow();
+  });
+
   it("should configure a default namespace when CELERITY_CONFIG_STORE_ID is set", async () => {
     process.env.CELERITY_CONFIG_STORE_ID = "arn:aws:secretsmanager:us-east-1:123:secret:my-secret";
     process.env.CELERITY_CONFIG_STORE_KIND = "secrets-manager";
