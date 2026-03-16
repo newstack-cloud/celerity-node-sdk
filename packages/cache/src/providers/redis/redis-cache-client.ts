@@ -8,6 +8,7 @@ const debug = createDebug("celerity:cache:redis");
 
 export class RedisCacheClient implements CacheClient {
   private client: import("ioredis").default | import("ioredis").Cluster | null = null;
+  private ioredisModule: typeof import("ioredis") | null = null;
   private readonly config: RedisCacheConfig;
 
   constructor(
@@ -29,6 +30,13 @@ export class RedisCacheClient implements CacheClient {
     }
   }
 
+  async ensureIoRedis(): Promise<void> {
+    if (!this.ioredisModule) {
+      const pkg = "ioredis";
+      this.ioredisModule = (await import(pkg)) as typeof import("ioredis");
+    }
+  }
+
   private getClient(): import("ioredis").default | import("ioredis").Cluster {
     if (!this.client) {
       this.client = this.createClient();
@@ -37,8 +45,7 @@ export class RedisCacheClient implements CacheClient {
   }
 
   private createClient(): import("ioredis").default | import("ioredis").Cluster {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const ioredis = require("ioredis");
+    const ioredis = this.ioredisModule!;
     const Redis = ioredis.default ?? ioredis;
 
     const { host, port, tls, clusterMode, connectionConfig, authToken, user, authTokenProvider } =

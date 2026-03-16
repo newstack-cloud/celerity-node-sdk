@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, afterAll, beforeAll, beforeEach } from "vitest";
 import Redis from "ioredis";
 import { RedisCacheClient } from "../../src/providers/redis/redis-cache-client";
 
@@ -21,7 +21,7 @@ const client = new RedisCacheClient({
     lazyConnect: true,
   },
 });
-const cache = client.cache(RESOURCE_NAME, KEY_PREFIX);
+let cache: ReturnType<typeof client.cache>;
 
 // Raw Redis client for verification reads
 const rawRedis = new Redis(REDIS_URL);
@@ -29,6 +29,11 @@ const rawRedis = new Redis(REDIS_URL);
 afterAll(async () => {
   await client.close();
   await rawRedis.quit();
+});
+
+beforeAll(async () => {
+  await client.ensureIoRedis();
+  cache = client.cache(RESOURCE_NAME, KEY_PREFIX);
 });
 
 beforeEach(async () => {
@@ -542,6 +547,7 @@ describe("Redis Provider (integration)", () => {
           lazyConnect: true,
         },
       });
+      await badClient.ensureIoRedis();
       const badCache = badClient.cache("bad");
 
       await expect(badCache.get("key")).rejects.toThrow(CacheError);

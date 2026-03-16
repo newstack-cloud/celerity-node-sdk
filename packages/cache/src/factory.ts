@@ -18,6 +18,8 @@ export type CreateCacheClientOptions = {
  * Unlike queue/topic which have per-cloud providers selected at runtime,
  * cache uses a single Redis provider for all deploy targets.
  */
-export function createCacheClient(options: CreateCacheClientOptions): CacheClient {
-  return new RedisCacheClient(options.config, options.tracer);
+export async function createCacheClient(options: CreateCacheClientOptions): Promise<CacheClient> {
+  const client = new RedisCacheClient(options.config, options.tracer);
+  await client.ensureIoRedis();
+  return client;
 }

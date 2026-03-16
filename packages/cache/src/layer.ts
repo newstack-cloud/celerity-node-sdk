@@ -139,7 +139,7 @@ export class CacheLayer implements CelerityLayer<BaseHandlerContext> {
       ...(authTokenProvider ? { authTokenProvider } : {}),
     };
 
-    const client = createCacheClient({ config: redisCacheConfig, tracer });
+    const client = await createCacheClient({ config: redisCacheConfig, tracer });
     const cache = client.cache(resourceName, info.keyPrefix);
 
     container.register(cacheToken(resourceName), { useValue: cache });
