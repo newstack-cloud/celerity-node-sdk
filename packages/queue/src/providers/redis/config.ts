@@ -8,6 +8,6 @@ const DEFAULT_REDIS_URL = "redis://localhost:6379";
  */
 export function captureRedisConfig(): RedisQueueConfig {
   return {
-    url: process.env.CELERITY_LOCAL_REDIS_URL ?? DEFAULT_REDIS_URL,
+    url: process.env.CELERITY_REDIS_ENDPOINT ?? DEFAULT_REDIS_URL,
   };
 }

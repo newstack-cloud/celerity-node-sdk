@@ -9,10 +9,8 @@ export {
   type BatchSendFailure,
 } from "./types";
 
-// Providers
-export { SQSQueueClient } from "./providers/sqs/sqs-queue-client";
+// Provider types
 export type { SQSQueueConfig } from "./providers/sqs/types";
-export { RedisQueueClient } from "./providers/redis/redis-queue-client";
 export type { RedisQueueConfig } from "./providers/redis/types";
 
 // Factory

@@ -4,7 +4,8 @@ import { RedisQueueClient } from "../../src/providers/redis/redis-queue-client";
 import { QueueError } from "../../src/errors";
 
 const REDIS_URL = "redis://localhost:6399";
-const TEST_STREAM = "test-stream";
+const TEST_QUEUE = "test-stream";
+const TEST_STREAM = `celerity:queue:${TEST_QUEUE}`;
 
 const client = new RedisQueueClient({ url: REDIS_URL });
 
@@ -17,6 +18,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  await client.ensureIoRedis();
   // Clean the stream before each test
   await rawRedis.del(TEST_STREAM);
 });
@@ -24,7 +26,7 @@ beforeEach(async () => {
 describe("Redis Provider (integration)", () => {
   describe("sendMessage", () => {
     it("should send a message and verify it in the stream", async () => {
-      const queue = client.queue(TEST_STREAM);
+      const queue = client.queue(TEST_QUEUE);
       const result = await queue.sendMessage({ orderId: "order-1", total: 42 });
 
       expect(result.messageId).toBeDefined();
@@ -42,7 +44,7 @@ describe("Redis Provider (integration)", () => {
     });
 
     it("should include the correct stream format fields (body, timestamp, message_type)", async () => {
-      const queue = client.queue(TEST_STREAM);
+      const queue = client.queue(TEST_QUEUE);
       await queue.sendMessage({ data: "value" });
 
       const entries = await rawRedis.xrange(TEST_STREAM, "-", "+");
@@ -61,7 +63,7 @@ describe("Redis Provider (integration)", () => {
     });
 
     it("should store group_id and dedup_id fields when provided", async () => {
-      const queue = client.queue(TEST_STREAM);
+      const queue = client.queue(TEST_QUEUE);
       await queue.sendMessage(
         { data: "value" },
         { groupId: "group-1", deduplicationId: "dedup-1" },
@@ -76,7 +78,7 @@ describe("Redis Provider (integration)", () => {
     });
 
     it("should store attributes as a JSON field when provided", async () => {
-      const queue = client.queue(TEST_STREAM);
+      const queue = client.queue(TEST_QUEUE);
       await queue.sendMessage(
         { data: "value" },
         { attributes: { env: "prod", priority: "high" } },
@@ -92,7 +94,7 @@ describe("Redis Provider (integration)", () => {
 
   describe("sendMessageBatch", () => {
     it("should send a batch of messages via pipeline", async () => {
-      const queue = client.queue(TEST_STREAM);
+      const queue = client.queue(TEST_QUEUE);
       const entries = Array.from({ length: 5 }, (_, i) => ({
         id: `e${i}`,
         body: { index: i },
@@ -119,7 +121,7 @@ describe("Redis Provider (integration)", () => {
     });
 
     it("should preserve per-message options in batch", async () => {
-      const queue = client.queue(TEST_STREAM);
+      const queue = client.queue(TEST_QUEUE);
       await queue.sendMessageBatch([
         {
           id: "e1",
@@ -141,6 +143,7 @@ describe("Redis Provider (integration)", () => {
     it("should wrap connection errors in QueueError", async () => {
       // Use a client pointing to a non-existent Redis
       const badClient = new RedisQueueClient({ url: "redis://localhost:1" });
+      await badClient.ensureIoRedis();
       const queue = badClient.queue("fail-stream");
 
       await expect(queue.sendMessage({ data: "fail" })).rejects.toThrow(QueueError);

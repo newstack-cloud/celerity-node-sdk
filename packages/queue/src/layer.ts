@@ -29,7 +29,7 @@ export class QueueLayer implements CelerityLayer<BaseHandlerContext> {
         ? await context.container.resolve<CelerityTracer>(TRACER_TOKEN)
         : undefined;
 
-      const client = createQueueClient({ tracer });
+      const client = await createQueueClient({ tracer });
       debug("registering QueueClient");
       context.container.register("QueueClient", { useValue: client });
 
