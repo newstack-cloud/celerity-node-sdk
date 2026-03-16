@@ -9,9 +9,7 @@ export {
   type BatchPublishFailure,
 } from "./types";
 
-export { SNSTopicClient } from "./providers/sns/sns-topic-client";
 export type { SNSTopicConfig } from "./providers/sns/types";
-export { RedisTopicClient } from "./providers/redis/redis-topic-client";
 export type { RedisTopicConfig } from "./providers/redis/types";
 
 export { createTopicClient } from "./factory";

@@ -6,6 +6,7 @@ import { captureRedisConfig } from "./config";
 
 export class RedisTopicClient implements TopicClient {
   private client: import("ioredis").default | null = null;
+  private ioredisModule: typeof import("ioredis") | null = null;
   private readonly config: RedisTopicConfig;
 
   constructor(
@@ -16,7 +17,8 @@ export class RedisTopicClient implements TopicClient {
   }
 
   topic(name: string): Topic {
-    return new RedisTopic(name, this.getClient(), this.tracer);
+    const channel = `celerity:topic:channel:${name}`;
+    return new RedisTopic(channel, this.getClient(), this.tracer);
   }
 
   async close(): Promise<void> {
@@ -26,12 +28,18 @@ export class RedisTopicClient implements TopicClient {
     }
   }
 
+  async ensureIoRedis(): Promise<void> {
+    if (!this.ioredisModule) {
+      const pkg = "ioredis";
+      this.ioredisModule = (await import(pkg)) as typeof import("ioredis");
+    }
+  }
+
   private getClient(): import("ioredis").default {
     if (!this.client) {
-      // Dynamic require to avoid bundling ioredis when not used.
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const Redis = require("ioredis").default ?? require("ioredis");
-      this.client = new Redis(this.config.url);
+      const ioredis = this.ioredisModule!;
+      const Redis = ioredis.default ?? ioredis;
+      this.client = new Redis(this.config.url as string);
     }
     return this.client!;
   }

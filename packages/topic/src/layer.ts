@@ -29,7 +29,7 @@ export class TopicLayer implements CelerityLayer<BaseHandlerContext> {
         ? await context.container.resolve<CelerityTracer>(TRACER_TOKEN)
         : undefined;
 
-      const client = createTopicClient({ tracer });
+      const client = await createTopicClient({ tracer });
       debug("registering TopicClient");
       context.container.register("TopicClient", { useValue: client });
 
