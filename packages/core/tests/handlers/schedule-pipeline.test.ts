@@ -229,7 +229,7 @@ describe("executeSchedulePipeline", () => {
         return { success: true };
       });
 
-      const handler = makeHandler({ handlerFn, layers: [layer] });
+      const handler = makeHandler({ handlerFn, handlerInstance: {}, layers: [layer] });
       await executeSchedulePipeline(handler, makeEvent(), makeOptions(container));
 
       expect(order).toEqual(["layer-before", "handler", "layer-after"]);
@@ -239,6 +239,7 @@ describe("executeSchedulePipeline", () => {
   describe("error handling", () => {
     it("wraps uncaught errors in EventResult", async () => {
       const handler = makeHandler({
+        handlerInstance: {},
         handlerFn: vi.fn(async () => {
           throw new Error("boom");
         }),
@@ -252,6 +253,7 @@ describe("executeSchedulePipeline", () => {
 
     it("wraps non-Error throws in EventResult", async () => {
       const handler = makeHandler({
+        handlerInstance: {},
         handlerFn: vi.fn(async () => {
           throw "string error";
         }),
@@ -270,6 +272,7 @@ describe("executeSchedulePipeline", () => {
       };
 
       const handler = makeHandler({
+        handlerInstance: {},
         handlerFn: vi.fn(async () => handlerResult),
       });
 

@@ -8,6 +8,7 @@ import type {
   FunctionHandlerDefinition,
   GuardDefinition,
 } from "@celerity-sdk/types";
+import { isResourceLayerToken } from "@celerity-sdk/common";
 import { MODULE_METADATA } from "../metadata/constants";
 import type { Container } from "../di/container";
 import { tokenToString } from "../di/container";
@@ -334,6 +335,11 @@ function checkDependencies(
       );
       continue;
     }
+
+    // Tokens provided by system resource layers at runtime (@Datastore,
+    // @Bucket, @Cache, @Queue, @Topic, @SqlDatabase) are registered lazily
+    // on first request, not at bootstrap time.
+    if (isResourceLayerToken(dep)) continue;
 
     // Truly missing — no provider registered for this non-class token
     diagnostics.push({

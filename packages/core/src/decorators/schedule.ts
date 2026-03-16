@@ -2,12 +2,12 @@ import "reflect-metadata";
 import { SCHEDULE_HANDLER_METADATA } from "../metadata/constants";
 
 export type ScheduleHandlerMetadata = {
-  scheduleId?: string;
+  source?: string;
   schedule?: string;
 };
 
 type ScheduleHandlerOptions = {
-  scheduleId?: string;
+  source?: string;
   schedule?: string;
 };
 
@@ -17,10 +17,10 @@ function isScheduleExpression(value: string): boolean {
 
 function parseScheduleArg(arg: string | ScheduleHandlerOptions): ScheduleHandlerMetadata {
   if (typeof arg === "string") {
-    return isScheduleExpression(arg) ? { schedule: arg } : { scheduleId: arg };
+    return isScheduleExpression(arg) ? { schedule: arg } : { source: arg };
   }
   const meta: ScheduleHandlerMetadata = {};
-  if (arg.scheduleId !== undefined) meta.scheduleId = arg.scheduleId;
+  if (arg.source !== undefined) meta.source = arg.source;
   if (arg.schedule !== undefined) meta.schedule = arg.schedule;
   return meta;
 }
@@ -39,16 +39,16 @@ function parseScheduleArg(arg: string | ScheduleHandlerOptions): ScheduleHandler
  * @param arg - Optional string or options object. String parsing:
  *   - No args → fully blueprint-driven (no annotations)
  *   - String with `rate(` or `cron(` prefix → `schedule` expression annotation
- *   - String without prefix → `scheduleId` annotation hint for deploy engine
- *   - Object → explicit `{ scheduleId?, schedule? }`
+ *   - String without prefix → `source` blueprint resource name hint for deploy engine
+ *   - Object → explicit `{ source?, schedule? }`
  *
  * @example
  * ```ts
  * @Controller()
  * class MaintenanceTasks {
- *   @ScheduleHandler("daily-cleanup")
+ *   @ScheduleHandler("dailyCleanup")
  *   async cleanup(@ScheduleInput() input: unknown): Promise<EventResult> {
- *     // scheduleId hint — blueprint defines the actual schedule
+ *     // source hint — matches blueprint resource name, blueprint defines the actual schedule
  *   }
  *
  *   @ScheduleHandler("rate(1 day)")
@@ -56,7 +56,7 @@ function parseScheduleArg(arg: string | ScheduleHandlerOptions): ScheduleHandler
  *     // schedule expression annotation — blueprint can override
  *   }
  *
- *   @ScheduleHandler({ scheduleId: "weekly-report", schedule: "cron(0 9 ? * MON *)" })
+ *   @ScheduleHandler({ source: "weeklyReport", schedule: "cron(0 9 ? * MON *)" })
  *   async report(): Promise<EventResult> {
  *     // explicit object with both fields
  *   }
@@ -64,7 +64,7 @@ function parseScheduleArg(arg: string | ScheduleHandlerOptions): ScheduleHandler
  * ```
  */
 export function ScheduleHandler(): MethodDecorator;
-export function ScheduleHandler(scheduleIdOrExpression: string): MethodDecorator;
+export function ScheduleHandler(sourceOrExpression: string): MethodDecorator;
 export function ScheduleHandler(options: ScheduleHandlerOptions): MethodDecorator;
 export function ScheduleHandler(arg?: string | ScheduleHandlerOptions): MethodDecorator {
   return (target, propertyKey) => {

@@ -117,7 +117,7 @@ type FnDefMetadata = {
   path?: string;
   method?: HttpMethod;
   route?: string;
-  scheduleId?: string;
+  source?: string;
   name?: string;
 };
 
@@ -155,7 +155,7 @@ function buildResolvedFromExport(
     case "consumer":
       return { ...base, type: "consumer", handlerTag: meta?.route ?? handlerId };
     case "schedule":
-      return { ...base, type: "schedule", handlerTag: meta?.scheduleId ?? handlerId };
+      return { ...base, type: "schedule", handlerTag: meta?.source ?? handlerId };
     case "custom":
       return { ...base, type: "custom", name: meta?.name ?? handlerId };
   }

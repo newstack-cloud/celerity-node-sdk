@@ -96,8 +96,7 @@ async function scanClassHandler(
   );
   if (!controllerMeta) return;
 
-  const instance = await container.resolve<object>(controllerClass);
-  const prototype = Object.getPrototypeOf(instance) as object;
+  const prototype = controllerClass.prototype as object;
   const methods = Object.getOwnPropertyNames(prototype).filter((name) => name !== "constructor");
 
   const classProtectedBy: string[] =
@@ -150,7 +149,7 @@ async function scanClassHandler(
       paramMetadata,
       customMetadata: { ...classCustomMetadata, ...methodCustomMetadata },
       handlerFn: descriptor.value as (...args: unknown[]) => unknown,
-      handlerInstance: instance,
+      controllerClass,
     });
   }
 }
@@ -210,8 +209,7 @@ async function scanClassGuard(
   const guardName: string | undefined = Reflect.getOwnMetadata(GUARD_CUSTOM_METADATA, guardClass);
   if (!guardName) return;
 
-  const instance = await container.resolve<object>(guardClass);
-  const prototype = Object.getPrototypeOf(instance) as object;
+  const prototype = guardClass.prototype as object;
   const descriptor = Object.getOwnPropertyDescriptor(prototype, "check");
   if (!descriptor?.value || typeof descriptor.value !== "function") {
     debug("scanClassGuard: %s has no check() method, skipping", guardClass.name);
@@ -227,7 +225,7 @@ async function scanClassGuard(
   registry.registerGuard({
     name: guardName,
     handlerFn: descriptor.value as (...args: unknown[]) => unknown,
-    handlerInstance: instance,
+    guardClass,
     paramMetadata,
     customMetadata,
   });

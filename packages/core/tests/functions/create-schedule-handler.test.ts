@@ -11,9 +11,9 @@ describe("createScheduleHandler", () => {
     expect(def.handler).toBe(handler);
   });
 
-  it("stores scheduleId from config", () => {
-    const def = createScheduleHandler({ scheduleId: "daily-cleanup" }, handler);
-    expect(def.metadata.scheduleId).toBe("daily-cleanup");
+  it("stores source from config", () => {
+    const def = createScheduleHandler({ source: "dailyCleanup" }, handler);
+    expect(def.metadata.source).toBe("dailyCleanup");
   });
 
   it("stores schedule expression from config", () => {
@@ -47,16 +47,16 @@ describe("createScheduleHandler", () => {
 
   // Overloaded call patterns with string first argument
   describe("string first argument", () => {
-    it("parses a plain string as scheduleId", () => {
-      const def = createScheduleHandler("daily-cleanup", {}, handler);
-      expect(def.metadata.scheduleId).toBe("daily-cleanup");
+    it("parses a plain string as source", () => {
+      const def = createScheduleHandler("dailyCleanup", {}, handler);
+      expect(def.metadata.source).toBe("dailyCleanup");
       expect(def.metadata.schedule).toBeUndefined();
     });
 
     it("parses a rate() string as schedule expression", () => {
       const def = createScheduleHandler("rate(1 day)", {}, handler);
       expect(def.metadata.schedule).toBe("rate(1 day)");
-      expect(def.metadata.scheduleId).toBeUndefined();
+      expect(def.metadata.source).toBeUndefined();
     });
 
     it("parses a cron() string as schedule expression", () => {
@@ -66,8 +66,8 @@ describe("createScheduleHandler", () => {
 
     it("merges string argument with config options", () => {
       const schema = { parse: (data: unknown) => data };
-      const def = createScheduleHandler("weekly-report", { schema }, handler);
-      expect(def.metadata.scheduleId).toBe("weekly-report");
+      const def = createScheduleHandler("weeklyReport", { schema }, handler);
+      expect(def.metadata.source).toBe("weeklyReport");
       expect(def.metadata.schema).toBe(schema);
     });
   });

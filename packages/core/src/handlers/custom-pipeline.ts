@@ -7,7 +7,7 @@ import type {
 } from "@celerity-sdk/types";
 import { runLayerPipeline } from "../layers/pipeline";
 import { HandlerMetadataStore } from "../metadata/handler-metadata";
-import type { ResolvedHandlerBase } from "./types";
+import { resolveHandlerInstance, type ResolvedHandlerBase } from "./types";
 import type { ParamMetadata } from "../decorators/params";
 
 const debug = createDebug("celerity:core:custom-pipeline");
@@ -82,7 +82,8 @@ async function invokeClassHandler(
     args[meta.index] = extractCustomParam(meta, context, validatedPayload);
   }
 
-  return handler.handlerFn.apply(handler.handlerInstance, args);
+  const instance = await resolveHandlerInstance(handler, context.container);
+  return handler.handlerFn.apply(instance, args);
 }
 
 async function invokeFunctionHandler(

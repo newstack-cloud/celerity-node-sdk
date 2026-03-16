@@ -60,9 +60,9 @@ describe("scanConsumerHandlers", () => {
       expect(handlers).toHaveLength(2);
 
       const tags = handlers.map((h) => h.handlerTag);
-      // Method without route defaults to method name
+      // handlerTag is always the method name (route is for Rust runtime routing, not SDK lookup)
       expect(tags).toContain("processDefault");
-      expect(tags).toContain("priority");
+      expect(tags).toContain("processPriority");
     });
 
     it("looks up handlers by handlerTag via getHandler", async () => {
@@ -71,9 +71,9 @@ describe("scanConsumerHandlers", () => {
 
       await scanModule(M, container, registry);
 
-      const priorityHandler = registry.getHandler("consumer", "priority");
+      const priorityHandler = registry.getHandler("consumer", "processPriority");
       expect(priorityHandler).toBeDefined();
-      expect(priorityHandler!.handlerTag).toBe("priority");
+      expect(priorityHandler!.handlerTag).toBe("processPriority");
     });
 
     it("stores param metadata on registered handlers", async () => {
@@ -82,7 +82,7 @@ describe("scanConsumerHandlers", () => {
 
       await scanModule(M, container, registry);
 
-      const handler = registry.getHandler("consumer", "priority");
+      const handler = registry.getHandler("consumer", "processPriority");
       expect(handler).toBeDefined();
       expect(handler!.paramMetadata).toHaveLength(2);
       expect(handler!.paramMetadata.map((p) => p.type)).toContain("messages");
@@ -127,6 +127,7 @@ describe("scanConsumerHandlers", () => {
     it("registers consumer function handlers", async () => {
       const fnHandler: FunctionHandlerDefinition = {
         __celerity_handler: true,
+        id: "new-order",
         type: "consumer",
         metadata: { route: "new-order", layers: [] },
         handler: vi.fn(),
@@ -182,6 +183,7 @@ describe("scanConsumerHandlers", () => {
       const TOKEN = Symbol("TOKEN");
       const fnHandler: FunctionHandlerDefinition = {
         __celerity_handler: true,
+        id: "new-order",
         type: "consumer",
         metadata: { route: "new-order", inject: [TOKEN] },
         handler: vi.fn(),
@@ -200,6 +202,7 @@ describe("scanConsumerHandlers", () => {
       const schema = { parse: (data: unknown) => data };
       const fnHandler: FunctionHandlerDefinition = {
         __celerity_handler: true,
+        id: "validated",
         type: "consumer",
         metadata: { route: "validated", messageSchema: schema },
         handler: vi.fn(),

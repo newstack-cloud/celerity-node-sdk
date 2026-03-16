@@ -6,7 +6,7 @@ import {
 } from "../metadata/constants";
 
 export type ConsumerMetadata = {
-  sourceId?: string;
+  source?: string;
 };
 
 export type ConsumerHandlerMetadata = {
@@ -20,13 +20,13 @@ export type ConsumerHandlerMetadata = {
  * The class becomes injectable and its `@MessageHandler()` methods are
  * registered as consumer handler callbacks.
  *
- * @param sourceId - Optional annotation hint that tells the deploy engine
- *   which blueprint-defined consumer source this handler should be wired to.
+ * @param source - Optional blueprint resource name that tells the deploy engine
+ *   which blueprint-defined consumer resource this handler should be wired to.
  *   Does not create infrastructure — the blueprint defines the actual source.
  *
  * @example
  * ```ts
- * @Consumer("orders-queue")
+ * @Consumer("ordersConsumer")
  * class OrderConsumer {
  *   @MessageHandler()
  *   async process(@Messages(OrderSchema) messages: ValidatedConsumerMessage<Order>[]): Promise<EventResult> {
@@ -35,10 +35,10 @@ export type ConsumerHandlerMetadata = {
  * }
  * ```
  */
-export function Consumer(sourceId?: string): ClassDecorator {
+export function Consumer(source?: string): ClassDecorator {
   return (target) => {
     const meta: ConsumerMetadata = {};
-    if (sourceId !== undefined) meta.sourceId = sourceId;
+    if (source !== undefined) meta.source = source;
     Reflect.defineMetadata(CONSUMER_METADATA, meta, target);
     Reflect.defineMetadata(INJECTABLE_METADATA, true, target);
   };

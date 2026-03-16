@@ -26,20 +26,20 @@ describe("Consumer decorators", () => {
       expect(Reflect.getOwnMetadata(INJECTABLE_METADATA, TestConsumer)).toBe(true);
     });
 
-    it("stores sourceId when provided", () => {
-      @Consumer("orders-queue")
+    it("stores source when provided", () => {
+      @Consumer("ordersConsumer")
       class TestConsumer {}
 
       const meta: ConsumerMetadata = Reflect.getOwnMetadata(CONSUMER_METADATA, TestConsumer);
-      expect(meta.sourceId).toBe("orders-queue");
+      expect(meta.source).toBe("ordersConsumer");
     });
 
-    it("omits sourceId when not provided", () => {
+    it("omits source when not provided", () => {
       @Consumer()
       class TestConsumer {}
 
       const meta: ConsumerMetadata = Reflect.getOwnMetadata(CONSUMER_METADATA, TestConsumer);
-      expect(meta).not.toHaveProperty("sourceId");
+      expect(meta).not.toHaveProperty("source");
     });
   });
 

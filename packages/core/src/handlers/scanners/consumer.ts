@@ -50,8 +50,7 @@ async function scanClassHandler(
   const consumerMeta = Reflect.getOwnMetadata(CONSUMER_METADATA, controllerClass);
   if (!consumerMeta) return;
 
-  const instance = await container.resolve<object>(controllerClass);
-  const prototype = Object.getPrototypeOf(instance) as object;
+  const prototype = controllerClass.prototype as object;
   const methods = Object.getOwnPropertyNames(prototype).filter((name) => name !== "constructor");
 
   const classLayers: (CelerityLayer | Type<CelerityLayer>)[] =
@@ -77,7 +76,11 @@ async function scanClassHandler(
     const descriptor = Object.getOwnPropertyDescriptor(prototype, methodName);
     if (!descriptor?.value || typeof descriptor.value !== "function") continue;
 
-    const handlerTag = handlerMeta.route ?? methodName;
+    // The handler tag is used for SDK-internal registry lookup — it must match
+    // the key the orchestrator constructs: `${consumerName}::${methodName}`.
+    // handlerMeta.route is for the Rust runtime's MessageHandlerWithRouter
+    // routing logic, not for the SDK registry.
+    const handlerTag = consumerMeta.source ? `${consumerMeta.source}::${methodName}` : methodName;
 
     const layers = [...classLayers, ...methodLayers];
     const messageParam = paramMetadata.find((p) => p.type === "messages");
@@ -93,7 +96,7 @@ async function scanClassHandler(
       paramMetadata,
       customMetadata: { ...classCustomMetadata, ...methodCustomMetadata },
       handlerFn: descriptor.value as (...args: unknown[]) => unknown,
-      handlerInstance: instance,
+      controllerClass,
     });
   }
 }
@@ -112,7 +115,8 @@ function scanFunctionHandler(
     customMetadata?: Record<string, unknown>;
   };
 
-  const handlerTag = meta.route ?? definition.id ?? "default";
+  // Same as class handlers — route is for Rust runtime routing, not SDK lookup.
+  const handlerTag = definition.id ?? "default";
 
   const layers = [...(meta.layers ?? [])];
   if (meta.messageSchema) {

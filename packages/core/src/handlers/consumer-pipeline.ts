@@ -13,7 +13,7 @@ import type {
 } from "@celerity-sdk/types";
 import { runLayerPipeline } from "../layers/pipeline";
 import { HandlerMetadataStore } from "../metadata/handler-metadata";
-import type { ResolvedHandlerBase } from "./types";
+import { resolveHandlerInstance, type ResolvedHandlerBase } from "./types";
 import type { ParamMetadata } from "../decorators/params";
 
 const debug = createDebug("celerity:core:consumer-pipeline");
@@ -93,6 +93,7 @@ export async function executeConsumerPipeline(
         handlerTag: event.handlerTag,
         messageCount: event.messages.length,
         ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+        ...(error instanceof Error && error.cause ? { cause: String(error.cause) } : {}),
       });
     } else {
       console.error("Unhandled error in consumer handler pipeline:", error);
@@ -116,7 +117,8 @@ async function invokeClassHandler(
     args[meta.index] = extractConsumerParam(meta, context, validatedMessages, rawMessages);
   }
 
-  return (await handler.handlerFn.apply(handler.handlerInstance, args)) as EventResult;
+  const instance = await resolveHandlerInstance(handler, context.container);
+  return (await handler.handlerFn.apply(instance, args)) as EventResult;
 }
 
 async function invokeFunctionHandler(

@@ -110,12 +110,40 @@ async function registerConsumerHandlers(
 ): Promise<void> {
   for (const consumer of consumers?.consumers ?? []) {
     for (const def of consumer.handlers) {
-      const tag = `source::${consumer.sourceId}::${def.name}`;
+      // def.handler is "module.ClassName.methodName" — extract the method name
+      // for the registry lookup key that matches the scanner's tag format.
+      const methodName = def.handler.split(".").pop() ?? def.name;
+      const lookupKey = `${consumer.consumerName}::${methodName}`;
       const callback =
-        result.createConsumerCallback(tag, def.name) ??
+        result.createConsumerCallback(lookupKey, def.name) ??
         (await result.createConsumerCallbackById(def.handler, def.location, def.name));
       if (callback) {
-        app.registerConsumerHandler(tag, def.timeout, callback);
+        // Register with def.name (e.g. "userEventsConsumer_handle") — the Rust
+        // runtime extracts the last `::` segment of the full source tag for its
+        // handler HashMap lookup, so the registration key must match that segment.
+        app.registerConsumerHandler(def.name, def.timeout, callback);
+      }
+    }
+  }
+}
+
+async function registerEventHandlers(
+  app: CoreRuntimeApplicationType,
+  events: ReturnType<CoreRuntimeApplicationType["setup"]>["events"],
+  result: RuntimeBootstrapResult,
+): Promise<void> {
+  for (const event of events?.events ?? []) {
+    for (const def of event.handlers) {
+      // Event consumers (datastore streams, bucket events) use the same
+      // handler registration as queue/topic consumers — the Rust runtime
+      // dispatches via the same registerConsumerHandler callback mechanism.
+      const methodName = def.handler.split(".").pop() ?? def.name;
+      const lookupKey = `${event.consumerName}::${methodName}`;
+      const callback =
+        result.createConsumerCallback(lookupKey, def.name) ??
+        (await result.createConsumerCallbackById(def.handler, def.location, def.name));
+      if (callback) {
+        app.registerConsumerHandler(def.name, def.timeout, callback);
       }
     }
   }
@@ -128,12 +156,14 @@ async function registerScheduleHandlers(
 ): Promise<void> {
   for (const schedule of schedules?.schedules ?? []) {
     for (const def of schedule.handlers) {
-      const tag = `source::${schedule.scheduleId}::${def.name}`;
+      const methodName = def.handler.split(".").pop() ?? def.name;
+      const lookupKey = `${schedule.scheduleId}::${methodName}`;
       const callback =
-        result.createScheduleCallback(tag, def.name) ??
+        result.createScheduleCallback(lookupKey, def.name) ??
         (await result.createScheduleCallbackById(def.handler, def.location, def.name));
       if (callback) {
-        app.registerScheduleHandler(tag, def.timeout, callback);
+        // Same as consumers — Rust runtime extracts last `::` segment for lookup.
+        app.registerScheduleHandler(def.name, def.timeout, callback);
       }
     }
   }
@@ -167,6 +197,7 @@ export async function startRuntime(options?: StartRuntimeOptions): Promise<void>
   await registerGuardHandlers(app, appConfig.api?.guards, result);
   await registerWebSocketHandlers(app, appConfig.api?.websocket, result);
   await registerConsumerHandlers(app, appConfig.consumers, result);
+  await registerEventHandlers(app, appConfig.events, result);
   await registerScheduleHandlers(app, appConfig.schedules, result);
   await registerCustomHandlers(app, appConfig.customHandlers, result);
 

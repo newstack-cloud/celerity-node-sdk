@@ -49,8 +49,7 @@ async function scanClassHandler(
   registry: HandlerRegistry,
 ): Promise<void> {
   // Cross-cutting: no class-level metadata check — scan ALL controllers
-  const instance = await container.resolve<object>(controllerClass);
-  const prototype = Object.getPrototypeOf(instance) as object;
+  const prototype = controllerClass.prototype as object;
   const methods = Object.getOwnPropertyNames(prototype).filter((name) => name !== "constructor");
 
   const classLayers: (CelerityLayer | Type<CelerityLayer>)[] =
@@ -76,7 +75,7 @@ async function scanClassHandler(
     const descriptor = Object.getOwnPropertyDescriptor(prototype, methodName);
     if (!descriptor?.value || typeof descriptor.value !== "function") continue;
 
-    const handlerTag = handlerMeta.scheduleId ?? methodName;
+    const handlerTag = handlerMeta.source ? `${handlerMeta.source}::${methodName}` : methodName;
 
     const layers = [...classLayers, ...methodLayers];
     const inputParam = paramMetadata.find((p) => p.type === "scheduleInput");
@@ -94,10 +93,10 @@ async function scanClassHandler(
         ...classCustomMetadata,
         ...methodCustomMetadata,
         ...(handlerMeta.schedule ? { schedule: handlerMeta.schedule } : {}),
-        ...(handlerMeta.scheduleId ? { scheduleId: handlerMeta.scheduleId } : {}),
+        ...(handlerMeta.source ? { source: handlerMeta.source } : {}),
       },
       handlerFn: descriptor.value as (...args: unknown[]) => unknown,
-      handlerInstance: instance,
+      controllerClass,
     });
   }
 }
@@ -109,7 +108,7 @@ function scanFunctionHandler(
   if (definition.type !== "schedule") return;
 
   const meta = definition.metadata as {
-    scheduleId?: string;
+    source?: string;
     schedule?: string;
     schema?: Schema;
     layers?: (CelerityLayer | Type<CelerityLayer>)[];
@@ -117,7 +116,7 @@ function scanFunctionHandler(
     customMetadata?: Record<string, unknown>;
   };
 
-  const handlerTag = meta.scheduleId ?? definition.id ?? "default";
+  const handlerTag = meta.source ?? definition.id ?? "default";
 
   const layers = [...(meta.layers ?? [])];
   if (meta.schema) {
@@ -126,7 +125,7 @@ function scanFunctionHandler(
 
   const customMetadata: Record<string, unknown> = { ...(meta.customMetadata ?? {}) };
   if (meta.schedule) customMetadata.schedule = meta.schedule;
-  if (meta.scheduleId) customMetadata.scheduleId = meta.scheduleId;
+  if (meta.source) customMetadata.source = meta.source;
 
   debug("scanFunctionHandler: tag=%s", handlerTag);
   registry.register({

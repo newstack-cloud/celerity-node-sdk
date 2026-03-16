@@ -13,7 +13,7 @@ import { HttpException } from "../errors/http-exception";
 import { extractParam, type ParamType } from "../decorators/params";
 import { buildHttpRequest, buildHttpContext } from "../functions/context";
 import { HandlerMetadataStore } from "../metadata/handler-metadata";
-import type { ResolvedHandlerBase } from "./types";
+import { resolveHandlerInstance, type ResolvedHandlerBase } from "./types";
 
 const debug = createDebug("celerity:core:pipeline");
 
@@ -80,6 +80,7 @@ export async function executeHttpPipeline(
       context.logger.error("Unhandled error in handler pipeline", {
         error: message,
         ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+        ...(error instanceof Error && error.cause ? { cause: String(error.cause) } : {}),
       });
     } else {
       console.error("Unhandled error in handler pipeline:", error);
@@ -109,7 +110,8 @@ async function invokeClassHandler(
     );
   }
 
-  return handler.handlerFn.apply(handler.handlerInstance, args);
+  const instance = await resolveHandlerInstance(handler, context.container);
+  return handler.handlerFn.apply(instance, args);
 }
 
 const VALIDATED_METADATA_KEYS: Partial<Record<ParamType, string>> = {

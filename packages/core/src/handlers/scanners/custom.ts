@@ -49,8 +49,7 @@ async function scanClassHandler(
   registry: HandlerRegistry,
 ): Promise<void> {
   // Cross-cutting: no class-level metadata check — scan ALL controllers
-  const instance = await container.resolve<object>(controllerClass);
-  const prototype = Object.getPrototypeOf(instance) as object;
+  const prototype = controllerClass.prototype as object;
   const methods = Object.getOwnPropertyNames(prototype).filter((name) => name !== "constructor");
 
   const classLayers: (CelerityLayer | Type<CelerityLayer>)[] =
@@ -90,7 +89,7 @@ async function scanClassHandler(
       paramMetadata,
       customMetadata: { ...classCustomMetadata, ...methodCustomMetadata },
       handlerFn: descriptor.value as (...args: unknown[]) => unknown,
-      handlerInstance: instance,
+      controllerClass,
     });
   }
 }

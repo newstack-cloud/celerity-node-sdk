@@ -55,8 +55,7 @@ async function scanClassHandler(
   );
   if (!isWsController) return;
 
-  const instance = await container.resolve<object>(controllerClass);
-  const prototype = Object.getPrototypeOf(instance) as object;
+  const prototype = controllerClass.prototype as object;
   const methods = Object.getOwnPropertyNames(prototype).filter((name) => name !== "constructor");
 
   const classProtectedBy: string[] =
@@ -107,7 +106,7 @@ async function scanClassHandler(
       paramMetadata,
       customMetadata: { ...classCustomMetadata, ...methodCustomMetadata },
       handlerFn: descriptor.value as (...args: unknown[]) => unknown,
-      handlerInstance: instance,
+      controllerClass,
     });
   }
 }

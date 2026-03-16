@@ -9,7 +9,7 @@ import type {
 } from "@celerity-sdk/types";
 import { runLayerPipeline } from "../layers/pipeline";
 import { HandlerMetadataStore } from "../metadata/handler-metadata";
-import type { ResolvedHandlerBase } from "./types";
+import { resolveHandlerInstance, type ResolvedHandlerBase } from "./types";
 import type { ParamMetadata } from "../decorators/params";
 
 const debug = createDebug("celerity:core:ws-pipeline");
@@ -66,6 +66,7 @@ export async function executeWebSocketPipeline(
         connectionId: message.connectionId,
         eventType: message.eventType,
         ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+        ...(error instanceof Error && error.cause ? { cause: String(error.cause) } : {}),
       });
     } else {
       console.error("Unhandled error in WebSocket handler pipeline:", error);
@@ -84,7 +85,8 @@ async function invokeClassHandler(
     args[meta.index] = extractWebSocketParam(meta, context);
   }
 
-  await handler.handlerFn.apply(handler.handlerInstance, args);
+  const instance = await resolveHandlerInstance(handler, context.container);
+  await handler.handlerFn.apply(instance, args);
 }
 
 async function invokeFunctionHandler(

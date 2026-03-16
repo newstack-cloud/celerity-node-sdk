@@ -688,9 +688,9 @@ describe("Integration: schedule handler via TestingApplication.injectSchedule", 
 
     it("should invoke schedule handler and return EventResult", async () => {
       const app = await CelerityFactory.createTestingApp(ScheduleModule);
-      const event = mockScheduleEvent("daily-cleanup");
+      const event = mockScheduleEvent("daily-cleanup::cleanup");
 
-      const result = await app.injectSchedule("daily-cleanup", event);
+      const result = await app.injectSchedule("daily-cleanup::cleanup", event);
 
       expect(result.success).toBe(true);
     });

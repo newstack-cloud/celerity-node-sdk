@@ -205,7 +205,7 @@ describe("executeCustomPipeline", () => {
         return "done";
       });
 
-      const handler = makeHandler({ handlerFn, layers: [layer] });
+      const handler = makeHandler({ handlerFn, handlerInstance: {}, layers: [layer] });
       await executeCustomPipeline(handler, null, makeOptions(container));
 
       expect(order).toEqual(["layer-before", "handler", "layer-after"]);
@@ -215,6 +215,7 @@ describe("executeCustomPipeline", () => {
   describe("error handling", () => {
     it("re-throws Error from handler (not wrapped)", async () => {
       const handler = makeHandler({
+        handlerInstance: {},
         handlerFn: vi.fn(async () => {
           throw new Error("boom");
         }),
@@ -227,6 +228,7 @@ describe("executeCustomPipeline", () => {
 
     it("re-throws non-Error from handler", async () => {
       const handler = makeHandler({
+        handlerInstance: {},
         handlerFn: vi.fn(async () => {
           throw "string error";
         }),
@@ -239,6 +241,7 @@ describe("executeCustomPipeline", () => {
 
     it("returns raw result (no EventResult wrapping)", async () => {
       const handler = makeHandler({
+        handlerInstance: {},
         handlerFn: vi.fn(async () => ({
           data: [1, 2, 3],
           total: 3,
@@ -252,6 +255,7 @@ describe("executeCustomPipeline", () => {
 
     it("returns undefined when handler returns nothing", async () => {
       const handler = makeHandler({
+        handlerInstance: {},
         handlerFn: vi.fn(async () => undefined),
       });
 

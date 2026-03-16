@@ -10,7 +10,7 @@ import type {
 } from "@celerity-sdk/types";
 import { runLayerPipeline } from "../layers/pipeline";
 import { HandlerMetadataStore } from "../metadata/handler-metadata";
-import type { ResolvedHandlerBase } from "./types";
+import { resolveHandlerInstance, type ResolvedHandlerBase } from "./types";
 import type { ParamMetadata } from "../decorators/params";
 
 const debug = createDebug("celerity:core:schedule-pipeline");
@@ -72,6 +72,7 @@ export async function executeSchedulePipeline(
         handlerTag: event.handlerTag,
         scheduleId: event.scheduleId,
         ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+        ...(error instanceof Error && error.cause ? { cause: String(error.cause) } : {}),
       });
     } else {
       console.error("Unhandled error in schedule handler pipeline:", error);
@@ -94,7 +95,8 @@ async function invokeClassHandler(
     args[meta.index] = extractScheduleParam(meta, context, validatedInput);
   }
 
-  return (await handler.handlerFn.apply(handler.handlerInstance, args)) as EventResult;
+  const instance = await resolveHandlerInstance(handler, context.container);
+  return (await handler.handlerFn.apply(instance, args)) as EventResult;
 }
 
 async function invokeFunctionHandler(

@@ -2,9 +2,12 @@ import type { CelerityLayer } from "@celerity-sdk/types";
 import { ConfigLayer, captureResourceLinks, getResourceTypes } from "@celerity-sdk/config";
 
 const RESOURCE_LAYER_MAP: Record<string, { pkg: string; className: string }> = {
+  datastore: { pkg: "@celerity-sdk/datastore", className: "DatastoreLayer" },
   bucket: { pkg: "@celerity-sdk/bucket", className: "ObjectStorageLayer" },
   queue: { pkg: "@celerity-sdk/queue", className: "QueueLayer" },
+  topic: { pkg: "@celerity-sdk/topic", className: "TopicLayer" },
   cache: { pkg: "@celerity-sdk/cache", className: "CacheLayer" },
+  sqlDatabase: { pkg: "@celerity-sdk/sql-database", className: "SqlDatabaseLayer" },
 };
 
 export async function createDefaultSystemLayers(): Promise<CelerityLayer[]> {

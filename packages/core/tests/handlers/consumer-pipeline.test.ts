@@ -151,7 +151,7 @@ describe("executeConsumerPipeline", () => {
       return { success: true };
     });
 
-    const handler = createHandler({ handlerFn, layers: [layer1, layer2] });
+    const handler = createHandler({ handlerFn, handlerInstance: {}, layers: [layer1, layer2] });
     await executeConsumerPipeline(handler, createEvent(), { container });
 
     expect(order).toEqual([
@@ -169,7 +169,7 @@ describe("executeConsumerPipeline", () => {
       throw new Error("boom");
     });
 
-    const handler = createHandler({ handlerFn });
+    const handler = createHandler({ handlerFn, handlerInstance: {} });
     const result = await executeConsumerPipeline(handler, createEvent(), { container });
 
     expect(result.success).toBe(false);
@@ -190,7 +190,7 @@ describe("executeConsumerPipeline", () => {
       throw new Error("boom");
     });
 
-    const handler = createHandler({ handlerFn, layers: [logLayer] });
+    const handler = createHandler({ handlerFn, handlerInstance: {}, layers: [logLayer] });
     await executeConsumerPipeline(handler, createEvent(), { container });
 
     expect(mockLogger.error).toHaveBeenCalledWith(

@@ -92,18 +92,19 @@ describe("scanScheduleHandlers", () => {
       const handlers = registry.getHandlersByType("schedule");
       expect(handlers).toHaveLength(2);
       const tags = handlers.map((h) => h.handlerTag);
-      expect(tags).toContain("daily-cleanup");
+      // source::methodName when source is set, just methodName when only schedule expression
+      expect(tags).toContain("daily-cleanup::cleanup");
       expect(tags).toContain("sync");
     });
 
-    it("uses scheduleId as handlerTag, falls back to method name", async () => {
+    it("uses source as handlerTag, falls back to method name", async () => {
       @Module({ controllers: [MaintenanceTasks] })
       class M {}
 
       await scanModule(M, container, registry);
 
-      // "daily-cleanup" comes from scheduleId, "sync" from method name (rate expression is not an id)
-      expect(registry.getHandler("schedule", "daily-cleanup")).toBeDefined();
+      // source::methodName when source present, just methodName for rate-only
+      expect(registry.getHandler("schedule", "daily-cleanup::cleanup")).toBeDefined();
       expect(registry.getHandler("schedule", "sync")).toBeDefined();
     });
 
@@ -113,7 +114,7 @@ describe("scanScheduleHandlers", () => {
 
       await scanModule(M, container, registry);
 
-      const handler = registry.getHandler("schedule", "daily-cleanup");
+      const handler = registry.getHandler("schedule", "daily-cleanup::cleanup");
       expect(handler!.paramMetadata).toHaveLength(1);
       expect(handler!.paramMetadata[0].type).toBe("scheduleInput");
     });
@@ -124,7 +125,7 @@ describe("scanScheduleHandlers", () => {
 
       await scanModule(M, container, registry);
 
-      const handler = registry.getHandler("schedule", "weekly-report");
+      const handler = registry.getHandler("schedule", "weekly-report::generateReport");
       expect(handler).toBeDefined();
       expect(handler!.layers).toHaveLength(1);
     });
@@ -137,7 +138,7 @@ describe("scanScheduleHandlers", () => {
 
       await scanModule(M, container, registry);
 
-      const handler = registry.getHandler("schedule", "order-reconciliation");
+      const handler = registry.getHandler("schedule", "order-reconciliation::reconcile");
       expect(handler).toBeDefined();
       expect(handler!.type).toBe("schedule");
     });
@@ -148,7 +149,7 @@ describe("scanScheduleHandlers", () => {
 
       await scanModule(M, container, registry);
 
-      const handler = registry.getHandler("schedule", "ws-cleanup");
+      const handler = registry.getHandler("schedule", "ws-cleanup::cleanupConnections");
       expect(handler).toBeDefined();
       expect(handler!.type).toBe("schedule");
     });
@@ -159,7 +160,7 @@ describe("scanScheduleHandlers", () => {
       const fnHandler: FunctionHandlerDefinition = {
         __celerity_handler: true,
         type: "schedule",
-        metadata: { scheduleId: "daily-task", layers: [] },
+        metadata: { source: "daily-task", layers: [] },
         handler: vi.fn(),
       };
 
@@ -174,7 +175,7 @@ describe("scanScheduleHandlers", () => {
       expect(handlers[0].isFunctionHandler).toBe(true);
     });
 
-    it("defaults handlerTag to definition id when scheduleId not specified", async () => {
+    it("defaults handlerTag to definition id when source not specified", async () => {
       const fnHandler: FunctionHandlerDefinition = {
         __celerity_handler: true,
         id: "schedule.cleanup",
@@ -196,7 +197,7 @@ describe("scanScheduleHandlers", () => {
       const fnHandler: FunctionHandlerDefinition = {
         __celerity_handler: true,
         type: "schedule",
-        metadata: { scheduleId: "validated", schema },
+        metadata: { source: "validated", schema },
         handler: vi.fn(),
       };
 

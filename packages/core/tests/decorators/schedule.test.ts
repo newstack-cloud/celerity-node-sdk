@@ -20,9 +20,9 @@ describe("@ScheduleHandler()", () => {
     expect(meta).toEqual({});
   });
 
-  it("parses a plain string as scheduleId", () => {
+  it("parses a plain string as source", () => {
     class Tasks {
-      @ScheduleHandler("daily-cleanup")
+      @ScheduleHandler("dailyCleanup")
       cleanup() {}
     }
 
@@ -31,7 +31,7 @@ describe("@ScheduleHandler()", () => {
       Tasks.prototype,
       "cleanup",
     );
-    expect(meta.scheduleId).toBe("daily-cleanup");
+    expect(meta.source).toBe("dailyCleanup");
     expect(meta).not.toHaveProperty("schedule");
   });
 
@@ -47,7 +47,7 @@ describe("@ScheduleHandler()", () => {
       "cleanup",
     );
     expect(meta.schedule).toBe("rate(1 day)");
-    expect(meta).not.toHaveProperty("scheduleId");
+    expect(meta).not.toHaveProperty("source");
   });
 
   it("parses a cron() string as schedule expression", () => {
@@ -62,12 +62,12 @@ describe("@ScheduleHandler()", () => {
       "report",
     );
     expect(meta.schedule).toBe("cron(0 9 * * *)");
-    expect(meta).not.toHaveProperty("scheduleId");
+    expect(meta).not.toHaveProperty("source");
   });
 
   it("accepts an explicit options object with both fields", () => {
     class Tasks {
-      @ScheduleHandler({ scheduleId: "weekly-report", schedule: "cron(0 9 ? * MON *)" })
+      @ScheduleHandler({ source: "weeklyReport", schedule: "cron(0 9 ? * MON *)" })
       report() {}
     }
 
@@ -76,13 +76,13 @@ describe("@ScheduleHandler()", () => {
       Tasks.prototype,
       "report",
     );
-    expect(meta.scheduleId).toBe("weekly-report");
+    expect(meta.source).toBe("weeklyReport");
     expect(meta.schedule).toBe("cron(0 9 ? * MON *)");
   });
 
-  it("accepts an options object with only scheduleId", () => {
+  it("accepts an options object with only source", () => {
     class Tasks {
-      @ScheduleHandler({ scheduleId: "my-task" })
+      @ScheduleHandler({ source: "myTask" })
       task() {}
     }
 
@@ -91,13 +91,13 @@ describe("@ScheduleHandler()", () => {
       Tasks.prototype,
       "task",
     );
-    expect(meta.scheduleId).toBe("my-task");
+    expect(meta.source).toBe("myTask");
     expect(meta).not.toHaveProperty("schedule");
   });
 
   it("sets metadata independently on different methods", () => {
     class Tasks {
-      @ScheduleHandler("task-a")
+      @ScheduleHandler("taskA")
       taskA() {}
 
       @ScheduleHandler("rate(5 minutes)")
@@ -115,7 +115,7 @@ describe("@ScheduleHandler()", () => {
       "taskB",
     );
 
-    expect(metaA.scheduleId).toBe("task-a");
+    expect(metaA.source).toBe("taskA");
     expect(metaB.schedule).toBe("rate(5 minutes)");
   });
 });

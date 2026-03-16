@@ -132,7 +132,7 @@ describe("executeWebSocketPipeline", () => {
       order.push("handler");
     });
 
-    const handler = createHandler({ handlerFn, layers: [layer1, layer2] });
+    const handler = createHandler({ handlerFn, handlerInstance: {}, layers: [layer1, layer2] });
     await executeWebSocketPipeline(handler, createMessage(), { container });
 
     expect(order).toEqual([
@@ -145,7 +145,7 @@ describe("executeWebSocketPipeline", () => {
   });
 
   it("returns void (no response for WebSocket handlers)", async () => {
-    const handler = createHandler({ handlerFn: vi.fn() });
+    const handler = createHandler({ handlerFn: vi.fn(), handlerInstance: {} });
     const result = await executeWebSocketPipeline(handler, createMessage(), { container });
     expect(result).toBeUndefined();
   });
@@ -156,7 +156,7 @@ describe("executeWebSocketPipeline", () => {
       throw new Error("boom");
     });
 
-    const handler = createHandler({ handlerFn });
+    const handler = createHandler({ handlerFn, handlerInstance: {} });
     await expect(
       executeWebSocketPipeline(handler, createMessage(), { container }),
     ).resolves.toBeUndefined();
@@ -177,7 +177,7 @@ describe("executeWebSocketPipeline", () => {
       throw new Error("boom");
     });
 
-    const handler = createHandler({ handlerFn, layers: [logLayer] });
+    const handler = createHandler({ handlerFn, handlerInstance: {}, layers: [logLayer] });
     await executeWebSocketPipeline(handler, createMessage(), { container });
 
     expect(mockLogger.error).toHaveBeenCalledWith(

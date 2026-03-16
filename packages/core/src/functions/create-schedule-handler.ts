@@ -10,7 +10,7 @@ import type {
 } from "@celerity-sdk/types";
 
 export type ScheduleHandlerConfig<T = unknown> = {
-  scheduleId?: string;
+  source?: string;
   schedule?: string;
   schema?: Schema<T>;
   inject?: InjectionToken[];
@@ -46,8 +46,8 @@ function isScheduleExpression(value: string): boolean {
  *   },
  * );
  *
- * // With scheduleId hint for deploy engine auto-wiring
- * const weeklyReport = createScheduleHandler("weekly-report", {
+ * // With source hint for deploy engine auto-wiring
+ * const weeklyReport = createScheduleHandler("weeklyReport", {
  *   inject: [ReportService],
  * }, async (event, ctx, reportService: ReportService) => {
  *   await reportService.generate();
@@ -68,7 +68,7 @@ export function createScheduleHandler(
   handler: ScheduleHandlerFn,
 ): FunctionHandlerDefinition;
 export function createScheduleHandler(
-  scheduleIdOrExpression: string,
+  sourceOrExpression: string,
   config: ScheduleHandlerConfig,
   handler: ScheduleHandlerFn,
 ): FunctionHandlerDefinition;
@@ -86,7 +86,7 @@ export function createScheduleHandler(
     if (isScheduleExpression(configOrString)) {
       config.schedule = configOrString;
     } else {
-      config.scheduleId = configOrString;
+      config.source = configOrString;
     }
   } else {
     config = configOrString;
@@ -99,7 +99,7 @@ export function createScheduleHandler(
     customMetadata: config.metadata ?? {},
   };
 
-  if (config.scheduleId !== undefined) metadata.scheduleId = config.scheduleId;
+  if (config.source !== undefined) metadata.source = config.source;
   if (config.schedule !== undefined) metadata.schedule = config.schedule;
   if (config.schema !== undefined) metadata.schema = config.schema;
 
