@@ -16,7 +16,6 @@ export {
   type SignedUrl,
 } from "./types";
 
-export { S3ObjectStorage } from "./providers/s3/s3-object-storage";
 export type { S3ObjectStorageConfig } from "./providers/s3/types";
 
 export { createObjectStorage } from "./factory";

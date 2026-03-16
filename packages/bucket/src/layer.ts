@@ -29,7 +29,7 @@ export class ObjectStorageLayer implements CelerityLayer<BaseHandlerContext> {
         ? await context.container.resolve<CelerityTracer>(TRACER_TOKEN)
         : undefined;
 
-      const storage = createObjectStorage({ tracer });
+      const storage = await createObjectStorage({ tracer });
       debug("registering ObjectStorage");
       context.container.register("ObjectStorage", { useValue: storage });
 
