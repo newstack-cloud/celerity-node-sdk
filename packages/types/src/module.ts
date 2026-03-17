@@ -1,4 +1,5 @@
 import type { Type, InjectionToken, Provider } from "./common";
+import type { CelerityLayer } from "./layer";
 
 export type FunctionHandlerDefinition = {
   __celerity_handler: true;
@@ -22,4 +23,5 @@ export type ModuleMetadata = {
   providers?: (Type | (Provider & { provide: InjectionToken }))[];
   imports?: Type[];
   exports?: InjectionToken[];
+  layers?: (CelerityLayer | Type<CelerityLayer>)[];
 };

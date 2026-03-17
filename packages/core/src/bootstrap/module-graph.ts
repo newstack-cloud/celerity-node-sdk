@@ -7,6 +7,7 @@ import type {
   ModuleMetadata,
   FunctionHandlerDefinition,
   GuardDefinition,
+  CelerityLayer,
 } from "@celerity-sdk/types";
 import { isResourceLayerToken } from "@celerity-sdk/common";
 import { MODULE_METADATA } from "../metadata/constants";
@@ -25,6 +26,7 @@ export type ModuleNode = {
   functionHandlers: FunctionHandlerDefinition[];
   guards: (Type | GuardDefinition)[];
   providers: (Type | (Provider & { provide: InjectionToken }))[];
+  layers: (CelerityLayer | Type<CelerityLayer>)[];
 };
 
 export type ModuleGraph = Map<Type, ModuleNode>;
@@ -68,6 +70,7 @@ export function buildModuleGraph(rootModule: Type): ModuleGraph {
         functionHandlers: [],
         guards: [],
         providers: [],
+        layers: [],
       });
       return;
     }
@@ -126,6 +129,7 @@ export function buildModuleGraph(rootModule: Type): ModuleGraph {
       functionHandlers: metadata.functionHandlers ?? [],
       guards,
       providers,
+      layers: metadata.layers ?? [],
     });
   }
 

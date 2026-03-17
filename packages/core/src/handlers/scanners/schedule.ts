@@ -35,10 +35,10 @@ export async function scanScheduleHandlers(
 ): Promise<void> {
   for (const [, node] of graph) {
     for (const controllerClass of node.controllers) {
-      await scanClassHandler(controllerClass, container, registry);
+      await scanClassHandler(controllerClass, container, registry, node.layers);
     }
     for (const fnHandler of node.functionHandlers) {
-      scanFunctionHandler(fnHandler, registry);
+      scanFunctionHandler(fnHandler, registry, node.layers);
     }
   }
 }
@@ -47,6 +47,7 @@ async function scanClassHandler(
   controllerClass: Type,
   container: Container,
   registry: HandlerRegistry,
+  moduleLayers: (CelerityLayer | Type<CelerityLayer>)[],
 ): Promise<void> {
   // Cross-cutting: no class-level metadata check — scan ALL controllers
   const prototype = controllerClass.prototype as object;
@@ -77,7 +78,7 @@ async function scanClassHandler(
 
     const handlerTag = handlerMeta.source ? `${handlerMeta.source}::${methodName}` : methodName;
 
-    const layers = [...classLayers, ...methodLayers];
+    const layers = [...moduleLayers, ...classLayers, ...methodLayers];
     const inputParam = paramMetadata.find((p) => p.type === "scheduleInput");
     if (inputParam?.schema) {
       layers.unshift(validate({ scheduleInput: inputParam.schema }));
@@ -104,6 +105,7 @@ async function scanClassHandler(
 function scanFunctionHandler(
   definition: FunctionHandlerDefinition,
   registry: HandlerRegistry,
+  moduleLayers: (CelerityLayer | Type<CelerityLayer>)[],
 ): void {
   if (definition.type !== "schedule") return;
 
@@ -118,7 +120,7 @@ function scanFunctionHandler(
 
   const handlerTag = meta.source ?? definition.id ?? "default";
 
-  const layers = [...(meta.layers ?? [])];
+  const layers = [...moduleLayers, ...(meta.layers ?? [])];
   if (meta.schema) {
     layers.unshift(validate({ scheduleInput: meta.schema }));
   }

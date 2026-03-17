@@ -7,7 +7,7 @@ import { Consumer, MessageHandler } from "../../src/decorators/consumer";
 import { Messages, EventInput } from "../../src/decorators/consumer-params";
 import { Module } from "../../src/decorators/module";
 import { buildModuleGraph, registerModuleGraph } from "../../src/bootstrap/module-graph";
-import type { FunctionHandlerDefinition } from "@celerity-sdk/types";
+import type { FunctionHandlerDefinition, BaseHandlerContext, CelerityLayer } from "@celerity-sdk/types";
 
 // ---------------------------------------------------------------------------
 // Test fixtures
@@ -251,6 +251,50 @@ describe("scanConsumerHandlers", () => {
       const handler = registry.getHandlerById("consumer", "consumer.orders.new");
       expect(handler).toBeDefined();
       expect(handler!.id).toBe("consumer.orders.new");
+    });
+  });
+
+  describe("module-level layers", () => {
+    it("prepends module layers to class handler layers", async () => {
+      const moduleLayer: CelerityLayer<BaseHandlerContext> = {
+        handle: async (_ctx, next) => next(),
+      };
+
+      @Module({ controllers: [OrderConsumer], layers: [moduleLayer] })
+      class M {}
+
+      await scanModule(M, container, registry);
+
+      const handler = registry.getHandler("consumer", "processDefault");
+      expect(handler).toBeDefined();
+      expect(handler!.layers[0]).toBe(moduleLayer);
+    });
+
+    it("prepends module layers to function handler layers", async () => {
+      const moduleLayer: CelerityLayer<BaseHandlerContext> = {
+        handle: async (_ctx, next) => next(),
+      };
+      const handlerLayer: CelerityLayer<BaseHandlerContext> = {
+        handle: async (_ctx, next) => next(),
+      };
+
+      const fnHandler: FunctionHandlerDefinition = {
+        __celerity_handler: true,
+        id: "fn-consumer",
+        type: "consumer",
+        metadata: { layers: [handlerLayer] },
+        handler: vi.fn(),
+      };
+
+      @Module({ functionHandlers: [fnHandler], layers: [moduleLayer] })
+      class M {}
+
+      await scanModule(M, container, registry);
+
+      const handler = registry.getHandler("consumer", "fn-consumer");
+      expect(handler).toBeDefined();
+      expect(handler!.layers[0]).toBe(moduleLayer);
+      expect(handler!.layers[1]).toBe(handlerLayer);
     });
   });
 });

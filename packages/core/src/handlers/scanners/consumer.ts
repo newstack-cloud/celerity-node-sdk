@@ -34,10 +34,10 @@ export async function scanConsumerHandlers(
 ): Promise<void> {
   for (const [, node] of graph) {
     for (const controllerClass of node.controllers) {
-      await scanClassHandler(controllerClass, container, registry);
+      await scanClassHandler(controllerClass, container, registry, node.layers);
     }
     for (const fnHandler of node.functionHandlers) {
-      scanFunctionHandler(fnHandler, registry);
+      scanFunctionHandler(fnHandler, registry, node.layers);
     }
   }
 }
@@ -46,6 +46,7 @@ async function scanClassHandler(
   controllerClass: Type,
   container: Container,
   registry: HandlerRegistry,
+  moduleLayers: (CelerityLayer | Type<CelerityLayer>)[],
 ): Promise<void> {
   const consumerMeta = Reflect.getOwnMetadata(CONSUMER_METADATA, controllerClass);
   if (!consumerMeta) return;
@@ -82,7 +83,7 @@ async function scanClassHandler(
     // routing logic, not for the SDK registry.
     const handlerTag = consumerMeta.source ? `${consumerMeta.source}::${methodName}` : methodName;
 
-    const layers = [...classLayers, ...methodLayers];
+    const layers = [...moduleLayers, ...classLayers, ...methodLayers];
     const messageParam = paramMetadata.find((p) => p.type === "messages");
     if (messageParam?.schema) {
       layers.unshift(validate({ consumerMessage: messageParam.schema }));
@@ -104,6 +105,7 @@ async function scanClassHandler(
 function scanFunctionHandler(
   definition: FunctionHandlerDefinition,
   registry: HandlerRegistry,
+  moduleLayers: (CelerityLayer | Type<CelerityLayer>)[],
 ): void {
   if (definition.type !== "consumer") return;
 
@@ -118,7 +120,7 @@ function scanFunctionHandler(
   // Same as class handlers — route is for Rust runtime routing, not SDK lookup.
   const handlerTag = definition.id ?? "default";
 
-  const layers = [...(meta.layers ?? [])];
+  const layers = [...moduleLayers, ...(meta.layers ?? [])];
   if (meta.messageSchema) {
     layers.unshift(validate({ consumerMessage: meta.messageSchema }));
   }

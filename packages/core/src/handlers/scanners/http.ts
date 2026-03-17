@@ -42,10 +42,10 @@ export async function scanHttpHandlers(
 ): Promise<void> {
   for (const [, node] of graph) {
     for (const controllerClass of node.controllers) {
-      await scanClassHandler(controllerClass, container, registry);
+      await scanClassHandler(controllerClass, container, registry, node.layers);
     }
     for (const fnHandler of node.functionHandlers) {
-      scanFunctionHandler(fnHandler, registry);
+      scanFunctionHandler(fnHandler, registry, node.layers);
     }
   }
 }
@@ -89,6 +89,7 @@ async function scanClassHandler(
   controllerClass: Type,
   container: Container,
   registry: HandlerRegistry,
+  moduleLayers: (CelerityLayer | Type<CelerityLayer>)[],
 ): Promise<void> {
   const controllerMeta: ControllerMetadata | undefined = Reflect.getOwnMetadata(
     CONTROLLER_METADATA,
@@ -132,7 +133,7 @@ async function scanClassHandler(
     const descriptor = Object.getOwnPropertyDescriptor(prototype, methodName);
     if (!descriptor?.value || typeof descriptor.value !== "function") continue;
 
-    const layers = [...classLayers, ...methodLayers];
+    const layers = [...moduleLayers, ...classLayers, ...methodLayers];
     const validationSchemas = buildValidationSchemasFromParams(paramMetadata);
     if (validationSchemas) {
       layers.unshift(validate(validationSchemas));
@@ -157,6 +158,7 @@ async function scanClassHandler(
 function scanFunctionHandler(
   definition: FunctionHandlerDefinition,
   registry: HandlerRegistry,
+  moduleLayers: (CelerityLayer | Type<CelerityLayer>)[],
 ): void {
   if (definition.type !== "http") return;
 
@@ -169,7 +171,7 @@ function scanFunctionHandler(
     customMetadata?: Record<string, unknown>;
   };
 
-  const layers = [...(meta.layers ?? [])];
+  const layers = [...moduleLayers, ...(meta.layers ?? [])];
   if (meta.schema) {
     const schemas: Record<string, Schema> = {};
     if (meta.schema.body) schemas.body = meta.schema.body;

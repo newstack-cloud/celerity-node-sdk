@@ -35,10 +35,10 @@ export async function scanCustomHandlers(
 ): Promise<void> {
   for (const [, node] of graph) {
     for (const controllerClass of node.controllers) {
-      await scanClassHandler(controllerClass, container, registry);
+      await scanClassHandler(controllerClass, container, registry, node.layers);
     }
     for (const fnHandler of node.functionHandlers) {
-      scanFunctionHandler(fnHandler, registry);
+      scanFunctionHandler(fnHandler, registry, node.layers);
     }
   }
 }
@@ -47,6 +47,7 @@ async function scanClassHandler(
   controllerClass: Type,
   container: Container,
   registry: HandlerRegistry,
+  moduleLayers: (CelerityLayer | Type<CelerityLayer>)[],
 ): Promise<void> {
   // Cross-cutting: no class-level metadata check — scan ALL controllers
   const prototype = controllerClass.prototype as object;
@@ -75,7 +76,7 @@ async function scanClassHandler(
     const descriptor = Object.getOwnPropertyDescriptor(prototype, methodName);
     if (!descriptor?.value || typeof descriptor.value !== "function") continue;
 
-    const layers = [...classLayers, ...methodLayers];
+    const layers = [...moduleLayers, ...classLayers, ...methodLayers];
     const payloadParam = paramMetadata.find((p) => p.type === "payload");
     if (payloadParam?.schema) {
       layers.unshift(validate({ customPayload: payloadParam.schema }));
@@ -97,6 +98,7 @@ async function scanClassHandler(
 function scanFunctionHandler(
   definition: FunctionHandlerDefinition,
   registry: HandlerRegistry,
+  moduleLayers: (CelerityLayer | Type<CelerityLayer>)[],
 ): void {
   if (definition.type !== "custom") return;
 
@@ -110,7 +112,7 @@ function scanFunctionHandler(
 
   const name = meta.name ?? definition.id ?? "default";
 
-  const layers = [...(meta.layers ?? [])];
+  const layers = [...moduleLayers, ...(meta.layers ?? [])];
   if (meta.schema) {
     layers.unshift(validate({ customPayload: meta.schema }));
   }
