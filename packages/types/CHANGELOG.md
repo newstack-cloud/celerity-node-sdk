@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/types/v0.5.0...types/v0.6.0) (2026-03-18)
+
+
+### Features
+
+* **core:** add support for module level layers ([5dd62f5](https://github.com/newstack-cloud/celerity-node-sdk/commit/5dd62f56f80758ba34b1a88c8a3050575bab6e21))
+
 ## [0.5.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/types/v0.4.0...types/v0.5.0) (2026-03-16)
 
 
