@@ -44,7 +44,7 @@
     "debug": "^4.4.0"
   },
   "devDependencies": {
-    "@aws-sdk/rds-signer": "^3.750.0",
+    "@aws-sdk/rds-signer": "^3.1011.0",
     "knex": "^3.1.0",
     "pg": "^8.13.0",
     "reflect-metadata": "^0.2.0"
