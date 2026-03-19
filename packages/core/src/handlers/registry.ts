@@ -110,7 +110,20 @@ function matchRoute(pattern: string, actual: string): boolean {
   const patternParts = pattern.split("/").filter(Boolean);
   const actualParts = actual.split("/").filter(Boolean);
 
-  if (patternParts.length !== actualParts.length) return false;
+  for (let i = 0; i < patternParts.length; i++) {
+    const part = patternParts[i];
 
-  return patternParts.every((part, i) => part.startsWith("{") || part === actualParts[i]);
+    // Wildcard param: {name+} matches all remaining segments.
+    if (part.startsWith("{") && part.endsWith("+}")) {
+      return actualParts.length >= patternParts.length;
+    }
+
+    // Standard param: {name} matches a single segment.
+    if (part.startsWith("{")) continue;
+
+    // Literal segment must match exactly.
+    if (part !== actualParts[i]) return false;
+  }
+
+  return patternParts.length === actualParts.length;
 }

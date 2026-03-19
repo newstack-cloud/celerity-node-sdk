@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js >= 22
+- Node.js >= 24
 - pnpm >= 9
 
 ## Getting Started
