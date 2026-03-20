@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/datastore/v0.6.0...datastore/v0.7.0) (2026-03-20)
+
+
+### Features
+
+* **datastore:** add support for complex expressions with and/or groups ([8a94c51](https://github.com/newstack-cloud/celerity-node-sdk/commit/8a94c512f9c473d9ea5a32d9213532b9f0edd6d0))
+
 ## [0.6.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/datastore/v0.5.0...datastore/v0.6.0) (2026-03-18)
 
 
