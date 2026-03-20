@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.6.0...core/v0.7.0) (2026-03-20)
+
+
+### Miscellaneous
+
+* **core:** Synchronize celerity-sdk versions
+
 ## [0.6.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.5.0...core/v0.6.0) (2026-03-18)
 
 
