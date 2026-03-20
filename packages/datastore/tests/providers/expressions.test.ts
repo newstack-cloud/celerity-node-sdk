@@ -191,4 +191,139 @@ describe("buildFilterExpression", () => {
     expect(Object.keys(allNames)).toHaveLength(2);
     expect(Object.keys(allValues)).toHaveLength(2);
   });
+
+  describe("OR groups", () => {
+    it("builds a single OR group at root without outer parens", () => {
+      const result = buildFilterExpression({
+        or: [
+          { name: "status", operator: "eq", value: "active" },
+          { name: "status", operator: "eq", value: "pending" },
+        ],
+      });
+
+      expect(result.expression).toBe("#f0 = :f0 OR #f1 = :f1");
+      expect(result.names).toEqual({ "#f0": "status", "#f1": "status" });
+      expect(result.values).toEqual({ ":f0": "active", ":f1": "pending" });
+    });
+
+    it("builds an explicit AND group equivalent to array", () => {
+      const result = buildFilterExpression({
+        and: [
+          { name: "status", operator: "eq", value: "active" },
+          { name: "age", operator: "gt", value: 18 },
+        ],
+      });
+
+      expect(result.expression).toBe("#f0 = :f0 AND #f1 > :f1");
+      expect(result.names).toEqual({ "#f0": "status", "#f1": "age" });
+      expect(result.values).toEqual({ ":f0": "active", ":f1": 18 });
+    });
+
+    it("parenthesizes nested OR inside AND", () => {
+      const result = buildFilterExpression({
+        and: [
+          { name: "age", operator: "gt", value: 18 },
+          {
+            or: [
+              { name: "status", operator: "eq", value: "active" },
+              { name: "status", operator: "eq", value: "pending" },
+            ],
+          },
+        ],
+      });
+
+      expect(result.expression).toBe("#f0 > :f0 AND (#f1 = :f1 OR #f2 = :f2)");
+      expect(result.names).toEqual({ "#f0": "age", "#f1": "status", "#f2": "status" });
+      expect(result.values).toEqual({ ":f0": 18, ":f1": "active", ":f2": "pending" });
+    });
+
+    it("parenthesizes nested ANDs inside OR", () => {
+      const result = buildFilterExpression({
+        or: [
+          {
+            and: [
+              { name: "status", operator: "eq", value: "active" },
+              { name: "age", operator: "gt", value: 18 },
+            ],
+          },
+          {
+            and: [
+              { name: "role", operator: "eq", value: "admin" },
+              { name: "email", operator: "exists" },
+            ],
+          },
+        ],
+      });
+
+      expect(result.expression).toBe(
+        "(#f0 = :f0 AND #f1 > :f1) OR (#f2 = :f2 AND attribute_exists(#f3))",
+      );
+      expect(result.names).toEqual({
+        "#f0": "status",
+        "#f1": "age",
+        "#f2": "role",
+        "#f3": "email",
+      });
+      expect(result.values).toEqual({ ":f0": "active", ":f1": 18, ":f2": "admin" });
+    });
+
+    it("unwraps single-item OR group", () => {
+      const result = buildFilterExpression({
+        or: [{ name: "status", operator: "eq", value: "active" }],
+      });
+
+      expect(result.expression).toBe("#f0 = :f0");
+    });
+
+    it("unwraps single-item AND group", () => {
+      const result = buildFilterExpression({
+        and: [{ name: "status", operator: "eq", value: "active" }],
+      });
+
+      expect(result.expression).toBe("#f0 = :f0");
+    });
+
+    it("handles 3-level nesting with correct parenthesization", () => {
+      const result = buildFilterExpression({
+        or: [
+          {
+            and: [
+              { name: "a", operator: "eq", value: 1 },
+              {
+                or: [
+                  { name: "b", operator: "eq", value: 2 },
+                  { name: "c", operator: "eq", value: 3 },
+                ],
+              },
+            ],
+          },
+          { name: "d", operator: "eq", value: 4 },
+        ],
+      });
+
+      expect(result.expression).toBe("(#f0 = :f0 AND (#f1 = :f1 OR #f2 = :f2)) OR #f3 = :f3");
+    });
+
+    it("maintains unique placeholder counters across branches", () => {
+      const result = buildFilterExpression({
+        or: [
+          { name: "a", operator: "eq", value: "x" },
+          { name: "b", operator: "between", low: 1, high: 10 },
+          { name: "c", operator: "exists" },
+          { name: "d", operator: "contains", value: "test" },
+        ],
+      });
+
+      expect(result.expression).toBe(
+        "#f0 = :f0 OR #f1 BETWEEN :f1a AND :f1b OR attribute_exists(#f2) OR contains(#f3, :f3)",
+      );
+      expect(result.names).toEqual({ "#f0": "a", "#f1": "b", "#f2": "c", "#f3": "d" });
+      expect(result.values).toEqual({
+        ":f0": "x",
+        ":f1a": 1,
+        ":f1b": 10,
+        ":f3": "test",
+      });
+    });
+  });
 });

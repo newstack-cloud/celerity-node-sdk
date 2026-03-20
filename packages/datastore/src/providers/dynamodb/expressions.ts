@@ -1,4 +1,11 @@
-import type { KeyCondition, RangeCondition, ConditionExpression } from "../../types";
+import type {
+  Condition,
+  KeyCondition,
+  RangeCondition,
+  ConditionExpression,
+  AndGroup,
+  OrGroup,
+} from "../../types";
 
 export type ExpressionResult = {
   expression: string;
@@ -70,57 +77,105 @@ export function buildKeyConditionExpression(
   return { expression, names, values };
 }
 
+type MutableCounter = { value: number };
+
 /**
  * Builds a DynamoDB FilterExpression (or ConditionExpression for writes)
- * from one or more Condition objects. Conditions are AND'd together.
+ * from a condition expression tree. Supports single conditions, arrays of
+ * conditions (implicit AND), and explicit AND/OR groups with recursive nesting.
  * Uses `#f`/`:f` prefixed placeholders to avoid collision with key placeholders.
  */
 export function buildFilterExpression(conditions: ConditionExpression): ExpressionResult {
-  const condArray = Array.isArray(conditions) ? conditions : [conditions];
   const names: Record<string, string> = {};
   const values: Record<string, unknown> = {};
-  const parts: string[] = [];
-  let counter = 0;
+  const counter: MutableCounter = { value: 0 };
 
-  for (const cond of condArray) {
-    const attrName = `#f${counter}`;
-    names[attrName] = cond.name;
+  const expression = buildExpressionNode(conditions, names, values, counter, 0);
+  return { expression, names, values };
+}
 
-    switch (cond.operator) {
-      case "eq":
-      case "ne":
-      case "lt":
-      case "le":
-      case "gt":
-      case "ge": {
-        const valKey = `:f${counter}`;
-        values[valKey] = cond.value;
-        parts.push(`${attrName} ${COMPARISON_OPERATORS[cond.operator]} ${valKey}`);
-        break;
-      }
-      case "between": {
-        const lowVal = `:f${counter}a`;
-        const highVal = `:f${counter}b`;
-        values[lowVal] = cond.low;
-        values[highVal] = cond.high;
-        parts.push(`${attrName} BETWEEN ${lowVal} AND ${highVal}`);
-        break;
-      }
-      case "startsWith":
-      case "contains": {
-        const valKey = `:f${counter}`;
-        values[valKey] = cond.value;
-        const fnName = cond.operator === "startsWith" ? "begins_with" : "contains";
-        parts.push(`${fnName}(${attrName}, ${valKey})`);
-        break;
-      }
-      case "exists":
-        parts.push(`attribute_exists(${attrName})`);
-        break;
-    }
-
-    counter++;
+function buildExpressionNode(
+  expr: ConditionExpression,
+  names: Record<string, string>,
+  values: Record<string, unknown>,
+  counter: MutableCounter,
+  depth: number,
+): string {
+  if (Array.isArray(expr)) {
+    return buildGroup(expr, "AND", names, values, counter, depth);
   }
+  if (isOrGroup(expr)) {
+    return buildGroup(expr.or, "OR", names, values, counter, depth);
+  }
+  if (isAndGroup(expr)) {
+    return buildGroup(expr.and, "AND", names, values, counter, depth);
+  }
+  return buildSingleCondition(expr, names, values, counter);
+}
 
-  return { expression: parts.join(" AND "), names, values };
+function buildGroup(
+  children: ConditionExpression[],
+  operator: "AND" | "OR",
+  names: Record<string, string>,
+  values: Record<string, unknown>,
+  counter: MutableCounter,
+  depth: number,
+): string {
+  const parts = children.map((child) =>
+    buildExpressionNode(child, names, values, counter, depth + 1),
+  );
+
+  if (parts.length === 1) return parts[0];
+
+  const joined = parts.join(` ${operator} `);
+  return depth > 0 ? `(${joined})` : joined;
+}
+
+function buildSingleCondition(
+  cond: Condition,
+  names: Record<string, string>,
+  values: Record<string, unknown>,
+  counter: MutableCounter,
+): string {
+  const i = counter.value;
+  const attrName = `#f${i}`;
+  names[attrName] = cond.name;
+  counter.value++;
+
+  switch (cond.operator) {
+    case "eq":
+    case "ne":
+    case "lt":
+    case "le":
+    case "gt":
+    case "ge": {
+      const valKey = `:f${i}`;
+      values[valKey] = cond.value;
+      return `${attrName} ${COMPARISON_OPERATORS[cond.operator]} ${valKey}`;
+    }
+    case "between": {
+      const lowVal = `:f${i}a`;
+      const highVal = `:f${i}b`;
+      values[lowVal] = cond.low;
+      values[highVal] = cond.high;
+      return `${attrName} BETWEEN ${lowVal} AND ${highVal}`;
+    }
+    case "startsWith":
+    case "contains": {
+      const valKey = `:f${i}`;
+      values[valKey] = cond.value;
+      const fnName = cond.operator === "startsWith" ? "begins_with" : "contains";
+      return `${fnName}(${attrName}, ${valKey})`;
+    }
+    case "exists":
+      return `attribute_exists(${attrName})`;
+  }
+}
+
+function isAndGroup(expr: ConditionExpression): expr is AndGroup {
+  return typeof expr === "object" && !Array.isArray(expr) && "and" in expr;
+}
+
+function isOrGroup(expr: ConditionExpression): expr is OrGroup {
+  return typeof expr === "object" && !Array.isArray(expr) && "or" in expr;
 }

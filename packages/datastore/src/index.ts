@@ -4,6 +4,8 @@ export {
   type KeyCondition,
   type RangeCondition,
   type Condition,
+  type AndGroup,
+  type OrGroup,
   type ConditionExpression,
   type GetItemOptions,
   type PutItemOptions,

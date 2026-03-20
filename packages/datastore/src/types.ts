@@ -154,10 +154,21 @@ export type Condition = {
 );
 
 /**
- * One or more conditions AND'd together. A single {@link Condition} or an array
- * of Conditions — when multiple are provided, all must be true.
+ * A group of conditions combined with AND logic. All conditions must be true.
  */
-export type ConditionExpression = Condition | Condition[];
+export type AndGroup = { and: ConditionExpression[] };
+
+/**
+ * A group of conditions combined with OR logic. At least one condition must be true.
+ */
+export type OrGroup = { or: ConditionExpression[] };
+
+/**
+ * One or more conditions combined with logical operators. A single {@link Condition},
+ * an array of Conditions (implicit AND), or explicit
+ * {@link AndGroup}/{@link OrGroup} for compound logic with recursive nesting.
+ */
+export type ConditionExpression = Condition | Condition[] | AndGroup | OrGroup;
 
 /**
  * Options for the getItem operation.

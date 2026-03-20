@@ -321,6 +321,87 @@ describe("DynamoDB Provider (integration)", () => {
     });
   });
 
+  describe("OR condition expressions", () => {
+    it("should query with OR filter", async () => {
+      const items: TestItem[] = [];
+      for await (const item of ds.query<TestItem>({
+        key: { name: "pk", value: "user-1" },
+        filter: {
+          or: [
+            { name: "status", operator: "eq", value: "active" },
+            { name: "total", operator: "gt", value: 150 },
+          ],
+        },
+      })) {
+        items.push(item);
+      }
+
+      // 10 active (even indices) + archived items with total > 150 (indices 15, 17, 19 → totals 160, 180, 200)
+      expect(items).toHaveLength(13);
+    });
+
+    it("should scan with OR filter", async () => {
+      const items: TestItem[] = [];
+      for await (const item of ds.scan<TestItem>({
+        filter: {
+          or: [
+            { name: "pk", operator: "eq", value: "user-2" },
+            { name: "total", operator: "eq", value: 10 },
+          ],
+        },
+      })) {
+        items.push(item);
+      }
+
+      // 5 user-2 items + 1 user-1 item with total=10 (order-000)
+      expect(items).toHaveLength(6);
+    });
+
+    it("should query with nested AND/OR filter", async () => {
+      const items: TestItem[] = [];
+      for await (const item of ds.query<TestItem>({
+        key: { name: "pk", value: "user-1" },
+        filter: {
+          or: [
+            {
+              and: [
+                { name: "status", operator: "eq", value: "active" },
+                { name: "total", operator: "le", value: 30 },
+              ],
+            },
+            { name: "total", operator: "eq", value: 200 },
+          ],
+        },
+      })) {
+        items.push(item);
+      }
+
+      // Active with total <= 30: indices 0 (10), 2 (30) = 2 items
+      // Total == 200: index 19 = 1 item
+      expect(items).toHaveLength(3);
+    });
+
+    it("should support OR condition in putItem", async () => {
+      await ds.putItem({ pk: "or-test", sk: "cond-put", status: "draft", total: 5 });
+
+      // Condition: status = "draft" OR total > 100 → should succeed (status matches)
+      await ds.putItem(
+        { pk: "or-test", sk: "cond-put", status: "published", total: 5 },
+        {
+          condition: {
+            or: [
+              { name: "status", operator: "eq", value: "draft" },
+              { name: "total", operator: "gt", value: 100 },
+            ],
+          },
+        },
+      );
+
+      const result = await ds.getItem<TestItem>({ pk: "or-test", sk: "cond-put" });
+      expect(result!.status).toBe("published");
+    });
+  });
+
   describe("batchGetItems", () => {
     it("should retrieve multiple items in one call", async () => {
       const result = await ds.batchGetItems<TestItem>([
