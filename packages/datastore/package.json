@@ -44,8 +44,8 @@
     "debug": "^4.4.0"
   },
   "devDependencies": {
-    "@aws-sdk/client-dynamodb": "^3.750.0",
-    "@aws-sdk/lib-dynamodb": "^3.750.0",
+    "@aws-sdk/client-dynamodb": "^3.1014.0",
+    "@aws-sdk/lib-dynamodb": "^3.1014.0",
     "reflect-metadata": "^0.2.0"
   },
   "peerDependencies": {
