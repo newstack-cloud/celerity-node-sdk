@@ -48,21 +48,17 @@ export class TelemetryLayer implements CelerityLayer<BaseHandlerContext> {
   private config: TelemetryConfig;
   private rootLogger: CelerityLoggerImpl | null = null;
   private currentLevel: LogLevel;
-  private initPromise: Promise<void> | null = null;
+  private tracingInitialised = false;
 
   constructor() {
     this.config = readTelemetryEnv();
     this.currentLevel = this.config.logLevel;
-
-    if (this.config.tracingEnabled) {
-      this.initPromise = initTelemetry();
-    }
   }
 
   async handle(context: BaseHandlerContext, next: () => Promise<unknown>): Promise<unknown> {
-    if (this.initPromise) {
-      await this.initPromise;
-      this.initPromise = null;
+    if (this.config.tracingEnabled && !this.tracingInitialised) {
+      await initTelemetry();
+      this.tracingInitialised = true;
     }
 
     if (!this.rootLogger) {

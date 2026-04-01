@@ -336,9 +336,10 @@ describe("TelemetryLayer", () => {
     expect(initTelemetry).not.toHaveBeenCalled();
   });
 
-  it("should start OTel init when tracing is enabled", () => {
+  it("should start OTel init when tracing is enabled", async () => {
     process.env.CELERITY_TELEMETRY_ENABLED = "true";
-    new TelemetryLayer();
+    const layer = new TelemetryLayer();
+    await layer.handle(createHandlerContext(), vi.fn());
     expect(initTelemetry).toHaveBeenCalledTimes(1);
   });
 
