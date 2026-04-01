@@ -143,8 +143,8 @@ export class TestRequest<TBody = unknown> {
     }
   }
 
-  /** Alias for end() — allows await directly on the chain. */
-  then<T>(
+  /** Implements PromiseLike so the request chain can be awaited directly. */
+  then<T>( // intentional thenable for fluent await syntax
     resolve: (value: TestResponse<TBody>) => T | PromiseLike<T>,
     reject?: (reason: unknown) => T | PromiseLike<T>,
   ): Promise<T> {
