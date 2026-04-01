@@ -76,7 +76,7 @@ function buildCrc16Table(): Uint16Array {
 function crc16(str: string): number {
   let crc = 0;
   for (let i = 0; i < str.length; i++) {
-    crc = ((crc << 8) ^ CRC16_TABLE[((crc >> 8) ^ str.charCodeAt(i)) & 0xff]) & 0xffff;
+    crc = ((crc << 8) ^ CRC16_TABLE[((crc >> 8) ^ str.codePointAt(i)!) & 0xff]) & 0xffff;
   }
   return crc;
 }
