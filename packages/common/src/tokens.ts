@@ -19,13 +19,13 @@ export const INJECT_METADATA = Symbol.for("celerity:inject");
 /** Metadata key for `@UseResource()` / resource-type param decorators. */
 export const USE_RESOURCE_METADATA = Symbol.for("celerity:useResource");
 
-// -- Resource layer token detection --
-// Resource decorators (@Datastore, @Bucket, @Cache, @Queue, @Topic,
-// @SqlDatabase) produce Symbol.for("celerity:<type>:<name>") tokens that are
-// registered lazily by system layers at runtime, not by user modules.
-// Both the runtime validator and CLI extractor need to recognise these tokens
-// to skip them during static dependency validation.
+// -- Runtime-provided token detection --
+// The runtime registers certain DI tokens (resource handles, WebSocket sender,
+// etc.) lazily at startup rather than through user module providers.
+// The module-graph validator and CLI extractor need to recognise these tokens
+// so they can be skipped during static dependency validation.
 
+/** Prefixes for resource layer tokens: Symbol.for("celerity:<type>:<name>") */
 const RESOURCE_TOKEN_PREFIXES = [
   "celerity:config:",
   "celerity:datastore:",
@@ -36,12 +36,28 @@ const RESOURCE_TOKEN_PREFIXES = [
   "celerity:sqlDatabase:",
 ];
 
+/** Exact symbol descriptions for other runtime-provided tokens. */
+const RUNTIME_PROVIDED_TOKENS = ["celerity:websocket-sender"];
+
 /**
- * Returns true if the given DI token is a resource layer token that will be
- * registered lazily by a system layer at runtime rather than by any user module.
+ * Returns true if the given DI token is provided by the runtime rather than
+ * by user modules. This includes resource layer tokens (datastore, bucket, etc.)
+ * and system services (WebSocketSender).
+ *
+ * Used by the module-graph validator to skip these tokens during static
+ * dependency analysis, since they are registered at runtime startup.
  */
-export function isResourceLayerToken(token: unknown): boolean {
+export function isRuntimeProvidedToken(token: unknown): boolean {
   if (typeof token !== "symbol") return false;
   const desc = token.description;
-  return desc != null && RESOURCE_TOKEN_PREFIXES.some((p) => desc.startsWith(p));
+  return (
+    desc != null &&
+    (RESOURCE_TOKEN_PREFIXES.some((p) => desc.startsWith(p)) ||
+      RUNTIME_PROVIDED_TOKENS.includes(desc))
+  );
 }
+
+/**
+ * @deprecated Use `isRuntimeProvidedToken` instead.
+ */
+export const isResourceLayerToken = isRuntimeProvidedToken;

@@ -7,5 +7,6 @@ export {
   INJECT_METADATA,
   USE_RESOURCE_METADATA,
   isResourceLayerToken,
+  isRuntimeProvidedToken,
 } from "./tokens";
 export { mapBucketEventType, mapDatastoreEventType } from "./event-type-mapping";
