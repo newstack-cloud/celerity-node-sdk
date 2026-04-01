@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/common/v0.7.0...common/v0.8.0) (2026-04-01)
+
+
+### Features
+
+* **common:** expand support for runtime provided tokens ([267b829](https://github.com/newstack-cloud/celerity-node-sdk/commit/267b829507ffab3f33bb9d769216c84280a28826))
+
 ## [0.7.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/common/v0.6.0...common/v0.7.0) (2026-03-20)
 
 

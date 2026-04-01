@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.7.0...core/v0.8.0) (2026-04-01)
+
+
+### Bug Fixes
+
+* **core:** update core bootstrap to use updated token check helper ([a710501](https://github.com/newstack-cloud/celerity-node-sdk/commit/a7105011561bc22847d197bca5560ba198a07fec))
+
 ## [0.7.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.6.0...core/v0.7.0) (2026-03-20)
 
 

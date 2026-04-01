@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/cli/v0.7.0...cli/v0.8.0) (2026-04-01)
+
+
+### Bug Fixes
+
+* **cli:** update extract cli to use updated token check helper ([27a0b81](https://github.com/newstack-cloud/celerity-node-sdk/commit/27a0b812b463e62b9c889369b8a5544341e6da15))
+
 ## [0.7.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/cli/v0.6.0...cli/v0.7.0) (2026-03-20)
 
 

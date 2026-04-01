@@ -1,6 +1,6 @@
 {
   "name": "@celerity-sdk/sql-database",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "SQL database credentials provider and Knex.js connection factory for the Celerity Node SDK",
   "license": "Apache-2.0",
   "repository": {
