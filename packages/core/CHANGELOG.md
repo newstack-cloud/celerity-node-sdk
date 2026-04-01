@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.8.0...core/v0.8.1) (2026-04-01)
+
+
+### Dependencies
+
+* **core:** update core runtime to 0.3.4 ([570101e](https://github.com/newstack-cloud/celerity-node-sdk/commit/570101e4c7548e86ac34c584a6463f6a8e3bc7aa))
+
 ## [0.8.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.7.0...core/v0.8.0) (2026-04-01)
 
 
