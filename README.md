@@ -23,6 +23,7 @@ The official Node.js SDK for building [Celerity](https://celerityframework.com) 
 | [`@celerity-sdk/serverless-aws`](./packages/serverless-aws) | AWS Lambda adapter, API Gateway v2 event mapping, serverless entry point |
 | [`@celerity-sdk/telemetry`](./packages/telemetry) | Observability: pino-based logger, OTel tracing, auto-instrumentation |
 | [`@celerity-sdk/cli`](./packages/cli) | Build-time extraction tool for decorator metadata |
+| [`@celerity-sdk/testing`](./packages/testing) | Testing utilities: test app factory, mock factories, HTTP/WebSocket clients, JWT generation |
 
 ## Contributing
 
