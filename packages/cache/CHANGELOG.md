@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/cache/v0.7.0...cache/v0.8.0) (2026-04-01)
+
+
+### Bug Fixes
+
+* **cache:** use unicode-aware string method for proper char handling ([7803ec6](https://github.com/newstack-cloud/celerity-node-sdk/commit/7803ec62af152528eba3a0648799c7875073c368))
+
 ## [0.7.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/cache/v0.6.0...cache/v0.7.0) (2026-03-20)
 
 

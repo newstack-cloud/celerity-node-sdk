@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/datastore/v0.7.0...datastore/v0.8.0) (2026-04-01)
+
+
+### Miscellaneous
+
+* **datastore:** Synchronize celerity-sdk versions
+
 ## [0.7.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/datastore/v0.6.0...datastore/v0.7.0) (2026-03-20)
 
 
