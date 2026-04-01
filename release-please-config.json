@@ -28,7 +28,8 @@
         "cache",
         "serverless-aws",
         "telemetry",
-        "cli"
+        "cli",
+        "testing"
       ]
     }
   ],
@@ -97,6 +98,11 @@
       "release-type": "node",
       "component": "cli",
       "package-name": "@celerity-sdk/cli"
+    },
+    "packages/testing": {
+      "release-type": "node",
+      "component": "testing",
+      "package-name": "@celerity-sdk/testing"
     }
   }
 }

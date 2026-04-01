@@ -42,7 +42,8 @@
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.0.0",
     "unplugin-swc": "^1.5.9",
-    "vitest": "^3.0.0"
+    "vitest": "^3.0.0",
+    "ws": "^8.20.0"
   },
   "pnpm": {
     "overrides": {

@@ -11,5 +11,6 @@
   "packages/cache": "0.7.0",
   "packages/serverless-aws": "0.7.0",
   "packages/telemetry": "0.7.0",
-  "packages/cli": "0.7.0"
+  "packages/cli": "0.7.0",
+  "packages/testing": "0.7.0"
 }

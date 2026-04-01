@@ -1,0 +1,96 @@
+{
+  "name": "@celerity-sdk/testing",
+  "version": "0.6.0",
+  "description": "Testing utilities for Celerity applications — createTestApp, mock factories, JWT generation, and HTTP client",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/newstack-cloud/celerity-node-sdk.git",
+    "directory": "packages/testing"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@celerity-sdk/common": "workspace:^",
+    "@celerity-sdk/config": "workspace:^",
+    "@celerity-sdk/core": "workspace:^",
+    "@celerity-sdk/types": "workspace:^",
+    "jose": "^6.0.0",
+    "js-yaml": "^4.1.0",
+    "strip-json-comments": "^5.0.3"
+  },
+  "devDependencies": {
+    "@celerity-sdk/bucket": "workspace:^",
+    "@celerity-sdk/cache": "workspace:^",
+    "@celerity-sdk/datastore": "workspace:^",
+    "@celerity-sdk/queue": "workspace:^",
+    "@celerity-sdk/sql-database": "workspace:^",
+    "@celerity-sdk/topic": "workspace:^",
+    "@celerity-sdk/ws-client": "^0.3.0",
+    "@types/js-yaml": "^4.0.9",
+    "reflect-metadata": "^0.2.0"
+  },
+  "peerDependencies": {
+    "@celerity-sdk/bucket": "workspace:^",
+    "@celerity-sdk/cache": "workspace:^",
+    "@celerity-sdk/datastore": "workspace:^",
+    "@celerity-sdk/queue": "workspace:^",
+    "@celerity-sdk/sql-database": "workspace:^",
+    "@celerity-sdk/topic": "workspace:^",
+    "@celerity-sdk/ws-client": "^0.3.1",
+    "reflect-metadata": "^0.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@celerity-sdk/ws-client": {
+      "optional": true
+    },
+    "@celerity-sdk/datastore": {
+      "optional": true
+    },
+    "@celerity-sdk/bucket": {
+      "optional": true
+    },
+    "@celerity-sdk/cache": {
+      "optional": true
+    },
+    "@celerity-sdk/queue": {
+      "optional": true
+    },
+    "@celerity-sdk/topic": {
+      "optional": true
+    },
+    "@celerity-sdk/sql-database": {
+      "optional": true
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
