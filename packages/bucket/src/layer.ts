@@ -16,9 +16,9 @@ const debug = createDebug("celerity:bucket");
  * System layer that auto-registers {@link ObjectStorage} and per-resource
  * {@link Bucket} handles in the DI container.
  *
- * Reads resource link topology from `CELERITY_RESOURCE_LINKS` and resolves
- * actual bucket names from the ConfigService "resources" namespace.
- * Must run after ConfigLayer in the layer pipeline.
+ * Reads resource link topology from the Celerity CLI-generated resource
+ * links file and resolves actual bucket names from the ConfigService
+ * "resources" namespace. Must run after ConfigLayer in the layer pipeline.
  */
 export class ObjectStorageLayer implements CelerityLayer<BaseHandlerContext> {
   private initialized = false;

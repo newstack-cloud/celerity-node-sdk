@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { BaseHandlerContext, ServiceContainer } from "@celerity-sdk/types";
 import { queueToken, DEFAULT_QUEUE_TOKEN } from "../src/decorators";
 
@@ -75,10 +75,6 @@ describe("QueueLayer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockQueueClient.queue.mockImplementation((name: string) => mockQueue(name));
-  });
-
-  afterEach(() => {
-    delete process.env.CELERITY_RESOURCE_LINKS;
   });
 
   it("registers QueueClient in the container", async () => {

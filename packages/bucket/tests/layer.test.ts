@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { BaseHandlerContext, ServiceContainer } from "@celerity-sdk/types";
 import { bucketToken, DEFAULT_BUCKET_TOKEN } from "../src/decorators";
 
@@ -75,10 +75,6 @@ describe("ObjectStorageLayer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockStorage.bucket.mockImplementation((name: string) => mockBucket(name));
-  });
-
-  afterEach(() => {
-    delete process.env.CELERITY_RESOURCE_LINKS;
   });
 
   it("registers ObjectStorage in the container", async () => {

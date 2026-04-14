@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { BaseHandlerContext, ServiceContainer } from "@celerity-sdk/types";
 import { cacheToken, cacheCredentialsToken, cacheClientToken, DEFAULT_CACHE_TOKEN, DEFAULT_CACHE_CREDENTIALS_TOKEN } from "../src/decorators";
 
@@ -100,10 +100,6 @@ describe("CacheLayer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCacheClient.cache.mockImplementation((name: string) => mockCache(name));
-  });
-
-  afterEach(() => {
-    delete process.env.CELERITY_RESOURCE_LINKS;
   });
 
   it("does nothing when there are no cache links", async () => {

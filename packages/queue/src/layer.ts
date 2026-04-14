@@ -16,9 +16,10 @@ const debug = createDebug("celerity:queue");
  * System layer that auto-registers {@link QueueClient} and per-resource
  * {@link Queue} handles in the DI container.
  *
- * Reads resource link topology from `CELERITY_RESOURCE_LINKS` and resolves
- * actual queue URLs / stream names from the ConfigService "resources" namespace.
- * Must run after ConfigLayer in the layer pipeline.
+ * Reads resource link topology from the Celerity CLI-generated resource
+ * links file and resolves actual queue URLs / stream names from the
+ * ConfigService "resources" namespace. Must run after ConfigLayer in the
+ * layer pipeline.
  */
 export class QueueLayer implements CelerityLayer<BaseHandlerContext> {
   private initialized = false;

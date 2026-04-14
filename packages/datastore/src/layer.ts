@@ -16,9 +16,10 @@ const debug = createDebug("celerity:datastore");
  * System layer that auto-registers {@link DatastoreClient} and per-resource
  * {@link Datastore} handles in the DI container.
  *
- * Reads resource link topology from `CELERITY_RESOURCE_LINKS` and resolves
- * actual table/collection names from the ConfigService "resources" namespace.
- * Must run after ConfigLayer in the layer pipeline.
+ * Reads resource link topology from the Celerity CLI-generated resource
+ * links file and resolves actual table/collection names from the
+ * ConfigService "resources" namespace. Must run after ConfigLayer in the
+ * layer pipeline.
  */
 type DatastoreLayerConfig = {
   deployTarget: string | undefined;

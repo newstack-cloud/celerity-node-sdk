@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { BaseHandlerContext, ServiceContainer } from "@celerity-sdk/types";
 import { datastoreToken, DEFAULT_DATASTORE_TOKEN } from "../src/decorators";
 
@@ -75,10 +75,6 @@ describe("DatastoreLayer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockClient.datastore.mockImplementation((name: string) => mockDatastoreHandle(name));
-  });
-
-  afterEach(() => {
-    delete process.env.CELERITY_RESOURCE_LINKS;
   });
 
   it("registers DatastoreClient in the container", async () => {

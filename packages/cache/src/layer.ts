@@ -38,9 +38,9 @@ const debug = createDebug("celerity:cache");
  * System layer that auto-registers per-resource {@link Cache} and
  * {@link CacheCredentials} handles in the DI container.
  *
- * Reads resource link topology from `CELERITY_RESOURCE_LINKS` and resolves
- * connection config from the ConfigService "resources" namespace.
- * Must run after ConfigLayer in the layer pipeline.
+ * Reads resource link topology from the Celerity CLI-generated resource
+ * links file and resolves connection config from the ConfigService
+ * "resources" namespace. Must run after ConfigLayer in the layer pipeline.
  */
 export class CacheLayer implements CelerityLayer<BaseHandlerContext> {
   private initialized = false;

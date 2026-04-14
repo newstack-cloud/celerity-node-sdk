@@ -30,7 +30,7 @@ describe("createDefaultSystemLayers", () => {
     expect(classNames).toContain("ConfigLayer");
   });
 
-  it("does not include resource layers when CELERITY_RESOURCE_LINKS is absent", async () => {
+  it("does not include resource layers when the resource links file is empty", async () => {
     mockedCaptureResourceLinks.mockReturnValue(new Map());
     mockedGetResourceTypes.mockReturnValue(new Set());
 

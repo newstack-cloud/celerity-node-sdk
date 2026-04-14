@@ -26,7 +26,7 @@ export async function createDefaultSystemLayers(): Promise<CelerityLayer[]> {
 
   layers.push(new ConfigLayer());
 
-  // Resource layers — driven by CELERITY_RESOURCE_LINKS topology.
+  // Resource layers — driven by the CLI-generated resource links file.
   // Each loads AFTER config so it can resolve identifiers via ConfigService.
   const links = captureResourceLinks();
   const resourceTypes = getResourceTypes(links);

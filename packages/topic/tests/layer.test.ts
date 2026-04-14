@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { BaseHandlerContext, ServiceContainer } from "@celerity-sdk/types";
 import { topicToken, DEFAULT_TOPIC_TOKEN } from "../src/decorators";
 
@@ -75,10 +75,6 @@ describe("TopicLayer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockTopicClient.topic.mockImplementation((name: string) => mockTopic(name));
-  });
-
-  afterEach(() => {
-    delete process.env.CELERITY_RESOURCE_LINKS;
   });
 
   it("registers TopicClient in the container", async () => {

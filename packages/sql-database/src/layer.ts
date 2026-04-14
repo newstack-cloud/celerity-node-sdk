@@ -35,9 +35,10 @@ const debug = createDebug("celerity:sql-database");
  * System layer that auto-registers per-resource SQL database instances
  * in the DI container.
  *
- * Reads resource link topology from `CELERITY_RESOURCE_LINKS` and resolves
- * connection credentials + pool config from the ConfigService "resources"
- * namespace. Must run after ConfigLayer in the layer pipeline.
+ * Reads resource link topology from the Celerity CLI-generated resource
+ * links file and resolves connection credentials + pool config from the
+ * ConfigService "resources" namespace. Must run after ConfigLayer in the
+ * layer pipeline.
  */
 export class SqlDatabaseLayer implements CelerityLayer<BaseHandlerContext> {
   private initialized = false;
