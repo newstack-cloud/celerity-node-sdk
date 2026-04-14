@@ -1,6 +1,6 @@
 {
   "name": "@celerity-sdk/datastore",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "NoSQL data store abstraction for the Celerity Node SDK (DynamoDB / Cloud Firestore / Cosmos DB)",
   "license": "Apache-2.0",
   "repository": {

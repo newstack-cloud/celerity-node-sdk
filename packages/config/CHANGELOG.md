@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.2](https://github.com/newstack-cloud/celerity-node-sdk/compare/config/v0.8.1...config/v0.8.2) (2026-04-14)
+
+
+### Bug Fixes
+
+* **config:** resolve resource links from cli generated file ([bc0539d](https://github.com/newstack-cloud/celerity-node-sdk/commit/bc0539dd38919fe0421c9e9f6553275f6762b893))
+
 ## [0.8.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/config/v0.8.0...config/v0.8.1) (2026-04-01)
 
 
