@@ -15,6 +15,7 @@
     "isolatedModules": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
+    "types": ["node"],
     "outDir": "./dist",
     "rootDir": "./src"
   }

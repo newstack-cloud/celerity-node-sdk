@@ -1,14 +1,25 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, it, expect, afterEach, beforeEach } from "vitest";
 import {
   captureResourceLinks,
   getLinksOfType,
   getResourceTypes,
   RESOURCE_CONFIG_NAMESPACE,
+  RESOURCE_LINKS_FILENAME,
 } from "../src/resource-links";
 
 describe("resource-links", () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), "celerity-resource-links-"));
+  });
+
   afterEach(() => {
-    delete process.env.CELERITY_RESOURCE_LINKS;
+    delete process.env.CELERITY_RESOURCE_LINKS_PATH;
+    rmSync(tmpDir, { recursive: true, force: true });
   });
 
   describe("RESOURCE_CONFIG_NAMESPACE", () => {
@@ -18,21 +29,25 @@ describe("resource-links", () => {
   });
 
   describe("captureResourceLinks", () => {
-    it("returns an empty map when env var is not set", () => {
-      const links = captureResourceLinks();
-      expect(links.size).toBe(0);
-    });
+    const writeLinksFile = (contents: string): string => {
+      const path = join(tmpDir, RESOURCE_LINKS_FILENAME);
+      writeFileSync(path, contents, "utf8");
+      process.env.CELERITY_RESOURCE_LINKS_PATH = path;
+      return path;
+    };
 
-    it("returns an empty map when env var is an empty string", () => {
-      process.env.CELERITY_RESOURCE_LINKS = "";
+    it("parses an empty object file", () => {
+      writeLinksFile("{}");
       const links = captureResourceLinks();
       expect(links.size).toBe(0);
     });
 
     it("parses a single resource link", () => {
-      process.env.CELERITY_RESOURCE_LINKS = JSON.stringify({
-        imagesBucket: { type: "bucket", configKey: "imagesBucket" },
-      });
+      writeLinksFile(
+        JSON.stringify({
+          imagesBucket: { type: "bucket", configKey: "imagesBucket" },
+        }),
+      );
 
       const links = captureResourceLinks();
 
@@ -44,11 +59,13 @@ describe("resource-links", () => {
     });
 
     it("parses multiple resource links of different types", () => {
-      process.env.CELERITY_RESOURCE_LINKS = JSON.stringify({
-        imagesBucket: { type: "bucket", configKey: "imagesBucket" },
-        orderQueue: { type: "queue", configKey: "orderQueue" },
-        sessionCache: { type: "cache", configKey: "sessionCache" },
-      });
+      writeLinksFile(
+        JSON.stringify({
+          imagesBucket: { type: "bucket", configKey: "imagesBucket" },
+          orderQueue: { type: "queue", configKey: "orderQueue" },
+          sessionCache: { type: "cache", configKey: "sessionCache" },
+        }),
+      );
 
       const links = captureResourceLinks();
 
@@ -58,9 +75,14 @@ describe("resource-links", () => {
       expect(links.get("sessionCache")?.type).toBe("cache");
     });
 
-    it("throws on invalid JSON", () => {
-      process.env.CELERITY_RESOURCE_LINKS = "not-json";
-      expect(() => captureResourceLinks()).toThrow();
+    it("throws when the file is missing", () => {
+      process.env.CELERITY_RESOURCE_LINKS_PATH = join(tmpDir, "does-not-exist.json");
+      expect(() => captureResourceLinks()).toThrow(/resource links file not found/);
+    });
+
+    it("throws when the file contains invalid JSON", () => {
+      writeLinksFile("not-json");
+      expect(() => captureResourceLinks()).toThrow(/not valid JSON/);
     });
   });
 
