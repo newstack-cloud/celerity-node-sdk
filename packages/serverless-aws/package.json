@@ -51,7 +51,7 @@
     "@celerity-sdk/common": "workspace:^",
     "@celerity-sdk/core": "workspace:^",
     "@celerity-sdk/types": "workspace:^",
-    "@aws-sdk/util-dynamodb": "^3.750.0",
+    "@aws-sdk/util-dynamodb": "^3.996.2",
     "debug": "^4.4.0"
   },
   "peerDependencies": {
@@ -63,7 +63,7 @@
     }
   },
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.160"
+    "@types/aws-lambda": "^8.10.161"
   },
   "publishConfig": {
     "access": "public"
