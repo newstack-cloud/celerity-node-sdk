@@ -35,6 +35,15 @@ vi.mock("@celerity-sdk/runtime", () => ({
   runtimeConfigFromEnv: (...args: unknown[]) => mockRuntimeConfigFromEnv(...args),
 }));
 
+vi.mock("@celerity-sdk/config", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    captureResourceLinks: vi.fn(() => new Map()),
+    getResourceTypes: vi.fn(() => new Set()),
+  };
+});
+
 // Import after mock setup
 const { startRuntime } = await import("../../src/bootstrap/runtime-orchestrator");
 

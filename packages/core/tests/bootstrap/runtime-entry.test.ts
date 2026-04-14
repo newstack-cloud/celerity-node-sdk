@@ -14,7 +14,7 @@ afterEach(() => {
 describe("bootstrapForRuntime", () => {
   it("bootstraps the module and returns registry and container", async () => {
     const modulePath = resolve(fixturesDir, "test-module.ts");
-    const result = await bootstrapForRuntime(modulePath);
+    const result = await bootstrapForRuntime(modulePath, []);
 
     expect(result.container).toBeInstanceOf(Container);
     expect(result.registry).toBeInstanceOf(HandlerRegistry);
@@ -22,7 +22,7 @@ describe("bootstrapForRuntime", () => {
 
   it("creates a route callback for a matching handler", async () => {
     const modulePath = resolve(fixturesDir, "test-module.ts");
-    const result = await bootstrapForRuntime(modulePath);
+    const result = await bootstrapForRuntime(modulePath, []);
 
     const callback = result.createRouteCallback("GET", "/health");
     expect(callback).toBeTypeOf("function");
@@ -30,7 +30,7 @@ describe("bootstrapForRuntime", () => {
 
   it("returns null for an unmatched route", async () => {
     const modulePath = resolve(fixturesDir, "test-module.ts");
-    const result = await bootstrapForRuntime(modulePath);
+    const result = await bootstrapForRuntime(modulePath, []);
 
     const callback = result.createRouteCallback("GET", "/nonexistent");
     expect(callback).toBeNull();
@@ -38,7 +38,7 @@ describe("bootstrapForRuntime", () => {
 
   it("route callback maps runtime request and returns runtime response", async () => {
     const modulePath = resolve(fixturesDir, "test-module.ts");
-    const result = await bootstrapForRuntime(modulePath);
+    const result = await bootstrapForRuntime(modulePath, []);
 
     const callback = result.createRouteCallback("GET", "/health");
     expect(callback).not.toBeNull();
@@ -74,14 +74,14 @@ describe("bootstrapForRuntime", () => {
 
   it("uses CELERITY_MODULE_PATH env var when no explicit path", async () => {
     process.env.CELERITY_MODULE_PATH = resolve(fixturesDir, "test-module.ts");
-    const result = await bootstrapForRuntime();
+    const result = await bootstrapForRuntime(undefined, []);
 
     expect(result.registry.getHandler("http", "GET /health")).toBeDefined();
   });
 
   it("creates a route callback by handler ID", async () => {
     const modulePath = resolve(fixturesDir, "test-module.ts");
-    const result = await bootstrapForRuntime(modulePath);
+    const result = await bootstrapForRuntime(modulePath, []);
 
     const callback = await result.createRouteCallbackById("app.module.getOrder");
     expect(callback).toBeTypeOf("function");
@@ -89,7 +89,7 @@ describe("bootstrapForRuntime", () => {
 
   it("returns null for an unmatched handler ID", async () => {
     const modulePath = resolve(fixturesDir, "test-module.ts");
-    const result = await bootstrapForRuntime(modulePath);
+    const result = await bootstrapForRuntime(modulePath, []);
 
     const callback = await result.createRouteCallbackById("app.module.nonexistent");
     expect(callback).toBeNull();
@@ -97,7 +97,7 @@ describe("bootstrapForRuntime", () => {
 
   it("ID-based route callback maps request and returns response", async () => {
     const modulePath = resolve(fixturesDir, "test-module.ts");
-    const result = await bootstrapForRuntime(modulePath);
+    const result = await bootstrapForRuntime(modulePath, []);
 
     const callback = await result.createRouteCallbackById("app.module.getOrder");
     expect(callback).not.toBeNull();
@@ -134,7 +134,7 @@ describe("bootstrapForRuntime", () => {
   describe("module resolution fallback", () => {
     it("resolves a plain function export via dynamic import", async () => {
       const modulePath = resolve(fixturesDir, "test-module.ts");
-      const result = await bootstrapForRuntime(modulePath);
+      const result = await bootstrapForRuntime(modulePath, []);
 
       const callback = await result.createRouteCallbackById(
         "standalone-handlers.hello",
@@ -145,7 +145,7 @@ describe("bootstrapForRuntime", () => {
 
     it("resolves a FunctionHandlerDefinition export via dynamic import", async () => {
       const modulePath = resolve(fixturesDir, "test-module.ts");
-      const result = await bootstrapForRuntime(modulePath);
+      const result = await bootstrapForRuntime(modulePath, []);
 
       const callback = await result.createRouteCallbackById(
         "standalone-handlers.goodbye",
@@ -156,7 +156,7 @@ describe("bootstrapForRuntime", () => {
 
     it("matches registry handler by function reference and assigns ID", async () => {
       const modulePath = resolve(fixturesDir, "no-id-module.ts");
-      const result = await bootstrapForRuntime(modulePath);
+      const result = await bootstrapForRuntime(modulePath, []);
 
       // The greet handler is in the registry (registered via @Module) but has no id.
       const handler = result.registry.getAllHandlers().find((h) => h.isFunctionHandler);
@@ -177,7 +177,7 @@ describe("bootstrapForRuntime", () => {
 
     it("resolves default export when handler reference has no dot", async () => {
       const modulePath = resolve(fixturesDir, "test-module.ts");
-      const result = await bootstrapForRuntime(modulePath);
+      const result = await bootstrapForRuntime(modulePath, []);
 
       const callback = await result.createRouteCallbackById("default-handler", fixturesDir);
       expect(callback).toBeTypeOf("function");
@@ -185,7 +185,7 @@ describe("bootstrapForRuntime", () => {
 
     it("resolves dotted module name as default export when named split fails", async () => {
       const modulePath = resolve(fixturesDir, "test-module.ts");
-      const result = await bootstrapForRuntime(modulePath);
+      const result = await bootstrapForRuntime(modulePath, []);
 
       // "dotted.module" has a dot, so the code first tries module="dotted", export="module"
       // which fails (no "dotted" module), then falls back to treating the full string
@@ -196,7 +196,7 @@ describe("bootstrapForRuntime", () => {
 
     it("returns null when module does not exist", async () => {
       const modulePath = resolve(fixturesDir, "test-module.ts");
-      const result = await bootstrapForRuntime(modulePath);
+      const result = await bootstrapForRuntime(modulePath, []);
 
       const callback = await result.createRouteCallbackById(
         "nonexistent-module.handler",
@@ -207,7 +207,7 @@ describe("bootstrapForRuntime", () => {
 
     it("returns null when export does not exist in module", async () => {
       const modulePath = resolve(fixturesDir, "test-module.ts");
-      const result = await bootstrapForRuntime(modulePath);
+      const result = await bootstrapForRuntime(modulePath, []);
 
       const callback = await result.createRouteCallbackById(
         "standalone-handlers.missingExport",
@@ -218,7 +218,7 @@ describe("bootstrapForRuntime", () => {
 
     it("returns null when export is not a function", async () => {
       const modulePath = resolve(fixturesDir, "test-module.ts");
-      const result = await bootstrapForRuntime(modulePath);
+      const result = await bootstrapForRuntime(modulePath, []);
 
       const callback = await result.createRouteCallbackById(
         "standalone-handlers.notAHandler",
@@ -229,7 +229,7 @@ describe("bootstrapForRuntime", () => {
 
     it("uses moduleDir as fallback when no codeLocation is provided", async () => {
       const modulePath = resolve(fixturesDir, "test-module.ts");
-      const result = await bootstrapForRuntime(modulePath);
+      const result = await bootstrapForRuntime(modulePath, []);
 
       // moduleDir is dirname of the modulePath (fixturesDir), so this should
       // resolve standalone-handlers from the fixtures directory.
