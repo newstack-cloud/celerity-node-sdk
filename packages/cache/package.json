@@ -47,7 +47,7 @@
     "ioredis": "^5.4.0",
     "reflect-metadata": "^0.2.0",
     "@smithy/signature-v4": "^4.0.0",
-    "@smithy/protocol-http": "^4.0.0",
+    "@smithy/protocol-http": "^5.3.14",
     "@aws-crypto/sha256-js": "^5.0.0",
     "@aws-sdk/credential-provider-node": "^3.750.0"
   },
@@ -55,7 +55,7 @@
     "ioredis": "^5.0.0",
     "reflect-metadata": "^0.2.0",
     "@smithy/signature-v4": "^4.0.0",
-    "@smithy/protocol-http": "^4.0.0",
+    "@smithy/protocol-http": "^5.3.14",
     "@aws-crypto/sha256-js": "^5.0.0",
     "@aws-sdk/credential-provider-node": "^3.0.0"
   },
