@@ -42,7 +42,7 @@
     "@celerity-sdk/config": "workspace:^",
     "@celerity-sdk/core": "workspace:^",
     "@celerity-sdk/types": "workspace:^",
-    "jose": "^6.0.0",
+    "jose": "^6.2.3",
     "js-yaml": "^4.1.0",
     "strip-json-comments": "^5.0.3"
   },
