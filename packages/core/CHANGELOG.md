@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.3](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.8.2...core/v0.8.3) (2026-06-05)
+
+
+### Dependencies
+
+* **core:** address vulnerable dependencies and fix test failures ([97b0667](https://github.com/newstack-cloud/celerity-node-sdk/commit/97b0667edd48b3b7cd18f4bc3b038fb74a2bb0e4))
+* **core:** bump runtime lib to 0.3.5 ([0182f91](https://github.com/newstack-cloud/celerity-node-sdk/commit/0182f913b90bf0204edac8a06011f2cc64fbef31))
+
 ## [0.8.2](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.8.1...core/v0.8.2) (2026-04-14)
 
 
