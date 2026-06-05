@@ -54,7 +54,9 @@ describe("CONNECTION_PRESETS", () => {
 describe("resolveConnectionOverrides", () => {
   function mockNamespace(values: Record<string, string | undefined>): ConfigNamespace {
     return {
-      get: vi.fn().mockImplementation((key: string) => Promise.resolve(values[key])),
+      get: vi.fn().mockImplementation(function (key: string) {
+        return Promise.resolve(values[key]);
+      }),
       getOrThrow: vi.fn(),
       getAll: vi.fn(),
       parse: vi.fn(),

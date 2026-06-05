@@ -23,14 +23,16 @@ vi.mock("@celerity-sdk/sql-database", () => ({
   createKnexInstance: vi.fn(),
 }));
 vi.mock("@celerity-sdk/config", () => ({
-  ConfigNamespaceImpl: vi.fn().mockImplementation((_backend: unknown, storeId: string) => ({
-    __storeId: storeId,
-  })),
+  ConfigNamespaceImpl: vi.fn().mockImplementation(function (_backend: unknown, storeId: string) {
+    return {
+      __storeId: storeId,
+    };
+  }),
   LocalConfigBackend: vi.fn(),
 }));
 
 beforeEach(() => {
-  vi.restoreAllMocks();
+  vi.clearAllMocks();
 });
 
 function makeToken(type: string, name: string): ResourceTokenInfo {

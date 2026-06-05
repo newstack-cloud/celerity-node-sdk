@@ -4,14 +4,16 @@ const mockStart = vi.fn();
 const mockShutdown = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@opentelemetry/sdk-node", () => ({
-  NodeSDK: vi.fn().mockImplementation(() => ({
-    start: mockStart,
-    shutdown: mockShutdown,
-  })),
+  NodeSDK: vi.fn().mockImplementation(function () {
+    return {
+      start: mockStart,
+      shutdown: mockShutdown,
+    };
+  }),
 }));
 
 vi.mock("@opentelemetry/resources", () => ({
-  resourceFromAttributes: vi.fn().mockImplementation((attrs: unknown) => ({ attributes: attrs })),
+  resourceFromAttributes: vi.fn().mockImplementation(function (attrs: unknown) { return { attributes: attrs }; }),
 }));
 
 vi.mock("@opentelemetry/sdk-logs", () => ({

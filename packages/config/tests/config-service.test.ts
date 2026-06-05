@@ -192,9 +192,11 @@ describe("ConfigNamespace", () => {
         fetch: vi
           .fn()
           .mockResolvedValueOnce(new Map([["KEY", "old"]]))
-          .mockImplementation(
-            () => new Promise((resolve) => setTimeout(() => resolve(new Map([["KEY", "new"]])), 100)),
-          ),
+          .mockImplementation(function () {
+            return new Promise((resolve) =>
+              setTimeout(() => resolve(new Map([["KEY", "new"]])), 100),
+            );
+          }),
       };
 
       const ns = new ConfigNamespaceImpl(slowBackend, "store", 0);

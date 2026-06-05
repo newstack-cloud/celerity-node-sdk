@@ -9,7 +9,9 @@ function mockClient() {
 function mockTracer() {
   return {
     startSpan: vi.fn(),
-    withSpan: vi.fn().mockImplementation((_name, fn, _attrs) => fn()),
+    withSpan: vi.fn().mockImplementation(function (_name, fn, _attrs) {
+      return fn();
+    }),
   };
 }
 

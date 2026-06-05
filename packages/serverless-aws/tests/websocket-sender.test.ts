@@ -5,9 +5,11 @@ const { mockSend, mockApiGatewayManagementApiClient, mockPostToConnectionCommand
   () => {
     const mockSend = vi.fn().mockResolvedValue({});
     const mockPostToConnectionCommand = vi.fn();
-    const mockApiGatewayManagementApiClient = vi.fn(() => ({
-      send: mockSend,
-    }));
+    const mockApiGatewayManagementApiClient = vi.fn(function () {
+      return {
+        send: mockSend,
+      };
+    });
     return { mockSend, mockApiGatewayManagementApiClient, mockPostToConnectionCommand };
   },
 );

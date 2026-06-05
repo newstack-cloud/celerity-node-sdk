@@ -5,7 +5,9 @@ import { cacheToken, cacheCredentialsToken, DEFAULT_CACHE_TOKEN, DEFAULT_CACHE_C
 
 function mockContainer(resolveImpl: (token: unknown) => unknown): ServiceContainer {
   return {
-    resolve: vi.fn().mockImplementation((token: unknown) => Promise.resolve(resolveImpl(token))),
+    resolve: vi.fn().mockImplementation(function (token: unknown) {
+      return Promise.resolve(resolveImpl(token));
+    }),
     register: vi.fn(),
     has: vi.fn(),
     closeAll: vi.fn(),

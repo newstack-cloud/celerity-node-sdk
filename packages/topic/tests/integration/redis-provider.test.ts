@@ -3,77 +3,176 @@ import Redis from "ioredis";
 import { RedisTopicClient } from "../../src/providers/redis/redis-topic-client";
 import { TopicError } from "../../src/errors";
 
-const REDIS_URL = "redis://localhost:6399";
+// Explicit IPv4 loopback to avoid per-connection DNS variance.
+const REDIS_URL = "redis://127.0.0.1:6399";
 const TEST_TOPIC = "test-topic-channel";
 const TEST_CHANNEL = `celerity:topic:channel:${TEST_TOPIC}`;
 
-const client = new RedisTopicClient({ url: REDIS_URL });
+// Internal payloads (matched by prefix) used to exercise the path; filtered out
+// of collected messages.
+const SENTINEL_PREFIX = "__celerity_sentinel__";
+const READY_SENTINEL = `${SENTINEL_PREFIX}ready`;
+const PROBE_SENTINEL = `${SENTINEL_PREFIX}probe`;
 
-// Subscriber Redis client for verification
+const client = new RedisTopicClient({ url: REDIS_URL });
 const subscriber = new Redis(REDIS_URL);
+const sentinelPublisher = new Redis(REDIS_URL);
 
 afterAll(async () => {
   await client.close();
   await subscriber.quit();
+  await sentinelPublisher.quit();
 });
 
-/**
- * Subscribes to a channel and collects messages until the expected count
- * is reached or the timeout expires.
- *
- * Returns `{ subscribed, messages }`:
- *  - `subscribed` resolves once the SUBSCRIBE command has been acknowledged.
- *     **Await this before publishing** to eliminate the sub/pub race.
- *  - `messages` resolves with the collected messages array.
- */
-function collectMessages(
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+// Resolve once the connection's init sequence is done. Subscribing before "ready"
+// lets SUBSCRIBE race ioredis's init commands, which the server then rejects with
+// "Connection in subscriber mode", dropping the connection and its subscription.
+const whenReady = (conn: Redis): Promise<void> =>
+  conn.status === "ready"
+    ? Promise.resolve()
+    : new Promise<void>((resolve) => conn.once("ready", () => resolve()));
+
+function describeSocket(conn: Redis): string {
+  const stream = (conn as unknown as { stream?: import("node:net").Socket }).stream;
+  if (!stream) return "no-stream";
+  return `${stream.remoteAddress ?? "?"}:${stream.remotePort ?? "?"}(${stream.remoteFamily ?? "?"})`;
+}
+
+// `ready` resolves once a sentinel has round-tripped (proving the subscription is
+// live, await before publishing). `messages` resolves with collected messages,
+// or rejects with diagnostics on timeout. The collect deadline starts only after
+// readiness, so a slow handshake can't eat the collection budget.
+function subscribeAndCollect(
   channel: string,
   expectedCount: number,
-  timeoutMs = 5000,
-): { subscribed: Promise<void>; messages: Promise<string[]> } {
-  let resolveSubscribed!: () => void;
-  const subscribed = new Promise<void>((r) => {
-    resolveSubscribed = r;
+  readyTimeoutMs = 6_000,
+  collectTimeoutMs = 7_000,
+): { ready: Promise<void>; messages: Promise<string[]> } {
+  const collected: string[] = [];
+  let sentinelSeen = false;
+  let settled = false;
+  let collectTimer: ReturnType<typeof setTimeout> | undefined;
+
+  let resolveReady!: () => void;
+  let rejectReady!: (err: Error) => void;
+  const ready = new Promise<void>((resolve, reject) => {
+    resolveReady = resolve;
+    rejectReady = reject;
   });
 
-  const messages = new Promise<string[]>((resolve) => {
-    const collected: string[] = [];
-    let timer: ReturnType<typeof setTimeout>;
+  let resolveMessages!: (messages: string[]) => void;
+  let rejectMessages!: (err: Error) => void;
+  const messages = new Promise<string[]>((resolve, reject) => {
+    resolveMessages = resolve;
+    rejectMessages = reject;
+  });
 
-    const handler = (ch: string, message: string) => {
-      if (ch === channel) {
-        collected.push(message);
-        if (collected.length >= expectedCount) {
-          clearTimeout(timer);
-          subscriber.removeListener("message", handler);
-          subscriber.unsubscribe(channel).then(() => resolve(collected));
-        }
+  const cleanup = () => {
+    settled = true;
+    if (collectTimer) clearTimeout(collectTimer);
+    if (readyTimer) clearTimeout(readyTimer);
+    subscriber.removeListener("message", handler);
+    void subscriber.unsubscribe(channel);
+  };
+
+  const handler = (ch: string, message: string) => {
+    if (ch !== channel) return;
+
+    if (message.startsWith(SENTINEL_PREFIX)) {
+      if (!sentinelSeen) {
+        sentinelSeen = true;
+        if (readyTimer) clearTimeout(readyTimer);
+        resolveReady();
       }
-    };
+      return;
+    }
 
-    subscriber.on("message", handler);
+    collected.push(message);
+    if (collected.length >= expectedCount) {
+      cleanup();
+      resolveMessages(collected);
+    }
+  };
 
-    subscriber.subscribe(channel).then(() => {
-      resolveSubscribed();
-      timer = setTimeout(() => {
-        subscriber.removeListener("message", handler);
-        subscriber.unsubscribe(channel).then(() => resolve(collected));
-      }, timeoutMs);
-    });
+  subscriber.on("message", handler);
+
+  const readyTimer = setTimeout(() => {
+    if (settled) return;
+    cleanup();
+    const err = new Error(
+      `Readiness handshake failed after ${readyTimeoutMs}ms on "${channel}": ` +
+        `subscriber status=${subscriber.status}, sentinelSeen=${sentinelSeen}`,
+    );
+    rejectReady(err);
+    rejectMessages(err);
+  }, readyTimeoutMs);
+
+  const startCollectionDeadline = () => {
+    if (settled) return;
+    collectTimer = setTimeout(async () => {
+      if (settled) return;
+      // Probe via the known-good publisher: is the subscriber still live?
+      let probeArrived = false;
+      const probeHandler = (ch: string, msg: string) => {
+        if (ch === channel && msg === PROBE_SENTINEL) probeArrived = true;
+      };
+      subscriber.on("message", probeHandler);
+      let probeReceiverCount: number | string = -1;
+      try {
+        probeReceiverCount = await sentinelPublisher.publish(channel, PROBE_SENTINEL);
+      } catch (e) {
+        probeReceiverCount = `error: ${(e as Error).message}`;
+      }
+      await sleep(500);
+      subscriber.removeListener("message", probeHandler);
+
+      let activeChannels: string | string[] = "unknown";
+      try {
+        activeChannels = (await sentinelPublisher.call("PUBSUB", "CHANNELS")) as string[];
+      } catch (e) {
+        activeChannels = `error: ${(e as Error).message}`;
+      }
+
+      cleanup();
+      const err = new Error(
+        `Timed out after ${collectTimeoutMs}ms collecting on "${channel}": ` +
+          `collected ${collected.length}/${expectedCount}, ` +
+          `subscriber status=${subscriber.status}, sentinelSeen=${sentinelSeen}, ` +
+          `probeArrived=${probeArrived}, probeReceiverCount=${probeReceiverCount}, ` +
+          `subscriberSocket=${describeSocket(subscriber)}, ` +
+          `publisherSocket=${describeSocket(sentinelPublisher)}, ` +
+          `serverChannels=${JSON.stringify(activeChannels)}`,
+      );
+      rejectReady(err);
+      rejectMessages(err);
+    }, collectTimeoutMs);
+  };
+
+  // Subscribe, then publish sentinels until one round-trips, then start collecting.
+  void subscriber.subscribe(channel).then(async () => {
+    while (!sentinelSeen && !settled) {
+      await sentinelPublisher.publish(channel, READY_SENTINEL);
+      await sleep(50);
+    }
+    startCollectionDeadline();
   });
 
-  return { subscribed, messages };
+  return { ready, messages };
 }
 
 describe("Redis Provider (integration)", () => {
   beforeAll(async () => {
+    // Connections must be ready before any SUBSCRIBE (see whenReady).
+    await Promise.all([whenReady(subscriber), whenReady(sentinelPublisher)]);
     await client.ensureIoRedis();
   });
 
   describe("publish", () => {
     it("should publish a message and receive it on the channel", async () => {
-      const { subscribed, messages: collecting } = collectMessages(TEST_CHANNEL, 1);
-      await subscribed;
+      const { ready, messages: collecting } = subscribeAndCollect(TEST_CHANNEL, 1);
+      await ready;
 
       const topic = client.topic(TEST_TOPIC);
       const result = await topic.publish({ orderId: "order-1", total: 42 });
@@ -89,8 +188,8 @@ describe("Redis Provider (integration)", () => {
     });
 
     it("should include subject and attributes in the envelope", async () => {
-      const { subscribed, messages: collecting } = collectMessages(TEST_CHANNEL, 1);
-      await subscribed;
+      const { ready, messages: collecting } = subscribeAndCollect(TEST_CHANNEL, 1);
+      await ready;
 
       const topic = client.topic(TEST_TOPIC);
       await topic.publish(
@@ -109,8 +208,8 @@ describe("Redis Provider (integration)", () => {
     it("should publish a batch of messages via pipeline", async () => {
       const batchTopic = "test-topic-batch";
       const batchChannel = `celerity:topic:channel:${batchTopic}`;
-      const { subscribed, messages: collecting } = collectMessages(batchChannel, 3);
-      await subscribed;
+      const { ready, messages: collecting } = subscribeAndCollect(batchChannel, 3);
+      await ready;
 
       const topic = client.topic(batchTopic);
       const entries = Array.from({ length: 3 }, (_, i) => ({

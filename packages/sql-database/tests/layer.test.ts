@@ -70,7 +70,7 @@ function mockContainer(): ServiceContainer & { registered: Map<unknown, unknown>
   const registered = new Map<unknown, unknown>();
   return {
     registered,
-    resolve: vi.fn().mockImplementation((token: unknown) => {
+    resolve: vi.fn().mockImplementation(function (token: unknown) {
       if (token === "ConfigService") {
         return Promise.resolve({
           namespace: () => ({
@@ -81,7 +81,7 @@ function mockContainer(): ServiceContainer & { registered: Map<unknown, unknown>
       }
       return Promise.resolve(registered.get(token));
     }),
-    register: vi.fn().mockImplementation((token: unknown, provider: { useValue: unknown }) => {
+    register: vi.fn().mockImplementation(function (token: unknown, provider: { useValue: unknown }) {
       registered.set(token, provider.useValue);
     }),
     has: vi.fn().mockReturnValue(false),

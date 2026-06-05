@@ -48,24 +48,26 @@ const mockPinoChild = vi.fn();
 vi.mock("../src/logger", () => {
   return {
     CelerityLoggerImpl: vi.fn(),
-    createLogger: vi.fn().mockImplementation(() => ({
-      info: vi.fn(),
-      debug: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      setLevel: mockSetLevel,
-      child: mockPinoChild.mockImplementation((name: string, attrs?: Record<string, unknown>) => ({
-        _name: name,
-        ...attrs,
+    createLogger: vi.fn().mockImplementation(function () {
+      return {
         info: vi.fn(),
         debug: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
-        child: vi.fn(),
+        setLevel: mockSetLevel,
+        child: mockPinoChild.mockImplementation((name: string, attrs?: Record<string, unknown>) => ({
+          _name: name,
+          ...attrs,
+          info: vi.fn(),
+          debug: vi.fn(),
+          warn: vi.fn(),
+          error: vi.fn(),
+          child: vi.fn(),
+          withContext: vi.fn(),
+        })),
         withContext: vi.fn(),
-      })),
-      withContext: vi.fn(),
-    })),
+      };
+    }),
   };
 });
 
@@ -293,7 +295,7 @@ describe("TelemetryLayer", () => {
     const context = createHandlerContext();
     let capturedLogger: CelerityLogger | undefined;
 
-    const next = vi.fn().mockImplementation(async () => {
+    const next = vi.fn().mockImplementation(async function () {
       capturedLogger = getRequestLogger();
       return { status: 200, headers: {}, body: null };
     });
@@ -374,7 +376,7 @@ describe("TelemetryLayer", () => {
 
       // Register a mock ConfigService
       const mockConfigService = {
-        get: vi.fn().mockImplementation(async (key: string) => {
+        get: vi.fn().mockImplementation(async function (key: string) {
           if (key === "CELERITY_LOG_LEVEL") return "debug";
           return undefined;
         }),
@@ -392,7 +394,7 @@ describe("TelemetryLayer", () => {
       const context = createHandlerContext();
 
       const mockConfigService = {
-        get: vi.fn().mockImplementation(async (key: string) => {
+        get: vi.fn().mockImplementation(async function (key: string) {
           if (key === "celerity_log_level") return "warn";
           return undefined;
         }),

@@ -26,12 +26,14 @@ const mockShutdown = vi.fn();
 const mockRuntimeConfigFromEnv = vi.fn((..._args: unknown[]) => mockConfig);
 
 vi.mock("@celerity-sdk/runtime", () => ({
-  CoreRuntimeApplication: vi.fn().mockImplementation(() => ({
-    setup: mockSetup,
-    registerHttpHandler: mockRegisterHttpHandler,
-    run: mockRun,
-    shutdown: mockShutdown,
-  })),
+  CoreRuntimeApplication: vi.fn().mockImplementation(function () {
+    return {
+      setup: mockSetup,
+      registerHttpHandler: mockRegisterHttpHandler,
+      run: mockRun,
+      shutdown: mockShutdown,
+    };
+  }),
   runtimeConfigFromEnv: (...args: unknown[]) => mockRuntimeConfigFromEnv(...args),
 }));
 

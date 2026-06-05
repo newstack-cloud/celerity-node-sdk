@@ -44,13 +44,13 @@
     "debug": "^4.4.0"
   },
   "devDependencies": {
-    "@aws-sdk/client-dynamodb": "^3.750.0",
-    "@aws-sdk/lib-dynamodb": "^3.750.0",
+    "@aws-sdk/client-dynamodb": "^3.1062.0",
+    "@aws-sdk/lib-dynamodb": "^3.1062.0",
     "reflect-metadata": "^0.2.0"
   },
   "peerDependencies": {
-    "@aws-sdk/client-dynamodb": "^3.0.0",
-    "@aws-sdk/lib-dynamodb": "^3.0.0",
+    "@aws-sdk/client-dynamodb": "^3.1062.0",
+    "@aws-sdk/lib-dynamodb": "^3.1062.0",
     "@google-cloud/firestore": "^7.0.0",
     "@azure/cosmos": "^4.0.0",
     "reflect-metadata": "^0.2.0"

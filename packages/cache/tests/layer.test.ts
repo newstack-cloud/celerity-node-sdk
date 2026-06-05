@@ -67,7 +67,7 @@ function mockContainer(
   const registered = new Map<unknown, unknown>();
   return {
     registered,
-    resolve: vi.fn().mockImplementation((token: unknown) => {
+    resolve: vi.fn().mockImplementation(function (token: unknown) {
       if (token === "ConfigService") {
         return Promise.resolve({
           namespace: () => ({
@@ -79,10 +79,10 @@ function mockContainer(
       if (token === "CelerityTracer") return Promise.resolve(mockTracer);
       return Promise.resolve(registered.get(token));
     }),
-    register: vi.fn().mockImplementation((_token: unknown, provider: { useValue: unknown }) => {
+    register: vi.fn().mockImplementation(function (_token: unknown, provider: { useValue: unknown }) {
       registered.set(_token, provider.useValue);
     }),
-    has: vi.fn().mockImplementation((token: unknown) => {
+    has: vi.fn().mockImplementation(function (token: unknown) {
       if (token === "CelerityTracer") return opts?.hasTracer ?? false;
       return false;
     }),

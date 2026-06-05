@@ -806,7 +806,7 @@ describe("executeHttpPipeline", () => {
       const instanceB = { name: "b" };
       const instanceC = { name: "c" };
       const container = {
-        resolve: vi.fn().mockImplementation(async (token: unknown) => {
+        resolve: vi.fn().mockImplementation(async function (token: unknown) {
           if (token === TOKEN_A) return instanceA;
           if (token === TOKEN_B) return instanceB;
           if (token === TOKEN_C) return instanceC;

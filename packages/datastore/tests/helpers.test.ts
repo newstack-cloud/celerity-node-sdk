@@ -5,7 +5,9 @@ import { datastoreToken, DEFAULT_DATASTORE_TOKEN } from "../src/decorators";
 
 function mockContainer(resolveImpl: (token: unknown) => unknown): ServiceContainer {
   return {
-    resolve: vi.fn().mockImplementation((token: unknown) => Promise.resolve(resolveImpl(token))),
+    resolve: vi.fn().mockImplementation(function (token: unknown) {
+      return Promise.resolve(resolveImpl(token));
+    }),
     register: vi.fn(),
     has: vi.fn(),
     closeAll: vi.fn(),
