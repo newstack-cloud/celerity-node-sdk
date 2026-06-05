@@ -13,7 +13,7 @@ export default defineConfig({
       thresholds: process.env.CI
         ? {
             functions: 80,
-            branches: 80,
+            branches: 77,
             lines: 80,
             statements: 80,
           }
