@@ -1,0 +1,18 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["github>newstack-cloud/renovate-config"],
+  "packageRules": [
+    {
+      "description": "Internal workspace packages are version-locked by release-please linked-versions and use the workspace:* protocol — Renovate must not bump them.",
+      "matchPackageNames": ["/^@celerity-sdk//"],
+      "enabled": false
+    },
+    {
+      "description": "Group third-party npm minor/patch updates into one weekly PR. Because packages share one linked version, per-package scopes are cosmetic, so keep a single deps: scope.",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm dependencies",
+      "semanticCommitScope": null
+    }
+  ]
+}
