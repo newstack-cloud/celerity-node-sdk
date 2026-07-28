@@ -50,7 +50,9 @@ export async function initTelemetry(): Promise<void> {
     }),
     traceExporter: new OTLPTraceExporter({ url: config.otlpEndpoint }),
     logRecordProcessors: [
-      new BatchLogRecordProcessor(new OTLPLogExporter({ url: config.otlpEndpoint })),
+      new BatchLogRecordProcessor({
+        exporter: new OTLPLogExporter({ url: config.otlpEndpoint }),
+      }),
     ],
     textMapPropagator: new CompositePropagator({
       propagators: [new W3CTraceContextPropagator(), new AWSXRayPropagator()],
