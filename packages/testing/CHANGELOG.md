@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.4](https://github.com/newstack-cloud/celerity-node-sdk/compare/testing/v0.8.3...testing/v0.8.4) (2026-07-28)
+
+
+### Bug Fixes
+
+* **testing:** add support for blueprints in blueprint lang format ([6d3ad76](https://github.com/newstack-cloud/celerity-node-sdk/commit/6d3ad769483c553c11dfc6ad374a53e1918af3cc))
+
 ## [0.8.3](https://github.com/newstack-cloud/celerity-node-sdk/compare/testing/v0.8.2...testing/v0.8.3) (2026-06-05)
 
 

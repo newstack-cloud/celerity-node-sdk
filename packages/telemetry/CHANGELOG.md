@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.8.4](https://github.com/newstack-cloud/celerity-node-sdk/compare/telemetry/v0.8.3...telemetry/v0.8.4) (2026-07-28)
+
+
+### Bug Fixes
+
+* **telemetry:** update log record processor instantiation to use new otel api ([3ed313e](https://github.com/newstack-cloud/celerity-node-sdk/commit/3ed313efb72df899f5cf111905128a21cbab1db1))
+
+
+### Dependencies
+
+* update vulnerable dependencies ([b5d4640](https://github.com/newstack-cloud/celerity-node-sdk/commit/b5d4640b4cbe2582098c565636d611e578df14d6))
+
 ## [0.8.3](https://github.com/newstack-cloud/celerity-node-sdk/compare/telemetry/v0.8.2...telemetry/v0.8.3) (2026-06-05)
 
 
