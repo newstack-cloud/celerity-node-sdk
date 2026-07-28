@@ -1,5 +1,5 @@
 import { readFileSync, existsSync } from "node:fs";
-import { resolve, join, extname } from "node:path";
+import { resolve, join, dirname, extname } from "node:path";
 import yaml from "js-yaml";
 import stripJsonComments from "strip-json-comments";
 
@@ -22,7 +22,7 @@ type BlueprintSpec = {
  * (e.g., "usersDatastore") to the actual infrastructure names (e.g., "users").
  */
 export function loadBlueprintResources(blueprintPath?: string): Map<string, BlueprintResource> {
-  const path = blueprintPath ?? findBlueprintPath();
+  const path = resolveBlueprintPath(blueprintPath);
   if (!path) return new Map();
 
   const bp = parseBlueprint(path) as BlueprintSpec | undefined;
@@ -71,7 +71,7 @@ export type WebSocketConfig = {
  * Returns null if no WebSocket configuration is found.
  */
 export function loadWebSocketConfig(blueprintPath?: string): WebSocketConfig | null {
-  const path = blueprintPath ?? findBlueprintPath();
+  const path = resolveBlueprintPath(blueprintPath);
   if (!path) return null;
 
   const bp = parseBlueprint(path) as unknown;
@@ -145,18 +145,78 @@ function parseBlueprint(filePath: string): unknown {
   return yaml.load(content);
 }
 
+/** Fallback blueprint files this package can parse directly. */
+const PARSEABLE_BLUEPRINTS = [
+  "app.blueprint.yaml",
+  "app.blueprint.yml",
+  "app.blueprint.jsonc",
+  "app.blueprint.json",
+];
+
+/**
+ * Blueprints written in the Celerity blueprint language. They are not YAML or
+ * JSON, so they are read through the merged blueprint the CLI generates.
+ */
+const BLUEPRINT_LANGUAGE_FILES = ["app.bp", "app.blueprint"];
+const BLUEPRINT_LANGUAGE_EXTENSIONS = [".bp", ".blueprint"];
+
+/**
+ * The expanded blueprint `celerity dev run` and `celerity dev test` write before
+ * starting the environment. It is always YAML, regardless of the source format.
+ */
+const MERGED_BLUEPRINT = join(".celerity", "merged.blueprint.yaml");
+
+/**
+ * Resolves the blueprint to read, whether it was supplied by the caller or
+ * discovered in the working directory.
+ *
+ * A supplied path goes through the same rules as a discovered one where a
+ * blueprint-language file cannot be parsed here, so it is redirected to the
+ * merged blueprint the CLI generates from it.
+ */
+function resolveBlueprintPath(blueprintPath?: string): string | null {
+  if (blueprintPath === undefined) return findBlueprintPath();
+
+  if (!BLUEPRINT_LANGUAGE_EXTENSIONS.includes(extname(blueprintPath))) {
+    return resolve(blueprintPath);
+  }
+  return resolveMergedBlueprint(dirname(resolve(blueprintPath)), blueprintPath);
+}
+
 function findBlueprintPath(): string | null {
   const cwd = process.cwd();
-  const candidates = [
-    join(cwd, "app.blueprint.yaml"),
-    join(cwd, "app.blueprint.yml"),
-    join(cwd, "app.blueprint.jsonc"),
-    join(cwd, "app.blueprint.json"),
-  ];
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      return resolve(candidate);
-    }
+
+  for (const candidate of PARSEABLE_BLUEPRINTS) {
+    const path = join(cwd, candidate);
+    if (existsSync(path)) return resolve(path);
   }
+
+  const merged = join(cwd, MERGED_BLUEPRINT);
+  if (existsSync(merged)) return resolve(merged);
+
+  const source = BLUEPRINT_LANGUAGE_FILES.find((f) => existsSync(join(cwd, f)));
+  if (source) return resolveMergedBlueprint(cwd, source);
+
   return null;
+}
+
+/**
+ * Finds the merged blueprint generated from a blueprint-language file. It sits
+ * beside the blueprint, falling back to the working directory for projects whose
+ * tests run from elsewhere. Throws when it is absent, because the alternative is
+ * resolving every resource to its id and failing later against infrastructure
+ * names that do not exist.
+ */
+function resolveMergedBlueprint(blueprintDir: string, source: string): string {
+  for (const dir of [blueprintDir, process.cwd()]) {
+    const merged = join(dir, MERGED_BLUEPRINT);
+    if (existsSync(merged)) return resolve(merged);
+  }
+
+  throw new Error(
+    `${source} is written in the Celerity blueprint language and cannot be parsed directly. ` +
+      `Tests read ${MERGED_BLUEPRINT} instead, which is generated when the dev environment ` +
+      `starts. Run your tests through \`celerity dev test\`, or start the environment with ` +
+      `\`celerity dev run\` first.`,
+  );
 }

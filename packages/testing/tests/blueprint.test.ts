@@ -167,6 +167,108 @@ resources:
     const resources = loadBlueprintResources();
     expect(resources.size).toBe(0);
   });
+
+  it("should read the CLI-generated merged blueprint for blueprint-language projects", () => {
+    // app.blueprint is not YAML, so discovery falls through to the merged
+    // blueprint the CLI writes when the dev environment starts.
+    mockExistsSync.mockImplementation((path) => {
+      const p = String(path);
+      return p.endsWith("app.blueprint") || p.endsWith("merged.blueprint.yaml");
+    });
+    mockReadFileSync.mockReturnValue(`
+resources:
+  auditDatabase:
+    type: celerity/sqlDatabase
+    spec:
+      name: audit
+`);
+
+    const resources = loadBlueprintResources();
+
+    expect(resources.get("auditDatabase")).toEqual({
+      resourceId: "auditDatabase",
+      type: "celerity/sqlDatabase",
+      physicalName: "audit",
+    });
+  });
+
+  it("should throw when a blueprint-language file has no merged blueprint alongside it", () => {
+    mockExistsSync.mockImplementation((path) => String(path).endsWith("app.blueprint"));
+
+    expect(() => loadBlueprintResources()).toThrow(/celerity dev test/);
+  });
+
+  it("should redirect an explicitly passed blueprint-language path to the merged blueprint", () => {
+    // A caller-supplied path must follow the same rules as a discovered one:
+    // app.blueprint is not YAML, so parsing it directly would silently yield no
+    // resources and every name would fall back to its resource id.
+    mockExistsSync.mockImplementation((path) => String(path).endsWith("merged.blueprint.yaml"));
+    mockReadFileSync.mockReturnValue(`
+resources:
+  filesBucket:
+    type: celerity/bucket
+    spec:
+      name: files
+`);
+
+    const resources = loadBlueprintResources("/project/app.blueprint");
+
+    expect(resources.get("filesBucket")).toEqual({
+      resourceId: "filesBucket",
+      type: "celerity/bucket",
+      physicalName: "files",
+    });
+    expect(String(mockReadFileSync.mock.lastCall?.[0])).toContain("merged.blueprint.yaml");
+  });
+
+  it("should throw for an explicitly passed .bp path with no merged blueprint", () => {
+    mockExistsSync.mockReturnValue(false);
+
+    expect(() => loadBlueprintResources("/project/app.bp")).toThrow(/celerity dev test/);
+  });
+
+  it("should read an explicitly passed YAML path as given", () => {
+    mockExistsSync.mockReturnValue(false);
+    mockReadFileSync.mockReturnValue(`
+resources:
+  tasksDatastore:
+    type: celerity/datastore
+    spec:
+      name: tasks
+`);
+
+    const resources = loadBlueprintResources("/project/custom.blueprint.yaml");
+
+    expect(resources.get("tasksDatastore")?.physicalName).toBe("tasks");
+    expect(String(mockReadFileSync.mock.lastCall?.[0])).toContain("custom.blueprint.yaml");
+  });
+
+  it("should prefer a directly parseable blueprint over the merged one", () => {
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockImplementation((path) => {
+      if (String(path).endsWith("app.blueprint.yaml")) {
+        return `
+resources:
+  usersDatastore:
+    type: celerity/datastore
+    spec:
+      name: users
+`;
+      }
+      return `
+resources:
+  staleDatastore:
+    type: celerity/datastore
+    spec:
+      name: stale
+`;
+    });
+
+    const resources = loadBlueprintResources();
+
+    expect(resources.has("usersDatastore")).toBe(true);
+    expect(resources.has("staleDatastore")).toBe(false);
+  });
 });
 
 describe("tokenTypeToBlueprintType", () => {
