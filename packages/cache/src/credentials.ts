@@ -1,8 +1,9 @@
-import type { ConfigNamespace } from "@celerity-sdk/config";
+import type { ConfigNamespace, SecretResolver } from "@celerity-sdk/config";
 import type {
   CacheAuthMode,
   CacheConnectionInfo,
   CacheCredentials,
+  CacheCredentialsOptions,
   CacheIamAuth,
   CachePasswordAuth,
   TokenProvider,
@@ -15,8 +16,10 @@ const DEFAULT_PORT = 6379;
 export async function resolveCacheCredentials(
   configKey: string,
   resourceConfig: ConfigNamespace,
-  tokenProviderFactory?: TokenProviderFactory,
+  options: CacheCredentialsOptions = {},
 ): Promise<CacheCredentials> {
+  const { tokenProviderFactory, secrets } = options;
+
   const host = await resourceConfig.get(`${configKey}_host`);
   if (!host) {
     throw new CacheError(`Missing required config key "${configKey}_host"`, configKey);
@@ -49,7 +52,7 @@ export async function resolveCacheCredentials(
   };
 
   if (authMode === "password") {
-    const authToken = await resourceConfig.get(`${configKey}_authToken`);
+    const authToken = await resolveAuthToken(configKey, resourceConfig, secrets);
     return new PasswordCacheCredentials(connectionInfo, authToken);
   }
 
@@ -73,6 +76,49 @@ export async function resolveCacheCredentials(
   }
 
   return new IamCacheCredentials(connectionInfo, tokenProviderFactory, host, user, region);
+}
+
+/**
+ * The AUTH token, from wherever this environment keeps it.
+ *
+ * Local development seeds the literal into the namespace, because the value is a
+ * fixed constant that doesn't need to be protected. A deployed cache has a generated token
+ * living in a secret store, and the namespace carries a reference to it.
+ *
+ * Which store holds it is the resolver's business, not this function's.
+ * Here, a reference is an opaque id handed to a secrets resolver that knows how to read it.
+ *
+ * An absent token is not an error, a local cache with no auth configured is
+ * legitimate, and the client connects without a password.
+ */
+async function resolveAuthToken(
+  configKey: string,
+  resourceConfig: ConfigNamespace,
+  secrets: SecretResolver | undefined,
+): Promise<string | undefined> {
+  const literal = await resourceConfig.get(`${configKey}_authToken`);
+  if (literal) return literal;
+
+  const secretId = await resourceConfig.get(`${configKey}_authTokenSecretId`);
+  if (!secretId) return undefined;
+
+  if (!secrets) {
+    throw new CacheError(
+      `"${configKey}_authTokenSecretId" refers to a secret, but no secret store is ` +
+        "configured for this platform",
+      configKey,
+    );
+  }
+
+  try {
+    return await secrets.getString(secretId);
+  } catch (err) {
+    const cause = err instanceof Error ? err.message : String(err);
+    throw new CacheError(
+      `reading the AUTH token for "${configKey}" from ${secretId}: ${cause}`,
+      configKey,
+    );
+  }
 }
 
 class PasswordCacheCredentials implements CacheCredentials {

@@ -103,7 +103,7 @@ describe("resolveCacheCredentials", () => {
         myCache_user: "cache-user",
         myCache_region: "us-east-1",
       });
-      const creds = await resolveCacheCredentials("myCache", ns, mockFactory);
+      const creds = await resolveCacheCredentials("myCache", ns, { tokenProviderFactory: mockFactory });
 
       const info = await creds.getConnectionInfo();
       expect(info.authMode).toBe("iam");
@@ -118,7 +118,7 @@ describe("resolveCacheCredentials", () => {
         myCache_user: "cache-user",
         myCache_region: "us-east-1",
       });
-      const creds = await resolveCacheCredentials("myCache", ns, mockFactory);
+      const creds = await resolveCacheCredentials("myCache", ns, { tokenProviderFactory: mockFactory });
 
       const auth = await creds.getIamAuth();
       expect(auth.token).toBe("iam-token-123");
@@ -131,7 +131,7 @@ describe("resolveCacheCredentials", () => {
         myCache_user: "cache-user",
         myCache_region: "us-east-1",
       });
-      const creds = await resolveCacheCredentials("myCache", ns, mockFactory);
+      const creds = await resolveCacheCredentials("myCache", ns, { tokenProviderFactory: mockFactory });
 
       await expect(creds.getPasswordAuth()).rejects.toThrow(CacheError);
     });
@@ -144,7 +144,7 @@ describe("resolveCacheCredentials", () => {
         myCache_region: "us-east-1",
         myCache_tls: "false",
       });
-      const creds = await resolveCacheCredentials("myCache", ns, mockFactory);
+      const creds = await resolveCacheCredentials("myCache", ns, { tokenProviderFactory: mockFactory });
 
       const info = await creds.getConnectionInfo();
       expect(info.tls).toBe(true);
@@ -166,7 +166,7 @@ describe("resolveCacheCredentials", () => {
       });
       const factory: TokenProviderFactory = vi.fn();
 
-      await expect(resolveCacheCredentials("myCache", ns, factory)).rejects.toThrow(
+      await expect(resolveCacheCredentials("myCache", ns, { tokenProviderFactory: factory })).rejects.toThrow(
         "myCache_user",
       );
     });
@@ -190,7 +190,7 @@ describe("resolveCacheCredentials", () => {
       });
       const factory: TokenProviderFactory = vi.fn();
 
-      await expect(resolveCacheCredentials("myCache", ns, factory)).rejects.toThrow(
+      await expect(resolveCacheCredentials("myCache", ns, { tokenProviderFactory: factory })).rejects.toThrow(
         "myCache_region",
       );
     });

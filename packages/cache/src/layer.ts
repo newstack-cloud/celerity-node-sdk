@@ -11,10 +11,11 @@ import {
   type ConfigNamespace,
   captureResourceLinks,
   getLinksOfType,
+  selectSecretResolver,
   RESOURCE_CONFIG_NAMESPACE,
 } from "@celerity-sdk/config";
 import type { CacheLayerConfig } from "./config";
-import type { TokenProviderFactory } from "./types";
+import type { CacheCredentialsOptions } from "./types";
 import {
   captureCacheLayerConfig,
   resolveConnectionOverrides,
@@ -60,7 +61,10 @@ export class CacheLayer implements CelerityLayer<BaseHandlerContext> {
 
         const configService = await context.container.resolve<ConfigService>(CONFIG_SERVICE_TOKEN);
         const resourceConfig = configService.namespace(RESOURCE_CONFIG_NAMESPACE);
-        const tokenProviderFactory = await resolveTokenProviderFactory(this.config.platform);
+        const credentialsOptions: CacheCredentialsOptions = {
+          tokenProviderFactory: await resolveTokenProviderFactory(this.config.platform),
+          secrets: selectSecretResolver(this.config.platform),
+        };
 
         for (const [resourceName, configKey] of cacheLinks) {
           await this.initializeResource(
@@ -69,7 +73,7 @@ export class CacheLayer implements CelerityLayer<BaseHandlerContext> {
             configKey,
             resourceConfig,
             tracer,
-            tokenProviderFactory,
+            credentialsOptions,
           );
         }
 
@@ -91,14 +95,14 @@ export class CacheLayer implements CelerityLayer<BaseHandlerContext> {
     configKey: string,
     resourceConfig: ConfigNamespace,
     tracer: CelerityTracer | undefined,
-    tokenProviderFactory: TokenProviderFactory | undefined,
+    credentialsOptions: CacheCredentialsOptions,
   ): Promise<void> {
     debug("resolving cache resource %s (configKey=%s)", resourceName, configKey);
 
     const credentials = await resolveCacheCredentials(
       configKey,
       resourceConfig,
-      tokenProviderFactory,
+      credentialsOptions,
     );
     const connectionOverrides = await resolveConnectionOverrides(configKey, resourceConfig);
     const connectionConfig = resolveConnectionConfig(

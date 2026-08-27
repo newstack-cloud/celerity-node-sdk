@@ -15,6 +15,7 @@ export type {
   TransactionResult,
   TokenProvider,
   TokenProviderFactory,
+  CacheCredentialsOptions,
 } from "./types";
 
 export { CacheError } from "./errors";

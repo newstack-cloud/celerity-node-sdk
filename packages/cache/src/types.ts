@@ -1,4 +1,5 @@
 import type { Closeable } from "@celerity-sdk/types";
+import type { SecretResolver } from "@celerity-sdk/config";
 
 export type CacheAuthMode = "password" | "iam";
 
@@ -252,3 +253,19 @@ export type TokenProviderFactory = (
   userId: string,
   region: string,
 ) => TokenProvider;
+
+/**
+ * The platform-specific pieces credential resolution needs, supplied by the
+ * layer so that resolution itself stays provider-agnostic.
+ *
+ * Both are optional: a cache using password auth does not need a token provider, and
+ * one whose AUTH token is seeded as a literal needs no secret resolver. Where
+ * config asks for something the corresponding piece is missing, resolution
+ * fails naming the resource and the key rather than the missing dependency.
+ */
+export type CacheCredentialsOptions = {
+  /** Mints short-lived IAM auth tokens. Required for `authMode: "iam"`. */
+  tokenProviderFactory?: TokenProviderFactory;
+  /** Reads credentials the resources namespace refers to by reference. */
+  secrets?: SecretResolver;
+};
