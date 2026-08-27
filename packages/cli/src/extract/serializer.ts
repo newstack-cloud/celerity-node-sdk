@@ -21,6 +21,7 @@ import {
   PUBLIC_METADATA,
   CUSTOM_METADATA,
   USE_RESOURCE_METADATA,
+  composeHandlerTag,
 } from "@celerity-sdk/core";
 import type {
   ControllerMetadata,
@@ -39,6 +40,7 @@ import type {
   DependencyGraph,
   DependencyNode,
 } from "./types";
+import { createResourceRefResolver, type ResourceRefResolver } from "./resource-refs";
 import { joinHandlerPath } from "./path-utils";
 import {
   deriveClassResourceName,
@@ -61,9 +63,15 @@ export function serializeManifest(
   const handlers: ClassHandlerEntry[] = [];
   const functionHandlers: FunctionHandlerEntry[] = [];
   const guardHandlers: GuardHandlerEntry[] = [];
+  const resolveResourceRefs = createResourceRefResolver(scanned);
 
   for (const controllerClass of scanned.controllerClasses) {
-    const entries = serializeClassHandlers(controllerClass, sourceFile, options);
+    const entries = serializeClassHandlers(
+      controllerClass,
+      sourceFile,
+      options,
+      resolveResourceRefs,
+    );
     handlers.push(...entries);
   }
 
@@ -75,7 +83,7 @@ export function serializeManifest(
   }
 
   for (const guardClass of scanned.guardClasses) {
-    const entry = serializeClassGuard(guardClass, sourceFile, options);
+    const entry = serializeClassGuard(guardClass, sourceFile, options, resolveResourceRefs);
     if (entry) {
       guardHandlers.push(entry);
     }
@@ -113,7 +121,10 @@ type ControllerMeta = {
   resourceRefs: string[];
 };
 
-function extractControllerMeta(controllerClass: Type): ControllerMeta | null {
+function extractControllerMeta(
+  controllerClass: Type,
+  resolveResourceRefs: ResourceRefResolver,
+): ControllerMeta | null {
   const httpMeta: ControllerMetadata | undefined = Reflect.getOwnMetadata(
     CONTROLLER_METADATA,
     controllerClass,
@@ -122,7 +133,7 @@ function extractControllerMeta(controllerClass: Type): ControllerMeta | null {
     return {
       controllerType: "http",
       prefix: httpMeta.prefix ?? "",
-      ...extractSharedClassMeta(controllerClass),
+      ...extractSharedClassMeta(controllerClass, resolveResourceRefs),
     };
   }
 
@@ -134,7 +145,7 @@ function extractControllerMeta(controllerClass: Type): ControllerMeta | null {
     return {
       controllerType: "websocket",
       prefix: "",
-      ...extractSharedClassMeta(controllerClass),
+      ...extractSharedClassMeta(controllerClass, resolveResourceRefs),
     };
   }
 
@@ -147,14 +158,17 @@ function extractControllerMeta(controllerClass: Type): ControllerMeta | null {
       controllerType: "consumer",
       prefix: "",
       source: consumerMeta.source,
-      ...extractSharedClassMeta(controllerClass),
+      ...extractSharedClassMeta(controllerClass, resolveResourceRefs),
     };
   }
 
   return null;
 }
 
-function extractSharedClassMeta(controllerClass: Type) {
+function extractSharedClassMeta(controllerClass: Type, resolveResourceRefs: ResourceRefResolver) {
+  const ownRefs =
+    (Reflect.getOwnMetadata(USE_RESOURCE_METADATA, controllerClass) as string[]) ?? [];
+
   return {
     protectedBy:
       (Reflect.getOwnMetadata(GUARD_PROTECTEDBY_METADATA, controllerClass) as string[]) ?? [],
@@ -163,8 +177,9 @@ function extractSharedClassMeta(controllerClass: Type) {
       | undefined,
     customMetadata:
       (Reflect.getOwnMetadata(CUSTOM_METADATA, controllerClass) as Record<string, unknown>) ?? {},
-    resourceRefs:
-      (Reflect.getOwnMetadata(USE_RESOURCE_METADATA, controllerClass) as string[]) ?? [],
+    // Own declarations first so the order stays stable as injected services
+    // come and go.
+    resourceRefs: [...new Set([...ownRefs, ...resolveResourceRefs(controllerClass)])],
   };
 }
 
@@ -256,6 +271,9 @@ function buildConsumerAnnotations(
   if (consumerHandler.route) {
     annotations["celerity.handler.consumer.route"] = consumerHandler.route;
   }
+  // The route is the payload value the runtime routes on, not a registry key, so
+  // it cannot serve as the handler tag. See composeHandlerTag.
+  annotations["celerity.handler.tag"] = composeHandlerTag(meta.source, methodName);
   appendSharedAnnotations(annotations, meta, prototype, methodName);
   return annotations;
 }
@@ -274,6 +292,10 @@ function buildScheduleAnnotations(
   if (scheduleMeta.schedule) {
     annotations["celerity.handler.schedule.expression"] = scheduleMeta.schedule;
   }
+  // A schedule event carries only the rule that fired, which says nothing about
+  // which method to run, so the tag is the only way a deployed function reaches
+  // its handler. See composeHandlerTag.
+  annotations["celerity.handler.tag"] = composeHandlerTag(scheduleMeta.source, methodName);
   appendSharedAnnotations(annotations, meta, prototype, methodName);
   return annotations;
 }
@@ -299,8 +321,9 @@ function serializeClassHandlers(
   controllerClass: Type,
   sourceFile: string,
   options: SerializeOptions,
+  resolveResourceRefs: ResourceRefResolver,
 ): ClassHandlerEntry[] {
-  const meta = extractControllerMeta(controllerClass);
+  const meta = extractControllerMeta(controllerClass, resolveResourceRefs);
   if (!meta) return [];
 
   const className = controllerClass.name;
@@ -602,6 +625,7 @@ function serializeClassGuard(
   guardClass: Type,
   sourceFile: string,
   options: SerializeOptions,
+  resolveResourceRefs: ResourceRefResolver,
 ): GuardHandlerEntry | null {
   const meta = extractGuardMeta(guardClass);
   if (!meta) return null;
@@ -615,6 +639,15 @@ function serializeClassGuard(
   for (const [key, value] of Object.entries(meta.customMetadata)) {
     if (value === undefined) continue;
     annotations[`celerity.handler.metadata.${key}`] = serializeAnnotationValue(value);
+  }
+
+  // A guard is deployed as its own handler, so it needs the same resource
+  // wiring as a controller method where a guard reading a datastore to authorise a
+  // request has to be granted that datastore.
+  const ownRefs = (Reflect.getOwnMetadata(USE_RESOURCE_METADATA, guardClass) as string[]) ?? [];
+  const resourceRefs = [...new Set([...ownRefs, ...resolveResourceRefs(guardClass)])];
+  if (resourceRefs.length > 0) {
+    annotations["celerity.handler.resource.ref"] = resourceRefs;
   }
 
   return {

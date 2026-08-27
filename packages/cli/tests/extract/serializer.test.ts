@@ -9,6 +9,9 @@ import {
   Post,
   Delete,
   Guard,
+  INJECT_METADATA,
+  Injectable,
+  Inject,
   ProtectedBy,
   Public,
   SetMetadata,
@@ -497,6 +500,238 @@ describe("serializeManifest", () => {
     });
   });
 
+  // Resource decorators such as @SqlDatabase("auditDatabase") record the
+  // resource on the class declaring the constructor parameter, which is
+  // usually a service rather than the controller. These cover reaching those
+  // declarations through the injection graph.
+  describe("resource refs through injected services", () => {
+    it("picks up a resource declared by an injected service", () => {
+      @Injectable()
+      @UseResource("auditDatabase")
+      class AuditService {}
+
+      @Controller("/audit")
+      class AuditHandler {
+        constructor(@Inject(AuditService) private audit: AuditService) {}
+
+        @Get("/")
+        listEntries() {
+          return this.audit;
+        }
+      }
+
+      @Module({ controllers: [AuditHandler], providers: [AuditService] })
+      class AuditModule {}
+
+      const scanned = buildScannedModule(AuditModule);
+      const manifest = serializeManifest(scanned, SOURCE_FILE, OPTIONS);
+
+      expect(manifest.handlers[0].annotations["celerity.handler.resource.ref"]).toEqual([
+        "auditDatabase",
+      ]);
+    });
+
+    it("reaches resources declared several levels down the graph", () => {
+      @Injectable()
+      @UseResource("auditDatabase")
+      class RepositoryService {}
+
+      @Injectable()
+      @UseResource("auditCache")
+      class AuditService {
+        constructor(@Inject(RepositoryService) private repo: RepositoryService) {}
+      }
+
+      @Controller("/audit")
+      class AuditHandler {
+        constructor(@Inject(AuditService) private audit: AuditService) {}
+
+        @Get("/")
+        listEntries() {
+          return this.audit;
+        }
+      }
+
+      @Module({
+        controllers: [AuditHandler],
+        providers: [AuditService, RepositoryService],
+      })
+      class AuditModule {}
+
+      const scanned = buildScannedModule(AuditModule);
+      const manifest = serializeManifest(scanned, SOURCE_FILE, OPTIONS);
+
+      const refs = manifest.handlers[0].annotations["celerity.handler.resource.ref"] as string[];
+      expect(refs.sort()).toEqual(["auditCache", "auditDatabase"]);
+    });
+
+    it("unions service resources with the handler's own class and method declarations", () => {
+      @Injectable()
+      @UseResource("auditDatabase")
+      class AuditService {}
+
+      @Controller("/audit")
+      @UseResource("filesBucket")
+      class AuditHandler {
+        constructor(@Inject(AuditService) private audit: AuditService) {}
+
+        @Get("/")
+        @UseResource("filesCache")
+        listEntries() {
+          return this.audit;
+        }
+      }
+
+      @Module({ controllers: [AuditHandler], providers: [AuditService] })
+      class AuditModule {}
+
+      const scanned = buildScannedModule(AuditModule);
+      const manifest = serializeManifest(scanned, SOURCE_FILE, OPTIONS);
+
+      const refs = manifest.handlers[0].annotations["celerity.handler.resource.ref"] as string[];
+      expect(refs.sort()).toEqual(["auditDatabase", "filesBucket", "filesCache"]);
+    });
+
+    it("reports a resource once when several injected services declare it", () => {
+      @Injectable()
+      @UseResource("auditDatabase")
+      class ReaderService {}
+
+      @Injectable()
+      @UseResource("auditDatabase")
+      class WriterService {}
+
+      @Controller("/audit")
+      class AuditHandler {
+        constructor(
+          @Inject(ReaderService) private reader: ReaderService,
+          @Inject(WriterService) private writer: WriterService,
+        ) {}
+
+        @Get("/")
+        listEntries() {
+          return [this.reader, this.writer];
+        }
+      }
+
+      @Module({
+        controllers: [AuditHandler],
+        providers: [ReaderService, WriterService],
+      })
+      class AuditModule {}
+
+      const scanned = buildScannedModule(AuditModule);
+      const manifest = serializeManifest(scanned, SOURCE_FILE, OPTIONS);
+
+      expect(manifest.handlers[0].annotations["celerity.handler.resource.ref"]).toEqual([
+        "auditDatabase",
+      ]);
+    });
+
+    it("does not leak one controller's service resources onto another controller", () => {
+      @Injectable()
+      @UseResource("auditDatabase")
+      class AuditService {}
+
+      @Controller("/audit")
+      class AuditHandler {
+        constructor(@Inject(AuditService) private audit: AuditService) {}
+
+        @Get("/")
+        listEntries() {
+          return this.audit;
+        }
+      }
+
+      @Controller("/health")
+      class HealthHandler {
+        @Get("/")
+        check() {
+          return {};
+        }
+      }
+
+      @Module({
+        controllers: [AuditHandler, HealthHandler],
+        providers: [AuditService],
+      })
+      class AuditModule {}
+
+      const scanned = buildScannedModule(AuditModule);
+      const manifest = serializeManifest(scanned, SOURCE_FILE, OPTIONS);
+
+      const check = findEntry(manifest, "check");
+      expect(check!.annotations).not.toHaveProperty("celerity.handler.resource.ref");
+    });
+
+    it("terminates on a dependency cycle between services", () => {
+      const PENDING = Symbol("pending");
+
+      @Injectable()
+      @UseResource("auditDatabase")
+      class ServiceA {
+        // Placeholder token: ServiceB does not exist yet at decoration time,
+        // so the real edge is patched in below. The parameter itself has to be
+        // declared, as dependency tokens are derived from design:paramtypes.
+        constructor(@Inject(PENDING) private b: unknown) {}
+      }
+
+      @Injectable()
+      @UseResource("auditCache")
+      class ServiceB {
+        constructor(@Inject(ServiceA) private a: ServiceA) {}
+      }
+
+      // Closes the cycle now that both classes exist, which is how a circular
+      // service dependency actually presents at runtime.
+      Reflect.defineMetadata(INJECT_METADATA, new Map([[0, ServiceB]]), ServiceA);
+
+      @Controller("/audit")
+      class AuditHandler {
+        constructor(@Inject(ServiceA) private a: ServiceA) {}
+
+        @Get("/")
+        listEntries() {
+          return this.a;
+        }
+      }
+
+      @Module({ controllers: [AuditHandler], providers: [ServiceA, ServiceB] })
+      class AuditModule {}
+
+      const scanned = buildScannedModule(AuditModule);
+      const manifest = serializeManifest(scanned, SOURCE_FILE, OPTIONS);
+
+      const refs = manifest.handlers[0].annotations["celerity.handler.resource.ref"] as string[];
+      expect(refs.sort()).toEqual(["auditCache", "auditDatabase"]);
+    });
+
+    it("gives a class guard the resources of the services it injects", () => {
+      @Injectable()
+      @UseResource("usersDatastore")
+      class PermissionService {}
+
+      @Guard("admin")
+      class AdminGuard {
+        constructor(@Inject(PermissionService) private perms: PermissionService) {}
+
+        check() {
+          return this.perms;
+        }
+      }
+
+      @Module({ guards: [AdminGuard], providers: [PermissionService] })
+      class GuardModule {}
+
+      const scanned = buildScannedModule(GuardModule);
+      const manifest = serializeManifest(scanned, SOURCE_FILE, OPTIONS);
+
+      expect(manifest.guardHandlers[0].annotations["celerity.handler.resource.ref"]).toEqual([
+        "usersDatastore",
+      ]);
+    });
+  });
+
   describe("websocket class handlers", () => {
     it("serializes @WebSocketController with @OnConnect, @OnMessage, @OnDisconnect", () => {
       @WebSocketController()
@@ -698,6 +933,101 @@ describe("serializeManifest", () => {
 
       const entry = manifest.handlers[0];
       expect(entry.annotations["celerity.handler.guard.protectedBy"]).toEqual(["apiKey"]);
+    });
+  });
+
+  // The tag is the key the handler registry registers a class handler under, and
+  // the only route from a consumer or schedule event to the method that handles
+  // it. The event names a queue or a rule, never a method, and module-reference
+  // resolution looks for an exported function, which a method is not. A deploy
+  // target stamps this on the function as CELERITY_HANDLER_TAG, so when it is
+  // missing, the function deploys, the event arrives and nothing runs; this is reported
+  // as an ordinary result rather than a failure.
+  describe("handler registry tags", () => {
+    it("emits the tag a consumer handler is registered under", () => {
+      @Consumer("orders")
+      class OrderConsumer {
+        @MessageHandler()
+        handle() {
+          return {};
+        }
+      }
+
+      @Module({ controllers: [OrderConsumer] })
+      class ConsumerModule {}
+
+      const manifest = serializeManifest(buildScannedModule(ConsumerModule), SOURCE_FILE, OPTIONS);
+
+      expect(manifest.handlers[0].annotations["celerity.handler.tag"]).toBe("orders::handle");
+    });
+
+    // The route is the payload value the runtime routes on within a consumer, so
+    // it identifies no method and cannot serve as the key.
+    it("keys on the method rather than the consumer route", () => {
+      @Consumer("userEvents")
+      class UserEventsConsumer {
+        @MessageHandler("user.created")
+        onCreated() {
+          return {};
+        }
+
+        @MessageHandler("user.deleted")
+        onDeleted() {
+          return {};
+        }
+      }
+
+      @Module({ controllers: [UserEventsConsumer] })
+      class ConsumerModule {}
+
+      const manifest = serializeManifest(buildScannedModule(ConsumerModule), SOURCE_FILE, OPTIONS);
+
+      expect(findEntry(manifest, "onCreated")!.annotations["celerity.handler.tag"]).toBe(
+        "userEvents::onCreated",
+      );
+      expect(findEntry(manifest, "onDeleted")!.annotations["celerity.handler.tag"]).toBe(
+        "userEvents::onDeleted",
+      );
+    });
+
+    it("emits the tag a schedule handler is registered under", () => {
+      @Controller("/stats")
+      class StatsController {
+        @ScheduleHandler("statsSchedule")
+        scheduledAggregate() {
+          return {};
+        }
+      }
+
+      @Module({ controllers: [StatsController] })
+      class ScheduleModule {}
+
+      const manifest = serializeManifest(buildScannedModule(ScheduleModule), SOURCE_FILE, OPTIONS);
+
+      const entry = manifest.handlers.find((h) => h.handlerType === "schedule");
+      expect(entry!.annotations["celerity.handler.tag"]).toBe(
+        "statsSchedule::scheduledAggregate",
+      );
+    });
+
+    // A handler declared with an expression has no source to qualify it, so the
+    // method name is the whole key.
+    it("falls back to the method name when there is no source", () => {
+      @Controller("/tasks")
+      class TaskHandler {
+        @ScheduleHandler("rate(1 day)")
+        dailyTask() {
+          return {};
+        }
+      }
+
+      @Module({ controllers: [TaskHandler] })
+      class ScheduleModule {}
+
+      const manifest = serializeManifest(buildScannedModule(ScheduleModule), SOURCE_FILE, OPTIONS);
+
+      const entry = manifest.handlers.find((h) => h.handlerType === "schedule");
+      expect(entry!.annotations["celerity.handler.tag"]).toBe("dailyTask");
     });
   });
 
