@@ -19,6 +19,7 @@ import { validate } from "../../layers/validate";
 import type { Container } from "../../di/container";
 import type { ModuleGraph } from "../../bootstrap/module-graph";
 import type { HandlerRegistry } from "../registry";
+import { composeHandlerTag } from "../handler-tag";
 
 const debug = createDebug("celerity:core:scanner:schedule");
 
@@ -76,7 +77,7 @@ async function scanClassHandler(
     const descriptor = Object.getOwnPropertyDescriptor(prototype, methodName);
     if (!descriptor?.value || typeof descriptor.value !== "function") continue;
 
-    const handlerTag = handlerMeta.source ? `${handlerMeta.source}::${methodName}` : methodName;
+    const handlerTag = composeHandlerTag(handlerMeta.source, methodName);
 
     const layers = [...moduleLayers, ...classLayers, ...methodLayers];
     const inputParam = paramMetadata.find((p) => p.type === "scheduleInput");

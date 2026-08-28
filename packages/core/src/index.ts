@@ -106,6 +106,7 @@ export {
 // Handler registry and resolution
 export { HandlerRegistry } from "./handlers/registry";
 export { routingKeyOf } from "./handlers/routing";
+export { composeHandlerTag } from "./handlers/handler-tag";
 export { resolveHandlerByModuleRef } from "./handlers/module-resolver";
 export { scanHttpHandlers, scanHttpGuards, scanModule } from "./handlers/scanners/http";
 export { scanWebSocketHandlers } from "./handlers/scanners/websocket";
@@ -213,6 +214,16 @@ export type {
 
 // WebSocketSender is both a type (interface) and a value (DI token symbol).
 export { WebSocketSender } from "@celerity-sdk/types";
+
+// Binary needs a transport that carries binary frames, so it is not on the
+// portable WebSocketSender. An application asks whether the sender it was given
+// has the capability, with supportsBinary.
+export { supportsBinary } from "@celerity-sdk/types";
+export type {
+  BinaryMessageParts,
+  BinaryWebSocketSender,
+  OutboundBinaryMessage,
+} from "@celerity-sdk/types";
 
 // Consumer event contract constants
 export { SourceType, BucketEventType, DatastoreEventType } from "@celerity-sdk/types";

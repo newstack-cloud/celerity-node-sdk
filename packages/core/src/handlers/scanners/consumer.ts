@@ -20,6 +20,7 @@ import { validate } from "../../layers/validate";
 import type { Container } from "../../di/container";
 import type { ModuleGraph } from "../../bootstrap/module-graph";
 import type { HandlerRegistry } from "../registry";
+import { composeHandlerTag } from "../handler-tag";
 
 const debug = createDebug("celerity:core:scanner:consumer");
 
@@ -81,7 +82,7 @@ async function scanClassHandler(
     // the key the orchestrator constructs: `${consumerName}::${methodName}`.
     // handlerMeta.route is for the Rust runtime's MessageHandlerWithRouter
     // routing logic, not for the SDK registry.
-    const handlerTag = consumerMeta.source ? `${consumerMeta.source}::${methodName}` : methodName;
+    const handlerTag = composeHandlerTag(consumerMeta.source, methodName);
 
     const layers = [...moduleLayers, ...classLayers, ...methodLayers];
     const messageParam = paramMetadata.find((p) => p.type === "messages");
