@@ -11,3 +11,5 @@ export {
 export type { HandlerType, WebSocketMappedEvent } from "./event-mapper";
 export { ApiGatewayWebSocketSender } from "./websocket-sender";
 export { handler } from "./entry";
+
+export { clientAckRequest, composeClientAck } from "./client-ack";

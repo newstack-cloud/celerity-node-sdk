@@ -930,7 +930,7 @@ describe("mapApiGatewayWebSocketEvent", () => {
     expect(message.eventType).toBe("disconnect");
   });
 
-  it("handles base64-encoded binary body", () => {
+  it("reads a message as text even where the event claims base64", () => {
     const payload = Buffer.from("binary-data");
     const event = createWsEvent({
       body: payload.toString("base64"),
@@ -939,10 +939,8 @@ describe("mapApiGatewayWebSocketEvent", () => {
 
     const { message } = mapApiGatewayWebSocketEvent(event);
 
-    expect(message.messageType).toBe("binary");
-    expect(message.binaryBody).toBeInstanceOf(Buffer);
-    expect(message.binaryBody!.toString()).toBe("binary-data");
-    expect(message.jsonBody).toBeUndefined();
+    expect(message.messageType).toBe("json");
+    expect(message.jsonBody).toBe(payload.toString("base64"));
   });
 
   it("handles non-JSON text body gracefully", () => {

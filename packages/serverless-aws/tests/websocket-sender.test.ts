@@ -21,6 +21,7 @@ vi.mock("@aws-sdk/client-apigatewaymanagementapi", () => ({
 }));
 
 import { ApiGatewayWebSocketSender } from "../src/websocket-sender";
+import { supportsBinary } from "@celerity-sdk/types";
 
 describe("ApiGatewayWebSocketSender", () => {
   beforeEach(() => {
@@ -72,5 +73,15 @@ describe("ApiGatewayWebSocketSender", () => {
     await sender.sendMessage("conn-2", "msg2");
     expect(mockApiGatewayManagementApiClient).toHaveBeenCalledTimes(1);
     expect(mockSend).toHaveBeenCalledTimes(2);
+  });
+
+  // API Gateway WebSocket APIs carry text frames only, so an application asking
+  // whether it can send binary is told no here and yes under the runtime. This
+  // is the whole point of keeping binary off the portable interface: the
+  // capability is discoverable rather than something that throws at the send.
+  it("does not claim a binary capability its transport does not have", () => {
+    const sender = new ApiGatewayWebSocketSender("https://ws.example.com/prod");
+
+    expect(supportsBinary(sender)).toBe(false);
   });
 });

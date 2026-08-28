@@ -203,27 +203,21 @@ export function mapApiGatewayWebSocketEvent(
   const eventType = WS_EVENT_TYPE_MAP[rc.eventType] ?? "message";
 
   let jsonBody: unknown | undefined;
-  let binaryBody: Buffer | undefined;
 
   if (event.body) {
-    if (event.isBase64Encoded) {
-      binaryBody = Buffer.from(event.body, "base64");
-    } else {
-      try {
-        jsonBody = JSON.parse(event.body);
-      } catch {
-        jsonBody = event.body;
-      }
+    try {
+      jsonBody = JSON.parse(event.body);
+    } catch {
+      jsonBody = event.body;
     }
   }
 
   const message: WebSocketMessage = {
-    messageType: binaryBody ? "binary" : "json",
+    messageType: "json",
     eventType,
     connectionId: rc.connectionId,
     messageId: rc.requestId,
     jsonBody,
-    binaryBody,
     requestContext: {
       requestId: rc.requestId,
       requestTime: rc.requestTimeEpoch,

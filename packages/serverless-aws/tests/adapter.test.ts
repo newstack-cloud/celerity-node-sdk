@@ -22,6 +22,20 @@ vi.mock("@celerity-sdk/core", async (importOriginal) => {
   };
 });
 
+// The management API the adapter acknowledges through. Mocked so the
+// acknowledgement can be read off the wire without reaching AWS.
+const { mockPostToConnection, mockApiGwSend } = vi.hoisted(() => ({
+  mockPostToConnection: vi.fn(),
+  mockApiGwSend: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock("@aws-sdk/client-apigatewaymanagementapi", () => ({
+  ApiGatewayManagementApiClient: vi.fn(function () {
+    return { send: mockApiGwSend };
+  }),
+  PostToConnectionCommand: mockPostToConnection,
+}));
+
 vi.mock("@celerity-sdk/types", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@celerity-sdk/types")>();
   return {
@@ -699,6 +713,113 @@ describe("AwsLambdaAdapter", () => {
       expect(result.statusCode).toBe(404);
     });
 
+    // The application implements none of the protocol. A handler that had to
+    // acknowledge its own messages would be reimplementing it once per
+    // application, differently each time.
+    describe("client requested acknowledgements", () => {
+      beforeEach(() => {
+        mockPostToConnection.mockClear();
+        mockApiGwSend.mockReset().mockResolvedValue({});
+      });
+
+      function wsHandlerFor(registry: ReturnType<typeof createMockRegistry>) {
+        registry.getHandler.mockReturnValue({
+          type: "websocket" as const,
+          route: "$default",
+          protectedBy: [],
+          layers: [],
+          isPublic: false,
+          paramMetadata: [],
+          customMetadata: {},
+          handlerFn: vi.fn(),
+        });
+        mockExecuteWebSocketPipeline.mockResolvedValue(undefined);
+        return adapter.createWebSocketHandler(registry as never, mockOptions);
+      }
+
+      function ackPayload() {
+        const call = mockPostToConnection.mock.calls[0]?.[0] as { Data: Uint8Array } | undefined;
+        return call ? JSON.parse(new TextDecoder().decode(call.Data)) : null;
+      }
+
+      it("acknowledges a message that asked to be acknowledged", async () => {
+        const handler = wsHandlerFor(createMockRegistry());
+
+        await handler(
+          createWsEvent({ body: JSON.stringify({ action: "chat", ack: true, messageId: "m-1" }) }),
+          {},
+        );
+
+        expect(ackPayload()).toEqual({
+          event: "ack",
+          data: { messageId: "m-1", timestamp: expect.any(String) },
+        });
+      });
+
+      it("says nothing to a message that asked for nothing", async () => {
+        const handler = wsHandlerFor(createMockRegistry());
+
+        await handler(createWsEvent({ body: JSON.stringify({ action: "chat" }) }), {});
+
+        expect(mockApiGwSend).not.toHaveBeenCalled();
+      });
+
+      // The client asked whether its message arrived, and it did. Whether the
+      // application had somewhere to route it is a different question, and
+      // withholding the acknowledgement would have the client resend a message
+      // that was received every time.
+      it("acknowledges even where no handler matches the message", async () => {
+        const registry = createMockRegistry();
+        registry.getHandler.mockReturnValue(undefined);
+        const handler = adapter.createWebSocketHandler(registry as never, mockOptions);
+
+        const result = (await handler(
+          createWsEvent({ body: JSON.stringify({ action: "chat", ack: true, messageId: "m-2" }) }),
+          {},
+        )) as Record<string, unknown>;
+
+        expect(result.statusCode).toBe(404);
+        expect(ackPayload()).toMatchObject({ data: { messageId: "m-2" } });
+      });
+
+      // Acknowledged on receipt, so a client can stop its resend timer without
+      // waiting on however long the work behind the message takes.
+      it("acknowledges before running the handler", async () => {
+        const handler = wsHandlerFor(createMockRegistry());
+        const order: string[] = [];
+        mockApiGwSend.mockImplementationOnce(async () => {
+          order.push("ack");
+          return {};
+        });
+        mockExecuteWebSocketPipeline.mockImplementationOnce(async () => {
+          order.push("handler");
+        });
+
+        await handler(
+          createWsEvent({ body: JSON.stringify({ action: "chat", ack: true, messageId: "m-3" }) }),
+          {},
+        );
+
+        expect(order).toEqual(["ack", "handler"]);
+      });
+
+      // The message did arrive; the receipt is what went missing. Failing the
+      // invocation over it would be reporting a delivery problem the client
+      // already has its own recovery for.
+      it("does not fail the invocation when the acknowledgement cannot be sent", async () => {
+        mockApiGwSend.mockRejectedValueOnce(new Error("GoneException"));
+        const handler = wsHandlerFor(createMockRegistry());
+
+        const result = (await handler(
+          createWsEvent({ body: JSON.stringify({ action: "chat", ack: true, messageId: "m-4" }) }),
+          {},
+        )) as Record<string, unknown>;
+
+        expect(result.statusCode).toBe(200);
+        expect(mockExecuteWebSocketPipeline).toHaveBeenCalledTimes(1);
+      });
+    });
+
     it("looks up by CELERITY_HANDLER_ID when set", async () => {
       process.env.CELERITY_HANDLER_ID = "ws-handler-1";
       const wsAdapter = new AwsLambdaAdapter();
@@ -875,14 +996,17 @@ describe("AwsLambdaAdapter", () => {
       expect(result.batchItemFailures).toEqual([{ itemIdentifier: "msg-1" }]);
     });
 
-    it("returns empty batchItemFailures when no handler found", async () => {
+    // Reporting no batch item failures tells SQS the whole batch was handled and
+    // the messages are deleted, so a function that reaches no handler would
+    // quietly consume its queue. Throwing leaves the messages to be retried and
+    // redriven, and the invocation is recorded as failed.
+    it("throws when no handler found rather than reporting the batch as handled", async () => {
       const registry = createMockRegistry();
       registry.getHandler.mockReturnValue(undefined);
 
       const handler = adapter.createConsumerHandler(registry as never, mockOptions);
-      const result = (await handler(createSqsEvent(1), {})) as Record<string, unknown>;
 
-      expect(result.batchItemFailures).toEqual([]);
+      await expect(handler(createSqsEvent(1), {})).rejects.toThrow(/No handler for consumer tag/);
     });
 
     it("derives handler tag from eventSourceARN when env var not set", async () => {
@@ -890,7 +1014,7 @@ describe("AwsLambdaAdapter", () => {
       registry.getHandler.mockReturnValue(undefined);
 
       const handler = adapter.createConsumerHandler(registry as never, mockOptions);
-      await handler(createSqsEvent(1), {});
+      await expect(handler(createSqsEvent(1), {})).rejects.toThrow();
 
       expect(registry.getHandler).toHaveBeenCalledWith(
         "consumer",
@@ -1017,15 +1141,18 @@ describe("AwsLambdaAdapter", () => {
       expect(mockExecuteSchedulePipeline).toHaveBeenCalledTimes(1);
     });
 
-    it("returns error when no handler found", async () => {
+    // Returned as a value this is an ordinary result: the invocation succeeds,
+    // no error metric moves, and a schedule that reaches nothing looks like a
+    // schedule that ran.
+    it("throws when no handler found rather than answering with a failed result", async () => {
       const registry = createMockRegistry();
       registry.getHandler.mockReturnValue(undefined);
 
       const handler = adapter.createScheduleHandler(registry as never, mockOptions);
-      const result = (await handler(createEventBridgeEvent(), {})) as Record<string, unknown>;
 
-      expect(result.success).toBe(false);
-      expect(result.errorMessage).toContain("No handler for schedule tag");
+      await expect(handler(createEventBridgeEvent(), {})).rejects.toThrow(
+        /No handler for schedule tag/,
+      );
     });
 
     it("derives handler tag from resources when env var not set", async () => {
@@ -1033,7 +1160,7 @@ describe("AwsLambdaAdapter", () => {
       registry.getHandler.mockReturnValue(undefined);
 
       const handler = adapter.createScheduleHandler(registry as never, mockOptions);
-      await handler(createEventBridgeEvent(), {});
+      await expect(handler(createEventBridgeEvent(), {})).rejects.toThrow();
 
       expect(registry.getHandler).toHaveBeenCalledWith(
         "schedule",

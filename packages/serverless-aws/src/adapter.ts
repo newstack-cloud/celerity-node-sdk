@@ -27,6 +27,7 @@ import {
   executeCustomPipeline,
   resolveHandlerByModuleRef,
 } from "@celerity-sdk/core";
+import type { WebSocketMessage } from "@celerity-sdk/types";
 import { WebSocketSender as WS_SENDER_TOKEN } from "@celerity-sdk/types";
 import {
   mapApiGatewayV2Event,
@@ -37,6 +38,7 @@ import {
   mapConsumerResultToSqsBatchResponse,
 } from "./event-mapper";
 import { ApiGatewayWebSocketSender } from "./websocket-sender";
+import { clientAckRequest, composeClientAck } from "./client-ack";
 
 const debug = createDebug("celerity:serverless-aws");
 
@@ -48,7 +50,7 @@ type AwsLambdaAdapterConfig = {
 
 export class AwsLambdaAdapter implements ServerlessAdapter {
   config: AwsLambdaAdapterConfig;
-  private wsSenderRegistered = false;
+  private wsSender: ApiGatewayWebSocketSender | null = null;
 
   constructor() {
     this.config = captureAwsLambdaConfig();
@@ -114,12 +116,19 @@ export class AwsLambdaAdapter implements ServerlessAdapter {
       const { message, routeKey, endpoint } = mapApiGatewayWebSocketEvent(wsEvent);
 
       // Register WebSocket sender once
-      if (!this.wsSenderRegistered) {
-        const sender = new ApiGatewayWebSocketSender(endpoint);
-        options.container.register(WS_SENDER_TOKEN, { useValue: sender });
-        this.wsSenderRegistered = true;
+      if (!this.wsSender) {
+        this.wsSender = new ApiGatewayWebSocketSender(endpoint);
+        options.container.register(WS_SENDER_TOKEN, { useValue: this.wsSender });
         debug("adapter: registered ApiGatewayWebSocketSender for endpoint=%s", endpoint);
       }
+
+      // Answered here rather than by the application, and before the handler
+      // runs. The protocol says a message that asked to be acknowledged is
+      // acknowledged on receipt, which is what lets a client stop its resend
+      // timer without waiting on however long the work takes. It also has to
+      // happen whether or not this message reaches a handler at all, the client
+      // asked whether its message arrived, and it did.
+      await this.acknowledgeReceipt(message);
 
       if (!cachedHandler) {
         debug("adapter: cache miss, looking up WebSocket handler for routeKey=%s", routeKey);
@@ -155,6 +164,37 @@ export class AwsLambdaAdapter implements ServerlessAdapter {
     };
   }
 
+  /**
+   * Tells a client its message arrived, where it asked to be told.
+   *
+   * The application doesn't implement any of this, the protocol is the SDK's to
+   * implement, and a handler that had to acknowledge its own messages would be
+   * reimplementing it once per application, differently each time.
+   *
+   * A failure to acknowledge is logged and consumed. The message itself did
+   * arrive, and failing the invocation over the receipt would have SQS-style
+   * consequences the client never asked for, the client's own resend, after
+   * its timeout, is the recovery the protocol already specifies for an
+   * acknowledgement that goes missing.
+   */
+  private async acknowledgeReceipt(message: WebSocketMessage): Promise<void> {
+    const messageId = clientAckRequest(message.jsonBody);
+    if (!messageId || !this.wsSender) return;
+
+    const timestamp = Math.floor(Date.now() / 1000);
+    try {
+      await this.wsSender.sendMessage(message.connectionId, composeClientAck(messageId, timestamp));
+      debug("adapter: acknowledged message %s from %s", messageId, message.connectionId);
+    } catch (err) {
+      debug(
+        "adapter: could not acknowledge message %s from %s: %s",
+        messageId,
+        message.connectionId,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
+
   createConsumerHandler(registry: HandlerRegistry, options: PipelineOptions): ServerlessHandler {
     let cachedHandler: ResolvedConsumerHandler | null = null;
 
@@ -188,8 +228,16 @@ export class AwsLambdaAdapter implements ServerlessAdapter {
       }
 
       if (!cachedHandler) {
-        debug("adapter: no Consumer handler found → empty response");
-        return { batchItemFailures: [] };
+        // Answering with no batch item failures reports every message as handled
+        // and SQS deletes the batch, so a misconfigured function would quietly
+        // consume the queue. Throwing leaves the messages to be retried and
+        // redriven, and shows up as a failed invocation.
+        debug("adapter: no Consumer handler found");
+        throw new Error(
+          `No handler for consumer tag: ${handlerTag}. ` +
+            `The function is not reachable from its queue; check that CELERITY_HANDLER_TAG ` +
+            `matches the key the handler is registered under.`,
+        );
       }
 
       const result = await executeConsumerPipeline(cachedHandler, consumerEvent, options);
@@ -230,8 +278,16 @@ export class AwsLambdaAdapter implements ServerlessAdapter {
       }
 
       if (!cachedHandler) {
+        // Returned as a value this is an ordinary result: the invocation
+        // succeeds, no error metric moves and the schedule appears to be
+        // running. Throwing is what makes a schedule that reaches nothing
+        // visible.
         debug("adapter: no Schedule handler found");
-        return { success: false, errorMessage: `No handler for schedule tag: ${handlerTag}` };
+        throw new Error(
+          `No handler for schedule tag: ${handlerTag}. ` +
+            `The scheduled function is not reachable from its rule; check that ` +
+            `CELERITY_HANDLER_TAG matches the key the handler is registered under.`,
+        );
       }
 
       return executeSchedulePipeline(cachedHandler, scheduleEvent, options);
