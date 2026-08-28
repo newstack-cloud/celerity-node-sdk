@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/serverless-aws/v0.8.4...serverless-aws/v0.9.0) (2026-08-28)
+
+
+### Features
+
+* **serverless-aws:** add ws ack support and fixes to consumer and schedule adaptors ([9b09be4](https://github.com/newstack-cloud/celerity-node-sdk/commit/9b09be45a5bc6259dc888a0fb608f72b3ee32913))
+
 ## [0.8.4](https://github.com/newstack-cloud/celerity-node-sdk/compare/serverless-aws/v0.8.3...serverless-aws/v0.8.4) (2026-07-28)
 
 

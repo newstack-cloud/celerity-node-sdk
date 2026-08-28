@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.8.4...core/v0.9.0) (2026-08-28)
+
+
+### Features
+
+* **core:** add improvements to websocket sender, dependency tokens and handler tags ([c2f2e6e](https://github.com/newstack-cloud/celerity-node-sdk/commit/c2f2e6e139fc6ba09a1462b8a770557d41fd03aa))
+
 ## [0.8.4](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.8.3...core/v0.8.4) (2026-07-28)
 
 

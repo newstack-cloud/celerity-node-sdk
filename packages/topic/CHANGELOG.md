@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/topic/v0.8.4...topic/v0.9.0) (2026-08-28)
+
+
+### Miscellaneous
+
+* **topic:** Synchronize celerity-sdk versions
+
 ## [0.8.4](https://github.com/newstack-cloud/celerity-node-sdk/compare/topic/v0.8.3...topic/v0.8.4) (2026-07-28)
 
 

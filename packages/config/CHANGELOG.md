@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/config/v0.8.4...config/v0.9.0) (2026-08-28)
+
+
+### Features
+
+* **config:** add support for handler resource scoping and secret resolver ([dad2c79](https://github.com/newstack-cloud/celerity-node-sdk/commit/dad2c79c3ce66cdecd58ac83b47eb0b145cf162a))
+
 ## [0.8.4](https://github.com/newstack-cloud/celerity-node-sdk/compare/config/v0.8.3...config/v0.8.4) (2026-07-28)
 
 
