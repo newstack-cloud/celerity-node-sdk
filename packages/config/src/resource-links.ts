@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 export type ResourceLink = {
   type: string;
@@ -66,11 +66,63 @@ export function captureResourceLinks(): ResourceLinks {
   return new Map(Object.entries(parsed).map(([resourceName, link]) => [resourceName, link]));
 }
 
-/** Filters resource links by type, returning resourceName → configKey. */
+/**
+ * Filename the Celerity CLI writes alongside the resource links, saying which
+ * resources each handler actually uses.
+ *
+ * The links file describes every resource in the application, because one
+ * bundle serves every function. It is not a statement about any one handler,
+ * and should not be treated as such. The scope file is a per-handler filter, so a
+ * handler sees only the resources it actually uses.
+ */
+export const HANDLER_SCOPE_FILENAME = "__celerity_handler_scope__.json";
+
+/**
+ * The resources this handler uses, or null when that is not known.
+ */
+export function captureHandlerScope(): Set<string> | null {
+  const handlerId = process.env.CELERITY_HANDLER_ID;
+  if (!handlerId) return null;
+
+  const linksPath = resolveResourceLinksPath();
+  const scopePath = join(dirname(linksPath), HANDLER_SCOPE_FILENAME);
+
+  let raw: string;
+  try {
+    raw = readFileSync(scopePath, "utf8");
+  } catch {
+    // Absent by design on any bundle built before this file existed.
+    return null;
+  }
+
+  let parsed: Record<string, string[]>;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+
+  const refs = parsed[handlerId];
+  if (!Array.isArray(refs)) return null;
+
+  return new Set(refs);
+}
+
+/**
+ * Filters resource links by type, returning resourceName → configKey, narrowed
+ * to what this handler actually uses.
+ *
+ * Every resource layer routes through here, so the scope is applied once rather
+ * than multiple times. A handler outside the scope file's knowledge sees the whole
+ * application, as it did before.
+ */
 export function getLinksOfType(links: ResourceLinks, type: string): Map<string, string> {
+  const scope = captureHandlerScope();
   const result = new Map<string, string>();
   for (const [resourceName, link] of links) {
-    if (link.type === type) result.set(resourceName, link.configKey);
+    if (link.type !== type) continue;
+    if (scope && !scope.has(resourceName)) continue;
+    result.set(resourceName, link.configKey);
   }
   return result;
 }
