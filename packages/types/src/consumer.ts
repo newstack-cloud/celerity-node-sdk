@@ -77,16 +77,48 @@ export type ConsumerHandlerContext = BaseHandlerContext & {
   event: ConsumerEventInput;
 };
 
-/** Individual message processing failure for partial failure reporting. */
+/** One message in a batch that could not be processed. */
 export type MessageProcessingFailure = {
+  /**
+   * Must be the `messageId` the message arrived with. A message ID matching
+   * nothing in the batch would leave nothing behind, so the runtime refuses
+   * the whole answer rather than acknowledging a batch it cannot apply.
+   */
   messageId: string;
   errorMessage?: string;
 };
 
-/** Result returned from consumer and schedule handlers. */
+/**
+ * Result returned from consumer and schedule handlers.
+ *
+ * For a source that acknowledges, a queue, a topic or a schedule, this decides
+ * what happens to the message rather than only reporting what happened. A
+ * success acknowledges it and it is not delivered again; a failure leaves it
+ * on its source, which redelivers it according to its own rules.
+ */
 export type EventResult = {
+  /**
+   * Whether the event was processed successfully.
+   *
+   * Reporting success for work the handler did not do means never seeing that
+   * work again.
+   */
   success: boolean;
+  /**
+   * The messages in a batch that could not be processed.
+   *
+   * Naming messages is how a handler answers for each one separately, those
+   * named are left on the source to be delivered again and the rest are
+   * acknowledged, so a handler that processed most of a batch does not have
+   * all of it sent back. Failing without naming any answers for the whole
+   * batch, and none of it is acknowledged.
+   *
+   * A non-empty list is taken as the answer even alongside `success: true`.
+   * Ignored for schedule handlers, which receive one message and have nothing
+   * to name.
+   */
   failures?: MessageProcessingFailure[];
+  /** Optional error message, used for schedule handler failures. */
   errorMessage?: string;
 };
 

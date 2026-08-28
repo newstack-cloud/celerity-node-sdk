@@ -37,7 +37,14 @@ export type {
   WebSocketRequestContext,
   WebSocketHandlerContext,
   WebSocketSendOptions,
+  BinaryMessageParts,
+  BinaryWebSocketSender,
+  OutboundBinaryMessage,
+  OutboundMessage,
+  SendFailure,
 } from "./websocket";
+
+export { SendError, supportsBinary } from "./websocket";
 
 // WebSocketSender is both a type (interface) and a value (DI token symbol).
 // The regular export allows both to be re-exported.
