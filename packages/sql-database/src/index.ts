@@ -10,6 +10,7 @@ export type {
   SqlDatabaseCredentials,
   TokenProvider,
   TokenProviderFactory,
+  SqlCredentialsOptions,
 } from "./types";
 
 // Errors

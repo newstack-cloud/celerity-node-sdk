@@ -52,6 +52,9 @@ vi.mock("../src/factory", () => ({
 vi.mock("@celerity-sdk/config", () => ({
   captureResourceLinks: vi.fn(),
   getLinksOfType: vi.fn(),
+  // No secret store on the platform under test, these resources carry literal
+  // credentials, so nothing reaches for a resolver.
+  selectSecretResolver: vi.fn(() => undefined),
   RESOURCE_CONFIG_NAMESPACE: "resources",
 }));
 

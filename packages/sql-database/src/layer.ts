@@ -6,10 +6,11 @@ import {
   type ConfigNamespace,
   captureResourceLinks,
   getLinksOfType,
+  selectSecretResolver,
   RESOURCE_CONFIG_NAMESPACE,
 } from "@celerity-sdk/config";
 import type { SqlDatabaseLayerConfig } from "./config";
-import type { TokenProviderFactory } from "./types";
+import type { SqlCredentialsOptions } from "./types";
 import {
   captureSqlDatabaseLayerConfig,
   resolvePoolOverrides,
@@ -54,7 +55,10 @@ export class SqlDatabaseLayer implements CelerityLayer<BaseHandlerContext> {
       if (sqlLinks.size > 0) {
         const configService = await context.container.resolve<ConfigService>(CONFIG_SERVICE_TOKEN);
         const resourceConfig = configService.namespace(RESOURCE_CONFIG_NAMESPACE);
-        const tokenProviderFactory = await resolveTokenProviderFactory(this.config.platform);
+        const credentialsOptions: SqlCredentialsOptions = {
+          tokenProviderFactory: await resolveTokenProviderFactory(this.config.platform),
+          secrets: selectSecretResolver(this.config.platform),
+        };
 
         for (const [resourceName, configKey] of sqlLinks) {
           await this.initializeResource(
@@ -62,7 +66,7 @@ export class SqlDatabaseLayer implements CelerityLayer<BaseHandlerContext> {
             resourceName,
             configKey,
             resourceConfig,
-            tokenProviderFactory,
+            credentialsOptions,
           );
         }
 
@@ -83,14 +87,14 @@ export class SqlDatabaseLayer implements CelerityLayer<BaseHandlerContext> {
     resourceName: string,
     configKey: string,
     resourceConfig: ConfigNamespace,
-    tokenProviderFactory: TokenProviderFactory | undefined,
+    credentialsOptions: SqlCredentialsOptions,
   ): Promise<void> {
     debug("resolving sql database resource %s (configKey=%s)", resourceName, configKey);
 
     const credentials = await resolveDatabaseCredentials(
       configKey,
       resourceConfig,
-      tokenProviderFactory,
+      credentialsOptions,
     );
     const poolOverrides = await resolvePoolOverrides(configKey, resourceConfig);
     const info = await credentials.getConnectionInfo();

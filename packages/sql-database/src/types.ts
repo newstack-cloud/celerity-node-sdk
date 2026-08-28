@@ -1,3 +1,5 @@
+import type { SecretResolver } from "@celerity-sdk/config";
+
 export type SqlEngine = "postgres" | "mysql";
 
 export type SqlAuthMode = "password" | "iam";
@@ -51,3 +53,19 @@ export type TokenProviderFactory = (
   port: number,
   username: string,
 ) => TokenProvider;
+
+/**
+ * The platform-specific pieces credential resolution needs, supplied by the
+ * layer so that resolution itself stays provider-agnostic.
+ *
+ * Both are optional: a database using password auth needs no token provider,
+ * and one whose password is seeded as a literal needs no secret resolver. Where
+ * config asks for something the corresponding piece is missing, resolution
+ * fails naming the resource and the key rather than the missing dependency.
+ */
+export type SqlCredentialsOptions = {
+  /** Mints short-lived IAM auth tokens. Required for `authMode: "iam"`. */
+  tokenProviderFactory?: TokenProviderFactory;
+  /** Reads credentials the resources namespace refers to by reference. */
+  secrets?: SecretResolver;
+};

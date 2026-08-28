@@ -223,7 +223,9 @@ describe("resolveDatabaseCredentials", () => {
         db_ssl: "false", // should be forced to true
       });
 
-      const creds = await resolveDatabaseCredentials("db", ns, mockTokenProviderFactory());
+      const creds = await resolveDatabaseCredentials("db", ns, {
+        tokenProviderFactory: mockTokenProviderFactory(),
+      });
       const info = await creds.getConnectionInfo();
       expect(info.authMode).toBe("iam");
       expect(info.ssl).toBe(true);
@@ -236,7 +238,9 @@ describe("resolveDatabaseCredentials", () => {
         db_authMode: "iam",
       });
 
-      const creds = await resolveDatabaseCredentials("db", ns, mockTokenProviderFactory());
+      const creds = await resolveDatabaseCredentials("db", ns, {
+        tokenProviderFactory: mockTokenProviderFactory(),
+      });
       const info = await creds.getConnectionInfo();
       expect(info.authMode).toBe("iam");
     });
@@ -248,7 +252,9 @@ describe("resolveDatabaseCredentials", () => {
         db_authMode: "iam",
       });
 
-      const creds = await resolveDatabaseCredentials("db", ns, mockTokenProviderFactory());
+      const creds = await resolveDatabaseCredentials("db", ns, {
+        tokenProviderFactory: mockTokenProviderFactory(),
+      });
       await expect(creds.getPasswordAuth()).rejects.toThrow(SqlDatabaseError);
       await expect(creds.getPasswordAuth()).rejects.toThrow('authMode is "iam"');
     });
@@ -275,7 +281,9 @@ describe("resolveDatabaseCredentials", () => {
         db_authMode: "iam",
       });
 
-      const creds = await resolveDatabaseCredentials("db", ns, mockTokenProviderFactory());
+      const creds = await resolveDatabaseCredentials("db", ns, {
+        tokenProviderFactory: mockTokenProviderFactory(),
+      });
       const auth = await creds.getIamAuth();
 
       expect(auth.token).toBe("iam-token-for-primary.rds.amazonaws.com");
@@ -292,7 +300,7 @@ describe("resolveDatabaseCredentials", () => {
       });
 
       const factory = mockTokenProviderFactory();
-      const creds = await resolveDatabaseCredentials("db", ns, factory);
+      const creds = await resolveDatabaseCredentials("db", ns, { tokenProviderFactory: factory });
       const auth = await creds.getIamAuth();
 
       expect(auth.token).toBe("iam-token-for-primary.rds.amazonaws.com");
@@ -310,7 +318,7 @@ describe("resolveDatabaseCredentials", () => {
       });
 
       const factory = mockTokenProviderFactory();
-      const creds = await resolveDatabaseCredentials("db", ns, factory);
+      const creds = await resolveDatabaseCredentials("db", ns, { tokenProviderFactory: factory });
       await creds.getIamAuth();
       await creds.getIamAuth();
 

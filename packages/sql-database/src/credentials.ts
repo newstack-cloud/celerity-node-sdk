@@ -1,7 +1,8 @@
-import type { ConfigNamespace } from "@celerity-sdk/config";
+import type { ConfigNamespace, SecretResolver } from "@celerity-sdk/config";
 import type {
   SqlAuthMode,
   SqlConnectionInfo,
+  SqlCredentialsOptions,
   SqlDatabaseCredentials,
   SqlEngine,
   SqlIamAuth,
@@ -37,8 +38,10 @@ export function buildConnectionUrl(params: ConnectionUrlParams): string {
 export async function resolveDatabaseCredentials(
   configKey: string,
   resourceConfig: ConfigNamespace,
-  tokenProviderFactory?: TokenProviderFactory,
+  options: SqlCredentialsOptions = {},
 ): Promise<SqlDatabaseCredentials> {
+  const { tokenProviderFactory, secrets } = options;
+
   const host = await resourceConfig.get(`${configKey}_host`);
   if (!host) {
     throw new SqlDatabaseError(`Missing required config key "${configKey}_host"`, configKey);
@@ -78,13 +81,7 @@ export async function resolveDatabaseCredentials(
   };
 
   if (authMode === "password") {
-    const password = await resourceConfig.get(`${configKey}_password`);
-    if (!password) {
-      throw new SqlDatabaseError(
-        `Missing required config key "${configKey}_password" for password auth`,
-        configKey,
-      );
-    }
+    const password = await resolvePassword(configKey, resourceConfig, secrets);
     return new PasswordCredentials(connectionInfo, password);
   }
 
@@ -96,6 +93,96 @@ export async function resolveDatabaseCredentials(
   }
 
   return new IamCredentials(connectionInfo, tokenProviderFactory);
+}
+
+/**
+ * The application user's password, from wherever this environment keeps it.
+ *
+ * Local development seeds the literal into the namespace, because there it is a
+ * fixed constant nobody needs to protect. A deployed database has a generated
+ * password living in a secret, and the namespace carries a reference to it. The
+ * password can rotate, and a copy in the parameter store would keep working
+ * right up until it silently did not.
+ *
+ * Neither the store the secret lives in nor the shape it is stored in is this
+ * function's business. A reference is an opaque id handed to whoever knows how
+ * to read it, and what comes back is taken either way:
+ *
+ * - a JSON object, from which the `password` field is read. AWS deploys create
+ *   the secret in this shape to match an AWS-managed RDS secret, so the same
+ *   rotation tooling works against either.
+ * - anything else, which is the password itself. A secret store that holds a
+ *   plain string, as one holding a generated database password commonly does,
+ *   needs no wrapper to be readable here.
+ *
+ * Only the password is taken from an object; the user comes from config.
+ */
+async function resolvePassword(
+  configKey: string,
+  resourceConfig: ConfigNamespace,
+  secrets: SecretResolver | undefined,
+): Promise<string> {
+  const literal = await resourceConfig.get(`${configKey}_password`);
+  if (literal) return literal;
+
+  const secretId = await resourceConfig.get(`${configKey}_credentialsSecretId`);
+  if (!secretId) {
+    throw new SqlDatabaseError(
+      `Missing "${configKey}_password" and "${configKey}_credentialsSecretId"; ` +
+        "password auth needs one of them",
+      configKey,
+    );
+  }
+
+  if (!secrets) {
+    throw new SqlDatabaseError(
+      `"${configKey}_credentialsSecretId" refers to a secret, but no secret store is ` +
+        "configured for this platform",
+      configKey,
+    );
+  }
+
+  let raw: string;
+  try {
+    raw = await secrets.getString(secretId);
+  } catch (err) {
+    const cause = err instanceof Error ? err.message : String(err);
+    throw new SqlDatabaseError(
+      `reading credentials for "${configKey}" from ${secretId}: ${cause}`,
+      configKey,
+    );
+  }
+
+  const fields = credentialFields(raw);
+  if (!fields) return raw;
+
+  // An object that carries no password is a secret of the wrong kind rather
+  // than a password that happens to look like JSON, for example, one pointed at the master
+  // secret by mistake. Reading it as the password would send the whole
+  // object as one.
+  const password = fields.password;
+  if (typeof password !== "string" || password.length === 0) {
+    throw new SqlDatabaseError(
+      `the secret ${secretId} for "${configKey}" is an object with no password field`,
+      configKey,
+    );
+  }
+  return password;
+}
+
+/** The secret read as an object of credential fields, or null where it is not one. */
+function credentialFields(raw: string): Record<string, unknown> | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return null;
+  }
+  return parsed as Record<string, unknown>;
 }
 
 class PasswordCredentials implements SqlDatabaseCredentials {
