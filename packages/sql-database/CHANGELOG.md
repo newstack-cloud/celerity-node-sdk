@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/sql-database/v0.8.4...sql-database/v0.9.0) (2026-08-28)
+
+
+### Features
+
+* **sql-database:** add support for resolving password from separate secret ([5ee31e6](https://github.com/newstack-cloud/celerity-node-sdk/commit/5ee31e6541d2abf33e2e56cea5ee06b902145a51))
+
 ## [0.8.4](https://github.com/newstack-cloud/celerity-node-sdk/compare/sql-database/v0.8.3...sql-database/v0.8.4) (2026-07-28)
 
 

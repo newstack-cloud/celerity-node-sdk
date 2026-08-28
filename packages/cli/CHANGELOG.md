@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/cli/v0.8.4...cli/v0.9.0) (2026-08-28)
+
+
+### Bug Fixes
+
+* **cli:** walk dependency graph for resource extraction and add missing handler tags ([9676123](https://github.com/newstack-cloud/celerity-node-sdk/commit/967612396854b50447bcd5a32c636079aac9fcd1))
+
 ## [0.8.4](https://github.com/newstack-cloud/celerity-node-sdk/compare/cli/v0.8.3...cli/v0.8.4) (2026-07-28)
 
 

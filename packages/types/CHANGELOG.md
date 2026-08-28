@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/types/v0.8.4...types/v0.9.0) (2026-08-28)
+
+
+### Features
+
+* **types:** add event result, ws types and ws binary compatibility check ([129143c](https://github.com/newstack-cloud/celerity-node-sdk/commit/129143c231ab423049bc5f553a4d99e3d262aad9))
+
 ## [0.8.4](https://github.com/newstack-cloud/celerity-node-sdk/compare/types/v0.8.3...types/v0.8.4) (2026-07-28)
 
 

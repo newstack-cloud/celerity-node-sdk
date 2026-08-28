@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/cache/v0.8.4...cache/v0.9.0) (2026-08-28)
+
+
+### Bug Fixes
+
+* **cache:** add corrections to token names and decouples from aws ([a19d087](https://github.com/newstack-cloud/celerity-node-sdk/commit/a19d087a66ead9b3bb9486e6087357b19ca1c5f3))
+
 ## [0.8.4](https://github.com/newstack-cloud/celerity-node-sdk/compare/cache/v0.8.3...cache/v0.8.4) (2026-07-28)
 
 
