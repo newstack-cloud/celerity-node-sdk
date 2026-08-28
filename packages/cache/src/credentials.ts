@@ -7,6 +7,7 @@ import type {
   CacheIamAuth,
   CachePasswordAuth,
   TokenProvider,
+  TokenProviderContext,
   TokenProviderFactory,
 } from "./types";
 import { CacheError } from "./errors";
@@ -56,10 +57,6 @@ export async function resolveCacheCredentials(
     return new PasswordCacheCredentials(connectionInfo, authToken);
   }
 
-  if (!user) {
-    throw new CacheError(`Missing required config key "${configKey}_user" for IAM auth`, configKey);
-  }
-
   if (!tokenProviderFactory) {
     throw new CacheError(
       `IAM auth requires a tokenProviderFactory for config key "${configKey}"`,
@@ -67,15 +64,17 @@ export async function resolveCacheCredentials(
     );
   }
 
-  const region = await resourceConfig.get(`${configKey}_region`);
-  if (!region) {
-    throw new CacheError(
-      `Missing required config key "${configKey}_region" for IAM auth`,
-      configKey,
-    );
-  }
-
-  return new IamCacheCredentials(connectionInfo, tokenProviderFactory, host, user, region);
+  // Everything else IAM auth needs is the provider's to ask for. What a token
+  // is signed with differs by platform, a region and an RBAC user on AWS, an
+  // object id and a scope on Azure, neither on GCP where the token is the whole
+  // credential. Each provider reads its own keys out of the namespace rather
+  // than having them named here and required of every platform.
+  return new IamCacheCredentials(connectionInfo, tokenProviderFactory, {
+    configKey,
+    resourceConfig,
+    host,
+    ...(user ? { user } : {}),
+  });
 }
 
 /**
@@ -141,14 +140,12 @@ class PasswordCacheCredentials implements CacheCredentials {
 }
 
 class IamCacheCredentials implements CacheCredentials {
-  private tokenProvider: TokenProvider | null = null;
+  private tokenProvider: Promise<TokenProvider> | null = null;
 
   constructor(
     private readonly info: CacheConnectionInfo,
     private readonly factory: TokenProviderFactory,
-    private readonly cacheId: string,
-    private readonly userId: string,
-    private readonly region: string,
+    private readonly context: TokenProviderContext,
   ) {}
 
   async getConnectionInfo(): Promise<CacheConnectionInfo> {
@@ -160,15 +157,13 @@ class IamCacheCredentials implements CacheCredentials {
   }
 
   async getIamAuth(): Promise<CacheIamAuth> {
-    const provider = this.getOrCreateTokenProvider();
+    const provider = await this.getOrCreateTokenProvider();
     const token = await provider.getToken();
     return { token };
   }
 
-  private getOrCreateTokenProvider(): TokenProvider {
-    if (!this.tokenProvider) {
-      this.tokenProvider = this.factory(this.cacheId, this.userId, this.region);
-    }
+  private getOrCreateTokenProvider(): Promise<TokenProvider> {
+    this.tokenProvider ??= this.factory(this.context);
     return this.tokenProvider;
   }
 }

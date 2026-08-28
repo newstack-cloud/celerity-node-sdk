@@ -1,4 +1,5 @@
 import type { TokenProvider, TokenProviderFactory } from "../../../types";
+import { CacheError } from "../../../errors";
 
 /**
  * Generates IAM auth tokens for ElastiCache using SigV4 presigned requests.
@@ -66,7 +67,35 @@ function formatPresignedUrl(request: {
   return `${request.hostname}${request.path}?${params.toString()}`;
 }
 
+/**
+ * Builds providers that sign ElastiCache connection tokens.
+ */
 export function createElastiCacheTokenProviderFactory(): TokenProviderFactory {
-  return (cacheId: string, userId: string, region: string) =>
-    new ElastiCacheTokenProvider(cacheId, userId, region);
+  return async ({ configKey, resourceConfig, host, user }) => {
+    if (!user) {
+      throw new CacheError(
+        `ElastiCache IAM auth needs the RBAC user to sign for, from "${configKey}_user"`,
+        configKey,
+      );
+    }
+
+    const region = (await resourceConfig.get(`${configKey}_region`)) ?? awsRegionFromEnvironment();
+    return new ElastiCacheTokenProvider(host, user, region);
+  };
+}
+
+/**
+ * The region to sign a connection token in, from the environment running the
+ * function. This is a fallback for when the config key is not set.
+ */
+function awsRegionFromEnvironment(): string {
+  const region = process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION;
+  if (!region) {
+    throw new CacheError(
+      "ElastiCache IAM auth needs the region to sign a connection token in, and neither " +
+        "the cache's _region config key nor AWS_REGION is set",
+      "elasticache-token",
+    );
+  }
+  return region;
 }

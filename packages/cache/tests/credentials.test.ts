@@ -94,14 +94,13 @@ describe("resolveCacheCredentials", () => {
 
   describe("IAM mode", () => {
     const mockTokenProvider = { getToken: vi.fn().mockResolvedValue("iam-token-123") };
-    const mockFactory: TokenProviderFactory = vi.fn(() => mockTokenProvider);
+    const mockFactory: TokenProviderFactory = vi.fn(async () => mockTokenProvider);
 
     it("resolves IAM credentials with all required fields", async () => {
       const ns = mockNamespace({
         myCache_host: "redis.example.com",
         myCache_authMode: "iam",
         myCache_user: "cache-user",
-        myCache_region: "us-east-1",
       });
       const creds = await resolveCacheCredentials("myCache", ns, { tokenProviderFactory: mockFactory });
 
@@ -116,7 +115,6 @@ describe("resolveCacheCredentials", () => {
         myCache_host: "redis.example.com",
         myCache_authMode: "iam",
         myCache_user: "cache-user",
-        myCache_region: "us-east-1",
       });
       const creds = await resolveCacheCredentials("myCache", ns, { tokenProviderFactory: mockFactory });
 
@@ -129,7 +127,6 @@ describe("resolveCacheCredentials", () => {
         myCache_host: "redis.example.com",
         myCache_authMode: "iam",
         myCache_user: "cache-user",
-        myCache_region: "us-east-1",
       });
       const creds = await resolveCacheCredentials("myCache", ns, { tokenProviderFactory: mockFactory });
 
@@ -141,7 +138,6 @@ describe("resolveCacheCredentials", () => {
         myCache_host: "redis.example.com",
         myCache_authMode: "iam",
         myCache_user: "cache-user",
-        myCache_region: "us-east-1",
         myCache_tls: "false",
       });
       const creds = await resolveCacheCredentials("myCache", ns, { tokenProviderFactory: mockFactory });
@@ -158,17 +154,22 @@ describe("resolveCacheCredentials", () => {
       await expect(resolveCacheCredentials("myCache", ns)).rejects.toThrow("myCache_host");
     });
 
-    it("throws when IAM mode is missing user", async () => {
+    it("resolves without a user, leaving the requirement to the provider", async () => {
       const ns = mockNamespace({
         myCache_host: "redis.example.com",
         myCache_authMode: "iam",
-        myCache_region: "us-east-1",
       });
-      const factory: TokenProviderFactory = vi.fn();
+      const provider = { getToken: vi.fn().mockResolvedValue("token") };
+      const factory: TokenProviderFactory = vi.fn(async () => provider);
 
-      await expect(resolveCacheCredentials("myCache", ns, { tokenProviderFactory: factory })).rejects.toThrow(
-        "myCache_user",
-      );
+      const creds = await resolveCacheCredentials("myCache", ns, {
+        tokenProviderFactory: factory,
+      });
+      await creds.getIamAuth();
+
+      const [context] = vi.mocked(factory).mock.calls[0];
+      expect(context.user).toBeUndefined();
+      expect(context.configKey).toBe("myCache");
     });
 
     it("throws when IAM mode is missing tokenProviderFactory", async () => {
@@ -176,23 +177,32 @@ describe("resolveCacheCredentials", () => {
         myCache_host: "redis.example.com",
         myCache_authMode: "iam",
         myCache_user: "cache-user",
-        myCache_region: "us-east-1",
       });
 
       await expect(resolveCacheCredentials("myCache", ns)).rejects.toThrow("tokenProviderFactory");
     });
 
-    it("throws when IAM mode is missing region", async () => {
+    it("hands the provider the namespace rather than named platform values", async () => {
       const ns = mockNamespace({
         myCache_host: "redis.example.com",
         myCache_authMode: "iam",
         myCache_user: "cache-user",
       });
-      const factory: TokenProviderFactory = vi.fn();
+      const provider = { getToken: vi.fn().mockResolvedValue("token") };
+      const factory: TokenProviderFactory = vi.fn(async () => provider);
 
-      await expect(resolveCacheCredentials("myCache", ns, { tokenProviderFactory: factory })).rejects.toThrow(
-        "myCache_region",
-      );
+      const creds = await resolveCacheCredentials("myCache", ns, {
+        tokenProviderFactory: factory,
+      });
+      await creds.getIamAuth();
+
+      expect(factory).toHaveBeenCalledWith({
+        configKey: "myCache",
+        resourceConfig: ns,
+        host: "redis.example.com",
+        user: "cache-user",
+      });
+      expect(ns.get).not.toHaveBeenCalledWith("myCache_region");
     });
   });
 });

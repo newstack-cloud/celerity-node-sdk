@@ -1,5 +1,5 @@
 import type { Closeable } from "@celerity-sdk/types";
-import type { SecretResolver } from "@celerity-sdk/config";
+import type { ConfigNamespace, SecretResolver } from "@celerity-sdk/config";
 
 export type CacheAuthMode = "password" | "iam";
 
@@ -248,11 +248,28 @@ export interface TokenProvider {
   getToken(): Promise<string>;
 }
 
-export type TokenProviderFactory = (
-  cacheId: string,
-  userId: string,
-  region: string,
-) => TokenProvider;
+/**
+ * What a token provider is given to build itself.
+ *
+ * Carries the namespace and key rather than a fixed set of values so that each
+ * provider reads only what it needs. A region is an AWS and GCP concept and
+ * means nothing to an Entra token; a user is required by ElastiCache and by
+ * Azure but has no equivalent on Memorystore, where the token is the whole
+ * credential. Naming those here would put one platform's requirements in the
+ * path every platform takes.
+ */
+export type TokenProviderContext = {
+  /** The cache's key in the resources namespace, for provider-specific config. */
+  configKey: string;
+  /** The resources namespace, where a provider reads the keys only it knows about. */
+  resourceConfig: ConfigNamespace;
+  /** The endpoint being connected to, which some providers sign against. */
+  host: string;
+  /** The user the connection authenticates as, where the platform has one. */
+  user?: string;
+};
+
+export type TokenProviderFactory = (context: TokenProviderContext) => Promise<TokenProvider>;
 
 /**
  * The platform-specific pieces credential resolution needs, supplied by the

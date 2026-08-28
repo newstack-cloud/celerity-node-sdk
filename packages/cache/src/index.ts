@@ -14,6 +14,7 @@ export type {
   SortedSetScoreRangeOptions,
   TransactionResult,
   TokenProvider,
+  TokenProviderContext,
   TokenProviderFactory,
   CacheCredentialsOptions,
 } from "./types";
