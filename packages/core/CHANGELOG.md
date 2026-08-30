@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.9.0...core/v0.9.1) (2026-08-30)
+
+
+### Bug Fixes
+
+* **core:** adds fix to ensure handlers are correctly resolved by id ([ada9ba6](https://github.com/newstack-cloud/celerity-node-sdk/commit/ada9ba60a600aeee5d8bc6c7bdc8296ef570b54d))
+
 ## [0.9.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.8.4...core/v0.9.0) (2026-08-28)
 
 
