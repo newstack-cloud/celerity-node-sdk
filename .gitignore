@@ -36,3 +36,6 @@ eslint-report.json
 # Agent files and directories
 CLAUDE.md
 .claude
+
+# Local design docs that should not be committed.
+docs/design
