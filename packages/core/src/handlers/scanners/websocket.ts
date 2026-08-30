@@ -22,6 +22,7 @@ import { validate } from "../../layers/validate";
 import type { Container } from "../../di/container";
 import type { ModuleGraph } from "../../bootstrap/module-graph";
 import type { HandlerRegistry } from "../registry";
+import { classHandlerId } from "../handler-id";
 
 const debug = createDebug("celerity:core:scanner:websocket");
 
@@ -100,6 +101,7 @@ async function scanClassHandler(
 
     registry.register({
       type: "websocket",
+      id: classHandlerId(controllerClass, methodName),
       route: eventMeta.route,
       protectedBy: classProtectedBy,
       layers,

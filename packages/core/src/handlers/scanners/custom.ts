@@ -19,6 +19,7 @@ import { validate } from "../../layers/validate";
 import type { Container } from "../../di/container";
 import type { ModuleGraph } from "../../bootstrap/module-graph";
 import type { HandlerRegistry } from "../registry";
+import { classHandlerId } from "../handler-id";
 
 const debug = createDebug("celerity:core:scanner:custom");
 
@@ -85,6 +86,7 @@ async function scanClassHandler(
     debug("scanClassHandler: name=%s (%s.%s)", invokeMeta.name, controllerClass.name, methodName);
     registry.register({
       type: "custom",
+      id: classHandlerId(controllerClass, methodName),
       name: invokeMeta.name,
       layers,
       paramMetadata,

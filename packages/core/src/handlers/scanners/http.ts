@@ -28,6 +28,7 @@ import type { Container } from "../../di/container";
 import { buildModuleGraph, registerModuleGraph } from "../../bootstrap/module-graph";
 import type { ModuleGraph } from "../../bootstrap/module-graph";
 import type { HandlerRegistry } from "../registry";
+import { classHandlerId } from "../handler-id";
 
 const debug = createDebug("celerity:core:scanner:http");
 
@@ -142,6 +143,7 @@ async function scanClassHandler(
     debug("scanClassHandler: %s %s (%s.%s)", method, fullPath, controllerClass.name, methodName);
     registry.register({
       type: "http",
+      id: classHandlerId(controllerClass, methodName),
       path: fullPath,
       method,
       protectedBy: [...classProtectedBy, ...methodProtectedBy],

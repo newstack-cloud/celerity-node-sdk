@@ -1088,8 +1088,8 @@ describe("HandlerRegistry", () => {
       expect(byId).toBe(byRoute);
     });
 
-    it("does not match class handlers by id", async () => {
-      // Arrange — class handlers never have an id field
+    it("matches a class handler by its class-qualified id", async () => {
+      // Arrange
       @Module({ controllers: [UserHandler] })
       class M {}
       await scanModule(M, container, registry);
@@ -1098,6 +1098,33 @@ describe("HandlerRegistry", () => {
       const handler = registry.getHandlerById("http", "UserHandler.findAll");
 
       // Assert
+      expect(handler).toBeDefined();
+      expect(handler).toBe(registry.getHandler("http", "GET /users"));
+    });
+
+    // Deployment tooling identifies a handler as <module>.<Class>.<method>, while the
+    // scanners can only know <Class>.<method>. Without reconciling the two, the id
+    // lookup misses and the caller falls back to matching on the incoming event, which
+    // runs whichever handler that event addresses rather than the one this deployment
+    // unit exists to run.
+    it("matches a class handler when the id carries a module prefix", async () => {
+      @Module({ controllers: [UserHandler] })
+      class M {}
+      await scanModule(M, container, registry);
+
+      const handler = registry.getHandlerById("http", "app-module.UserHandler.findAll");
+
+      expect(handler).toBeDefined();
+      expect(handler).toBe(registry.getHandlerById("http", "UserHandler.findAll"));
+    });
+
+    it("does not match a different handler when the id is unknown", async () => {
+      @Module({ controllers: [UserHandler] })
+      class M {}
+      await scanModule(M, container, registry);
+
+      const handler = registry.getHandlerById("http", "app-module.OtherController.findAll");
+
       expect(handler).toBeUndefined();
     });
   });

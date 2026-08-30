@@ -10,6 +10,7 @@ import type {
   ResolvedGuard,
 } from "./types";
 import { routingKeyOf } from "./routing";
+import { stripModulePrefix } from "./handler-id";
 
 const debug = createDebug("celerity:core:registry");
 
@@ -47,14 +48,32 @@ export class HandlerRegistry {
     return found;
   }
 
+  /**
+   * Looks a handler up by the identifier deployment tooling assigned it.
+   *
+   * Class-based handlers are registered as `<Class>.<method>`, because the scanners
+   * walk classes and never see the module file. Deployment tooling identifies the same
+   * handler as `<module>.<Class>.<method>`, so an id arriving in that longer form is
+   * retried without its module segments.
+   */
   getHandlerById<T extends HandlerType>(
     type: T,
     id: string,
   ): Extract<ResolvedHandler, { type: T }> | undefined {
-    const handler = this.byId.get(id);
-    if (handler && handler.type === type) {
-      return handler as Extract<ResolvedHandler, { type: T }>;
+    const exact = this.byId.get(id);
+    if (exact && exact.type === type) {
+      return exact as Extract<ResolvedHandler, { type: T }>;
     }
+
+    const withoutModule = stripModulePrefix(id);
+    if (withoutModule) {
+      const reduced = this.byId.get(withoutModule);
+      if (reduced && reduced.type === type) {
+        debug("getHandlerById %s %s → matched as %s", type, id, withoutModule);
+        return reduced as Extract<ResolvedHandler, { type: T }>;
+      }
+    }
+
     debug("getHandlerById %s %s → not found", type, id);
     return undefined;
   }

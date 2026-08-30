@@ -19,6 +19,7 @@ import { validate } from "../../layers/validate";
 import type { Container } from "../../di/container";
 import type { ModuleGraph } from "../../bootstrap/module-graph";
 import type { HandlerRegistry } from "../registry";
+import { classHandlerId } from "../handler-id";
 import { composeHandlerTag } from "../handler-tag";
 
 const debug = createDebug("celerity:core:scanner:schedule");
@@ -88,6 +89,7 @@ async function scanClassHandler(
     debug("scanClassHandler: tag=%s (%s.%s)", handlerTag, controllerClass.name, methodName);
     registry.register({
       type: "schedule",
+      id: classHandlerId(controllerClass, methodName),
       handlerTag,
       layers,
       paramMetadata,
