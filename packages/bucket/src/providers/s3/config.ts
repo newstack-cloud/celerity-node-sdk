@@ -10,11 +10,24 @@ export function captureS3Config(): S3ObjectStorageConfig {
   const accessKeyId = process.env.CELERITY_LOCAL_BUCKET_ACCESS_KEY ?? process.env.AWS_ACCESS_KEY_ID;
   const secretAccessKey =
     process.env.CELERITY_LOCAL_BUCKET_SECRET_KEY ?? process.env.AWS_SECRET_ACCESS_KEY;
+  const endpoint = process.env.CELERITY_AWS_S3_ENDPOINT ?? process.env.AWS_ENDPOINT_URL;
 
+  // Credentials are only taken from the environment when a custom endpoint is set, which
+  // means MinIO or another local emulator. On real AWS they are left undefined so the
+  // SDK's own provider chain resolves them.
   return {
     region: process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION,
-    endpoint: process.env.CELERITY_AWS_S3_ENDPOINT ?? process.env.AWS_ENDPOINT_URL,
-    forcePathStyle: !!(process.env.CELERITY_AWS_S3_ENDPOINT ?? process.env.AWS_ENDPOINT_URL),
-    credentials: accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined,
+    endpoint,
+    forcePathStyle: !!endpoint,
+    credentials:
+      endpoint && accessKeyId && secretAccessKey
+        ? {
+            accessKeyId,
+            secretAccessKey,
+            ...(process.env.AWS_SESSION_TOKEN
+              ? { sessionToken: process.env.AWS_SESSION_TOKEN }
+              : {}),
+          }
+        : undefined,
   };
 }
