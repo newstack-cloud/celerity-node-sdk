@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/queue/v0.9.0...queue/v0.9.1) (2026-08-30)
+
+
+### Bug Fixes
+
+* **queue:** correct aws credentials resolution for deployed environments ([c4fa695](https://github.com/newstack-cloud/celerity-node-sdk/commit/c4fa69569c8d1e79a0e4a812b518e3bda7dd1047))
+
 ## [0.9.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/queue/v0.8.4...queue/v0.9.0) (2026-08-28)
 
 

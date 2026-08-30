@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/topic/v0.9.0...topic/v0.9.1) (2026-08-30)
+
+
+### Bug Fixes
+
+* **topic:** correct aws credentials resolution for deployed environments ([8811b6f](https://github.com/newstack-cloud/celerity-node-sdk/commit/8811b6f3d6f911e9e860dbc24b13b14160f131bf))
+
 ## [0.9.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/topic/v0.8.4...topic/v0.9.0) (2026-08-28)
 
 

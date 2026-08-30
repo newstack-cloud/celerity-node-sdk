@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/sql-database/v0.9.0...sql-database/v0.9.1) (2026-08-30)
+
+
+### Miscellaneous
+
+* **sql-database:** Synchronize celerity-sdk versions
+
 ## [0.9.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/sql-database/v0.8.4...sql-database/v0.9.0) (2026-08-28)
 
 

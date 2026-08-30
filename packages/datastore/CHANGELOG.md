@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/datastore/v0.9.0...datastore/v0.9.1) (2026-08-30)
+
+
+### Bug Fixes
+
+* **datastore:** correct aws credentials resolution for deployed environments ([f6c9323](https://github.com/newstack-cloud/celerity-node-sdk/commit/f6c93235bf2b3af1b5a3ea057e62536d1044193a))
+
 ## [0.9.0](https://github.com/newstack-cloud/celerity-node-sdk/compare/datastore/v0.8.4...datastore/v0.9.0) (2026-08-28)
 
 
