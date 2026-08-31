@@ -50,7 +50,7 @@
   },
   "peerDependencies": {
     "@aws-sdk/client-sqs": "^3.1062.0",
-    "@google-cloud/pubsub": "^4.0.0",
+    "@google-cloud/pubsub": "^4.0.0 || ^6.0.0",
     "@azure/service-bus": "^7.0.0",
     "ioredis": "^5.0.0",
     "reflect-metadata": "^0.2.0"
