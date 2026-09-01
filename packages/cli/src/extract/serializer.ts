@@ -573,6 +573,10 @@ function buildFunctionTypeAnnotations(
     }
     case "consumer": {
       annotations["celerity.handler.consumer"] = true;
+      const source = meta.source as string | undefined;
+      if (source) {
+        annotations["celerity.handler.consumer.source"] = source;
+      }
       const route = meta.route as string | undefined;
       if (route) {
         annotations["celerity.handler.consumer.route"] = route;

@@ -1272,6 +1272,26 @@ describe("serializeManifest", () => {
       expect(fn.annotations!["celerity.handler.consumer.route"]).toBe("process-orders");
     });
 
+    it("serializes the consumer a function handler declares as its source", () => {
+      // Deployment tooling groups a routed consumer's handlers behind one
+      // function, which it can only do if the manifest says which consumer each
+      // one belongs to.
+      const consumerHandler = createConsumerHandler(
+        { source: "ordersConsumer", route: "process-orders" },
+        async () => ({ success: true }),
+      );
+
+      @Module({ functionHandlers: [consumerHandler] })
+      class ConsumerModule {}
+
+      const scanned = buildScannedModule(ConsumerModule);
+      const manifest = serializeManifest(scanned, SOURCE_FILE, OPTIONS);
+
+      const fn = manifest.functionHandlers[0];
+      expect(fn.annotations!["celerity.handler.consumer.source"]).toBe("ordersConsumer");
+      expect(fn.annotations!["celerity.handler.consumer.route"]).toBe("process-orders");
+    });
+
     it("serializes schedule function handler with source", () => {
       const scheduleHandler = createScheduleHandler(
         "daily-cleanup",
