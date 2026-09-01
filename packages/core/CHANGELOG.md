@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.9.1...core/v0.9.2) (2026-09-01)
+
+
+### Bug Fixes
+
+* **core:** add fix to broken consumer message routing ([e3a4a54](https://github.com/newstack-cloud/celerity-node-sdk/commit/e3a4a5405a347756964d89314705717c7ba0c478))
+
 ## [0.9.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/core/v0.9.0...core/v0.9.1) (2026-08-30)
 
 

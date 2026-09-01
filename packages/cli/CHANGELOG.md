@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/newstack-cloud/celerity-node-sdk/compare/cli/v0.9.1...cli/v0.9.2) (2026-09-01)
+
+
+### Bug Fixes
+
+* **cli:** ensure source annotation is extracted from function factory consumers ([a1c927d](https://github.com/newstack-cloud/celerity-node-sdk/commit/a1c927d279b240ffb3804e3ad1fd5224459779c4))
+
 ## [0.9.1](https://github.com/newstack-cloud/celerity-node-sdk/compare/cli/v0.9.0...cli/v0.9.1) (2026-08-30)
 
 
