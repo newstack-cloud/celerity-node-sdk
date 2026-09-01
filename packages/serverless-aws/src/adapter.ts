@@ -26,8 +26,11 @@ import {
   executeSchedulePipeline,
   executeCustomPipeline,
   resolveHandlerByModuleRef,
+  planRouting,
+  routesAsConsumer,
 } from "@celerity-sdk/core";
-import type { WebSocketMessage } from "@celerity-sdk/types";
+import type { WebSocketMessage, ConsumerEventInput } from "@celerity-sdk/types";
+import type { UnroutedMessage } from "@celerity-sdk/core";
 import { WebSocketSender as WS_SENDER_TOKEN } from "@celerity-sdk/types";
 import {
   mapApiGatewayV2Event,
@@ -45,6 +48,15 @@ const debug = createDebug("celerity:serverless-aws");
 type AwsLambdaAdapterConfig = {
   handlerId?: string;
   handlerTag?: string;
+  /**
+   * The message-body field a routed consumer selects its handler on.
+   *
+   * Which handler to invoke is still addressed by the handler tag, as for every
+   * other handler type. This says how to read a route out of a message, which is
+   * information the tag cannot carry because it comes from the consumer's
+   * blueprint declaration rather than from the handler.
+   */
+  routingKey?: string;
   moduleDir: string;
 };
 
@@ -228,6 +240,19 @@ export class AwsLambdaAdapter implements ServerlessAdapter {
       }
 
       if (!cachedHandler) {
+        // Nothing is registered under this tag as a single handler. A tag that
+        // instead names a consumer marks a function serving that whole consumer,
+        // which routes the batch itself. The source cannot route, since it hands
+        // each message to whichever consumer polls first, so several functions on
+        // one queue give an arbitrary handler rather than the declared one.
+        //
+        // Resolved last so every existing path keeps precedence. A function that
+        // addresses one handler, by id or by tag, is dispatched to that handler
+        // exactly as before, whether or not its consumer has routed siblings.
+        if (routesAsConsumer(registry, handlerTag)) {
+          return this.dispatchRoutedConsumer(registry, handlerTag, consumerEvent, options);
+        }
+
         // Answering with no batch item failures reports every message as handled
         // and SQS deletes the batch, so a misconfigured function would quietly
         // consume the queue. Throwing leaves the messages to be retried and
@@ -243,6 +268,83 @@ export class AwsLambdaAdapter implements ServerlessAdapter {
       const result = await executeConsumerPipeline(cachedHandler, consumerEvent, options);
       return mapConsumerResultToSqsBatchResponse(result.failures);
     };
+  }
+
+  /**
+   * Runs one batch across the handlers of a routed consumer.
+   *
+   * Each handler is invoked through the ordinary consumer pipeline with its own
+   * subset of the batch, so layers, validation and the batch-shaped signature
+   * behave exactly as they do for an unrouted consumer.
+   *
+   * Handlers run in sequence rather than concurrently. A batch is already the
+   * unit of parallelism the source controls through its own concurrency, and
+   * running the groups together would multiply the load a single message batch
+   * can put on downstream resources without the author asking for it.
+   *
+   * A handler that throws fails only its own messages. The alternative, letting
+   * the invocation fail, would redeliver the whole batch and re-run the handlers
+   * that had already succeeded, which for anything not idempotent is worse than
+   * the failure itself.
+   */
+  private async dispatchRoutedConsumer(
+    registry: HandlerRegistry,
+    consumerName: string,
+    consumerEvent: ConsumerEventInput,
+    options: PipelineOptions,
+  ): Promise<SQSBatchResponse> {
+    const routingKey = this.config.routingKey ?? "event";
+
+    const plan = planRouting(registry, consumerName, routingKey, consumerEvent.messages);
+    debug(
+      "adapter: routed consumer=%s key=%s batches=%d unrouted=%d",
+      consumerName,
+      routingKey,
+      plan.batches.length,
+      plan.unrouted.length,
+    );
+
+    if (plan.batches.length === 0 && plan.unrouted.length === 0) {
+      return { batchItemFailures: [] };
+    }
+
+    if (plan.batches.length === 0 && consumerEvent.messages.length > 0) {
+      // Nothing in the batch could be routed. That is a wiring fault rather than
+      // a message fault, and failing the invocation surfaces it as an error
+      // instead of leaving it to look like ordinary redelivery.
+      throw new Error(
+        `No handler on consumer "${consumerName}" could take any message in this batch. ` +
+          `First reason: ${plan.unrouted[0].reason}.`,
+      );
+    }
+
+    const failures: Array<{ messageId: string }> = plan.unrouted.map(
+      ({ message, reason }: UnroutedMessage) => {
+        debug("adapter: unrouted message %s — %s", message.messageId, reason);
+        return { messageId: message.messageId };
+      },
+    );
+
+    for (const batch of plan.batches) {
+      try {
+        const result = await executeConsumerPipeline(
+          batch.handler,
+          { ...consumerEvent, handlerTag: batch.handler.handlerTag, messages: batch.messages },
+          options,
+        );
+        for (const failure of result.failures ?? []) failures.push(failure);
+      } catch (err) {
+        debug(
+          "adapter: routed handler %s threw, failing its %d message(s): %s",
+          batch.handler.handlerTag,
+          batch.messages.length,
+          err instanceof Error ? err.message : String(err),
+        );
+        for (const message of batch.messages) failures.push({ messageId: message.messageId });
+      }
+    }
+
+    return mapConsumerResultToSqsBatchResponse(failures);
   }
 
   createScheduleHandler(registry: HandlerRegistry, options: PipelineOptions): ServerlessHandler {
@@ -351,6 +453,10 @@ function captureAwsLambdaConfig(): AwsLambdaAdapterConfig {
   return {
     handlerId: process.env.CELERITY_HANDLER_ID,
     handlerTag: process.env.CELERITY_HANDLER_TAG,
+    // Defaulted rather than required, so a target that tags a function with a
+    // consumer but says nothing about the field still routes on the documented
+    // default.
+    routingKey: process.env.CELERITY_ROUTING_KEY || "event",
     moduleDir: modulePath ? dirname(resolve(modulePath)) : process.cwd(),
   };
 }
