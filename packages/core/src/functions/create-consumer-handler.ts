@@ -10,6 +10,16 @@ import type {
 } from "@celerity-sdk/types";
 
 export type ConsumerHandlerConfig = {
+  /**
+   * The blueprint consumer resource this handler belongs to.
+   *
+   * Needed whenever a consumer has more than one handler, a deploy target that
+   * puts them all behind a single function has to find them as a set, and the
+   * route alone says which of them takes a message, not which consumer they
+   * belong to. A consumer with a single handler does not need it, the same as
+   * for `@Consumer()`.
+   */
+  source?: string;
   route?: string;
   messageSchema?: Schema;
   inject?: InjectionToken[];
@@ -33,6 +43,7 @@ export function createConsumerHandler(
     customMetadata: config.metadata ?? {},
   };
 
+  if (config.source !== undefined) metadata.source = config.source;
   if (config.route !== undefined) metadata.route = config.route;
   if (config.messageSchema !== undefined) metadata.messageSchema = config.messageSchema;
 

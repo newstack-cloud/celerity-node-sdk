@@ -106,6 +106,8 @@ export {
 // Handler registry and resolution
 export { HandlerRegistry } from "./handlers/registry";
 export { routingKeyOf } from "./handlers/routing";
+export { planRouting, routesAsConsumer } from "./handlers/consumer-router";
+export type { RoutedBatch, UnroutedMessage, RoutingPlan } from "./handlers/consumer-router";
 export { composeHandlerTag } from "./handlers/handler-tag";
 export { resolveHandlerByModuleRef } from "./handlers/module-resolver";
 export { scanHttpHandlers, scanHttpGuards, scanModule } from "./handlers/scanners/http";

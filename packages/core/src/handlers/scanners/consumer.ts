@@ -81,8 +81,9 @@ async function scanClassHandler(
 
     // The handler tag is used for SDK-internal registry lookup — it must match
     // the key the orchestrator constructs: `${consumerName}::${methodName}`.
-    // handlerMeta.route is for the Rust runtime's MessageHandlerWithRouter
-    // routing logic, not for the SDK registry.
+    // The route is carried separately, it selects between the handlers of one
+    // consumer, which is a different question from which method to invoke, and
+    // a deploy target that routes in-process needs both.
     const handlerTag = composeHandlerTag(consumerMeta.source, methodName);
 
     const layers = [...moduleLayers, ...classLayers, ...methodLayers];
@@ -96,6 +97,8 @@ async function scanClassHandler(
       type: "consumer",
       id: classHandlerId(controllerClass, methodName),
       handlerTag,
+      consumerName: consumerMeta.source,
+      route: handlerMeta.route,
       layers,
       paramMetadata,
       customMetadata: { ...classCustomMetadata, ...methodCustomMetadata },
@@ -113,6 +116,7 @@ function scanFunctionHandler(
   if (definition.type !== "consumer") return;
 
   const meta = definition.metadata as {
+    source?: string;
     route?: string;
     messageSchema?: Schema;
     layers?: (CelerityLayer | Type<CelerityLayer>)[];
@@ -120,8 +124,18 @@ function scanFunctionHandler(
     customMetadata?: Record<string, unknown>;
   };
 
-  // Same as class handlers — route is for Rust runtime routing, not SDK lookup.
-  const handlerTag = definition.id ?? "default";
+  // The export name, which deployment tooling assigns as the id, is what
+  // addresses a function handler, so it stays the tag wherever it is known.
+  //
+  // Without one, every function handler of a routed consumer would register
+  // under "default" and only the last would be reached. The consumer and
+  // the route together name exactly one handler, which is what the tag has to
+  // do, so they compose it in that case.
+  const handlerTag =
+    definition.id ??
+    (meta.source !== undefined && meta.route !== undefined
+      ? composeHandlerTag(meta.source, meta.route)
+      : "default");
 
   const layers = [...moduleLayers, ...(meta.layers ?? [])];
   if (meta.messageSchema) {
@@ -133,6 +147,8 @@ function scanFunctionHandler(
     type: "consumer",
     id: definition.id,
     handlerTag,
+    consumerName: meta.source,
+    route: meta.route,
     layers,
     paramMetadata: [],
     customMetadata: meta.customMetadata ?? {},

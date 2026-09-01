@@ -81,6 +81,20 @@ export type ResolvedWebSocketHandler = ResolvedHandlerBase &
 export type ResolvedConsumerHandler = ResolvedHandlerBase & {
   type: "consumer";
   handlerTag: string;
+  /**
+   * The blueprint consumer this handler belongs to, when it declared one.
+   *
+   * A deploy target that puts every handler of one consumer behind a single
+   * function needs to find them as a set, which the handler tag alone cannot
+   * express because it identifies exactly one method.
+   */
+  consumerName?: string;
+  /**
+   * The value of the consumer's routing field that selects this handler.
+   *
+   * Absent for the fallback handler, which takes the messages no route matched.
+   */
+  route?: string;
 };
 
 export type ResolvedScheduleHandler = ResolvedHandlerBase & {

@@ -179,6 +179,69 @@ describe("scanConsumerHandlers", () => {
       expect(handler).toBeDefined();
     });
 
+    it("carries source and route through as the consumer and route of the handler", async () => {
+      const fnHandler: FunctionHandlerDefinition = {
+        __celerity_handler: true,
+        id: "onUserCreated",
+        type: "consumer",
+        metadata: { source: "userEventsConsumer", route: "user.created" },
+        handler: vi.fn(),
+      };
+
+      @Module({ functionHandlers: [fnHandler] })
+      class M {}
+
+      await scanModule(M, container, registry);
+
+      const handler = registry.getHandler("consumer", "onUserCreated");
+      expect(handler!.consumerName).toBe("userEventsConsumer");
+      expect(handler!.route).toBe("user.created");
+    });
+
+    it("composes the tag from source and route when the definition has no id", async () => {
+      // Without this every handler of the consumer registers under "default"
+      // and only the last one stays addressable.
+      const created: FunctionHandlerDefinition = {
+        __celerity_handler: true,
+        type: "consumer",
+        metadata: { source: "userEventsConsumer", route: "user.created" },
+        handler: vi.fn(),
+      };
+      const deleted: FunctionHandlerDefinition = {
+        __celerity_handler: true,
+        type: "consumer",
+        metadata: { source: "userEventsConsumer", route: "user.deleted" },
+        handler: vi.fn(),
+      };
+
+      @Module({ functionHandlers: [created, deleted] })
+      class M {}
+
+      await scanModule(M, container, registry);
+
+      expect(registry.getHandler("consumer", "userEventsConsumer::user.created")).toBeDefined();
+      expect(registry.getHandler("consumer", "userEventsConsumer::user.deleted")).toBeDefined();
+    });
+
+    it("keeps the definition id as the tag even when a source is declared", async () => {
+      // The id is what deployment tooling addresses the handler by, so a source
+      // must not move it.
+      const fnHandler: FunctionHandlerDefinition = {
+        __celerity_handler: true,
+        id: "onUserCreated",
+        type: "consumer",
+        metadata: { source: "userEventsConsumer", route: "user.created" },
+        handler: vi.fn(),
+      };
+
+      @Module({ functionHandlers: [fnHandler] })
+      class M {}
+
+      await scanModule(M, container, registry);
+
+      expect(registry.getHandler("consumer", "onUserCreated")).toBeDefined();
+    });
+
     it("stores inject tokens from function handler metadata", async () => {
       const TOKEN = Symbol("TOKEN");
       const fnHandler: FunctionHandlerDefinition = {
