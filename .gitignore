@@ -34,7 +34,6 @@ eslint-report.json
 *.tsbuildinfo
 
 # Agent files and directories
-CLAUDE.md
 .claude
 
 # Local design docs that should not be committed.
