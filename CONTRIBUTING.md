@@ -135,9 +135,9 @@ This project uses [conventional commits](https://www.conventionalcommits.org/) e
 
 Format: `type(scope): description`
 
-**Types**: `feat`, `fix`, `build`, `revert`, `wip`, `chore`, `ci`, `docs`, `style`, `refactor`, `perf`, `test`, `instr`
+**Types**: `feat`, `fix`, `build`, `revert`, `wip`, `chore`, `ci`, `docs`, `style`, `refactor`, `perf`, `test`, `instr`, `deps`
 
-**Scopes**: `types`, `config`, `core`, `bucket`, `queue`, `topic`, `datastore`, `sql-database`, `cache`, `cli`, `common`, `telemetry`
+**Scopes**: a package (`types`, `common`, `config`, `core`, `bucket`, `queue`, `topic`, `datastore`, `sql-database`, `cache`, `serverless-aws`, `telemetry`, `cli`, `testing`), or `ci`, `repo` or `deps`. `commitlint.config.js` holds the list.
 
 Examples:
 ```
