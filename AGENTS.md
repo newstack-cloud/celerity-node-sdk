@@ -2,7 +2,7 @@
 
 A pnpm monorepo of the `@celerity-sdk/*` packages for building Celerity applications in Node.js.
 Celerity's Node.js runtime images install them, the Celerity CLI runs the `celerity-extract`
-tool from `@celerity-sdk/cli` and reads the handler manifest it writes, and celerity-docs-v2
+tool from `@celerity-sdk/cli` and reads the handler manifest it writes, and celerity-docs
 copies that manifest's schema.
 
 ## Workspace
