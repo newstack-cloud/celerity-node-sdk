@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://celerityframework.io/schemas/handler-manifest.v1.schema.json",
+  "$id": "https://celerity.dev/schemas/handler-manifest.v1.schema.json",
   "title": "Celerity Handler Manifest",
   "description": "Output schema for Celerity language-specific extractor tools. Describes all handlers discovered in a Celerity application module via language-specific metadata scanning. Consumed by the Celerity CLI to merge with blueprint infrastructure configuration.",
   "type": "object",
