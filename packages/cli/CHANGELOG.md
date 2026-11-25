@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/newstack-cloud/celerity-node-sdk/compare/cli/v0.9.2...cli/v0.9.3) (2026-11-25)
+
+
+### Bug Fixes
+
+* **cli:** identify the handler manifest schema by its celerity.dev url ([4faa4ff](https://github.com/newstack-cloud/celerity-node-sdk/commit/4faa4ff5207ecca775cffbd853cbf904806722ae))
+
 ## [0.9.2](https://github.com/newstack-cloud/celerity-node-sdk/compare/cli/v0.9.1...cli/v0.9.2) (2026-09-01)
 
 
