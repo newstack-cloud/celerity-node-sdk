@@ -81,4 +81,4 @@ This package implements the `Cache` interface with a Redis provider (via ioredis
 
 ## Part of the Celerity Framework
 
-See [celerityframework.io](https://celerityframework.io) for full documentation.
+See [celerity.dev](https://celerity.dev) for full documentation.
