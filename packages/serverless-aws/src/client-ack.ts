@@ -10,7 +10,7 @@
  * frames.
  *
  * See the WebSocket Runtime Protocol, Server Capabilities and Acknowledgements:
- * https://celerityframework.io/docs/framework/runtime/websocket-runtime-protocol
+ * https://celerity.dev/docs/framework/runtime/websocket-runtime-protocol
  */
 
 /**
