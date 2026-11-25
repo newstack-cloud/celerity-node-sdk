@@ -173,4 +173,4 @@ The output conforms to `handler-manifest.v1.schema.json`:
 
 ## Part of the Celerity Framework
 
-See [celerityframework.io](https://celerityframework.io) for full documentation.
+See [celerity.dev](https://celerity.dev) for full documentation.
